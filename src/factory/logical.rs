@@ -95,7 +95,6 @@ pub struct LogicalLink {
 }
 
 pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataInput>>, data_outputs: Query<&Source, With<DataOutput>>, time: Res<Time>) {
-    println!("{:?}", data_inputs);
    for (mut buffer, link) in data_inputs {
         let source= data_outputs.get(link.output_entity).unwrap();
         if let Some(shape) = &buffer.shape {

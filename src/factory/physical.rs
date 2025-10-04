@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use bevy::{
     color::Color,
     ecs::{
@@ -22,15 +23,17 @@ pub struct PhysicalOutput(Entity, Direction);
 
 #[derive(Component)]
 pub struct PhysicalLink {
-    pub logical_link: Option<Entity>,
     pub throughput: f32,
 }
+
+#[derive(Component)]
+pub struct Linked;
+
 impl PhysicalLink {
     pub fn get_spawn_bundle(position: GridPosition) -> impl Bundle {
         (
             position,
             PhysicalLink {
-                logical_link: None,
                 throughput: 234.,
             },
             GridSprite(Color::linear_rgba(0.0, 0.0, 1.0, 1.0)),
@@ -155,14 +158,17 @@ fn insert_physical_connection(commands: &mut Commands, output_entity: Entity, in
 }
 
 pub fn establish_logical_links(
-    query: Query<Entity, Added<PhysicalLink>>,
     mut commands: Commands,
+    query: Query<Entity, Added<PhysicalLink>>,
     inputs: Query<&PhysicalInput>,
     outputs: Query<&PhysicalOutput>,
     links: Query<&PhysicalLink>
 ) {
 
+    let mut dirty = HashSet::<Entity>::new();
+
     for entity in query.iter() {
+        if dirty.contains(&entity) { continue;}
         if let (Ok(PhysicalInput(next_input, _)), Ok(PhysicalOutput(next_output, _))) =
             (inputs.get(entity), outputs.get(entity))
         {
@@ -199,10 +205,17 @@ pub fn establish_logical_links(
             let throughput = full_links.iter().map(|e| links.get(*e).unwrap().throughput).reduce(f32::min)
                 .unwrap_or(0.);
 
+            for link in full_links.iter() {
+                commands.entity(*link).insert(Linked);
+                dirty.insert(link.clone());
+            }
+
             let link = LogicalLink { links: full_links, throughput, output_entity: data_output_entity, input_entity: data_input_entity };
+            println!("Logical link established! {:?}", link);
             commands
                 .entity(data_input_entity)
                 .insert(link);
+
         }
     }
 }
