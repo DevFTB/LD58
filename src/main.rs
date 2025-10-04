@@ -1,12 +1,19 @@
-use bevy::{math::I8Vec2, prelude::*};
+use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
 
 use crate::{
     camera::GameCameraPlugin,
+    factory::{
+        FactoryPlugin,
+        logical::{Dataset, Sink, Source},
+        physical::PhysicalLink,
+    },
     grid::{Grid, GridPlugin, GridPosition},
     ui::{UIPlugin}
 };
+use crate::grid::Direction;
 
 mod camera;
+mod factory;
 mod grid;
 mod ui;
 
@@ -17,29 +24,32 @@ fn main() {
         .add_plugins(GameCameraPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
+        .add_plugins(FactoryPlugin)
         .add_systems(Startup, startup)
         .run();
 }
 
-fn startup(mut commands: Commands, grid: Res<Grid>) {
-    for i in -5..5 {
-        for j in -5..5 {
-            commands.spawn((
-                GridPosition(I8Vec2 { x: i, y: j }),
-                Sprite {
-                    color: Color::LinearRgba(LinearRgba {
-                        red: 1.0,
-                        green: 0.0,
-                        blue: 0.5,
-                        alpha: 1.0,
-                    }),
-                    custom_size: Some(Vec2 {
-                        x: grid.scale - 8.,
-                        y: grid.scale - 8.,
-                    }),
-                    ..Default::default()
-                },
-            ));
+fn startup(mut commands: Commands) {
+    commands.spawn(Source::get_spawn_bundle(
+        GridPosition(I8Vec2 { x: 1, y: 1 }),
+        Direction::Right,
+        Dataset {
+            contents: HashMap::new(),
         }
-    }
+    ));
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+        x: 2,
+        y: 1,
+    })));
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+        x: 3,
+        y: 1,
+    })));
+    commands.spawn(Sink::get_spawn_bundle(
+        GridPosition(I8Vec2 { x: 4, y: 1 }),
+        Direction::Left,
+        Dataset {
+            contents: HashMap::new(),
+        },
+    ));
 }
