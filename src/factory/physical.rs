@@ -4,11 +4,11 @@ use bevy::{
         bundle::Bundle,
         component::Component,
         entity::Entity,
-        query::{Added, Or, With, Without},
+        query::{Added, With, Without},
         system::{Commands, Query},
     },
 };
-
+use bevy::prelude::World;
 use crate::{
     factory::logical::{DataInput, DataOutput, LogicalLink},
     grid::{Direction, GridPosition, GridSprite},
@@ -159,8 +159,6 @@ pub fn establish_logical_links(
     mut commands: Commands,
     inputs: Query<&PhysicalInput>,
     outputs: Query<&PhysicalOutput>,
-    data_inputs: Query<Entity, With<DataInput>>,
-    data_outputs: Query<Entity, With<DataOutput>>,
     links: Query<&PhysicalLink>
 ) {
 
@@ -169,12 +167,10 @@ pub fn establish_logical_links(
             (inputs.get(entity), outputs.get(entity))
         {
             //Traverse input linked list
-            let Some((data_input_entity, mut output_links)) = ({
+            let Some((data_output_entity, mut output_links)) = ({
                 let mut links: Vec<Entity> = Vec::new();
                 links.push(*next_input);
                 while let Ok(next) = inputs.get(*links.last().unwrap()) {
-                    println!("{:?}", links);
-                    println!("Entity {:?} is after {:?}", next.0, *links.last().unwrap());
                     links.push(next.0);
                 }
 
@@ -183,7 +179,7 @@ pub fn establish_logical_links(
                 return;
             };
 
-            let Some((data_output_entity, mut input_links)) = ({
+            let Some((data_input_entity, mut input_links)) = ({
                 let mut links: Vec<Entity> = Vec::new();
                 links.push(*next_output);
                 while let Ok(next) = outputs.get(*links.last().unwrap()) {
@@ -207,8 +203,6 @@ pub fn establish_logical_links(
             commands
                 .entity(data_input_entity)
                 .insert(link);
-
-            println!("FUCK YEAH!!!")
         }
     }
 }

@@ -1,10 +1,11 @@
 use crate::grid::{Direction, GridPosition, GridSprite};
-use bevy::prelude::{Deref, Query, With};
+use bevy::prelude::{Deref, Query, Res, With};
 use bevy::{
     color::Color,
     ecs::{bundle::Bundle, component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
+use bevy::time::Time;
 
 #[derive(Component, Default, Debug)]
 pub struct FactoryTile;
@@ -38,13 +39,17 @@ pub struct Dataset {
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
 }
 #[derive(Component, Deref)]
+#[require(DataBuffer)]
 pub struct DataInput(Direction);
 
 #[derive(Component, Deref)]
 pub struct DataOutput(Direction);
 
-#[derive(Component, Default, Deref)]
-pub struct DataBuffer(Vec<Dataset>);
+#[derive(Component, Default)]
+pub struct DataBuffer {
+    shape: Option<Dataset>,
+    value: f32,
+}
 
 // Component for entities that can be connected (inputs/outputs of machines)
 #[derive(Component)]
@@ -75,12 +80,13 @@ impl Sink {
             position,
             Sink { packet },
             DataInput(direction),
+            DataBuffer{shape: None, value: 0.},
             GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
         )
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct LogicalLink {
     pub links: Vec<Entity>,
     pub(crate) output_entity: Entity,
@@ -88,13 +94,20 @@ pub struct LogicalLink {
     pub throughput: f32,
 }
 
-fn pass_data(mut data_inputs: Query<(&DataBuffer, &LogicalLink), With<DataInput>>, mut data_outputs: Query<&DataOutput>) {
-   for (buffer, link) in data_inputs {
-        let output= data_outputs.get(link.output_entity).unwrap();
+pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataInput>>, data_outputs: Query<&Source, With<DataOutput>>, time: Res<Time>) {
+    println!("{:?}", data_inputs);
+   for (mut buffer, link) in data_inputs {
+        let source= data_outputs.get(link.output_entity).unwrap();
+        if let Some(shape) = &buffer.shape {
+            if source.packet != *shape {
+                buffer.shape = Some(source.packet.clone());
+                buffer.value = 0.;
+            }
+        } else {
+            buffer.shape = Some(source.packet.clone());
+            buffer.value = 0.;
+        }
 
-        //*input_buffer.push
-
-
-
+        buffer.value += source.rate * time.delta_secs();
    }
 }

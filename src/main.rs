@@ -26,7 +26,7 @@ fn main() {
         .run();
 }
 
-fn startup(mut commands: Commands, grid: Res<Grid>) {
+fn startup(mut commands: Commands) {
     commands.spawn(Source::get_spawn_bundle(
         GridPosition(I8Vec2 { x: 1, y: 1 }),
         Direction::Right,
