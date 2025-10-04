@@ -15,6 +15,7 @@ use crate::grid::Direction;
 mod camera;
 mod factory;
 mod grid;
+mod things;
 mod ui;
 
 fn main() {

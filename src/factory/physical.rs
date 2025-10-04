@@ -149,12 +149,12 @@ fn insert_physical_connection(commands: &mut Commands, output_entity: Entity, in
     commands
         .entity(output_entity)
         .insert(PhysicalOutput(input_entity, **dir));
-    println!("PhysicalOutput on {:?} to {:?}", output_entity, input_entity);
+    // println!("PhysicalOutput on {:?} to {:?}", output_entity, input_entity);
 
     commands
         .entity(input_entity)
         .insert(PhysicalInput(output_entity, dir.opposite()));
-    println!("PhysicalInput on {:?} to {:?}", input_entity, output_entity);
+    // println!("PhysicalInput on {:?} to {:?}", input_entity, output_entity);
 }
 
 pub fn establish_logical_links(
@@ -211,7 +211,7 @@ pub fn establish_logical_links(
             }
 
             let link = LogicalLink { links: full_links, throughput, output_entity: data_output_entity, input_entity: data_input_entity };
-            println!("Logical link established! {:?}", link);
+            // println!("Logical link established! {:?}", link);
             commands
                 .entity(data_input_entity)
                 .insert(link);
