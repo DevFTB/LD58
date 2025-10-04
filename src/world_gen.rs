@@ -33,8 +33,7 @@ const WORLD_SIZE: i32 = 1000;
 const WORLD_MIN: i32 = -(WORLD_SIZE / 2);
 const WORLD_MAX: i32 = (WORLD_SIZE / 2) - 1; 
 
-// const FACTION_CLUSTER_THRESHOLD: f32 = 0.65;
-const FACTION_CLUSTER_THRESHOLD: f32 = 0.15;
+const FACTION_CLUSTER_THRESHOLD: f32 = 0.35;
 
 
 impl Plugin for WorldGenPlugin {
@@ -71,14 +70,11 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
 }
 
-// fn get_locked_tile_noise(vec: IVec2) -> f32{
-//     const SIMPLEX_FREQUENCY: f32 = 0.035;
-//     const BIAS_EXPONENT: f32 = 2.0;
-//     let normalised =  (fbm_simplex_2d_seeded(vec.as_vec2() * SIMPLEX_FREQUENCY, 2, 2., 0.1, 48.) + 1.0) / 2.0;
-//     return normalised.powf(BIAS_EXPONENT);
-// }
-
 fn get_locked_tile_noise(vec: IVec2, offset: f32) -> f32 {
-    const FREQUENCY: f32 = 0.04;
-    return worley_2d((vec.as_vec2() + Vec2::new(offset, offset)) * FREQUENCY, 0.7).x;
+    const SIMPLEX_FREQUENCY: f32 = 0.035;
+    const BIAS_EXPONENT: f32 = 2.0;
+    let normalised_simplex_noise =  (fbm_simplex_2d_seeded(vec.as_vec2() * SIMPLEX_FREQUENCY, 2, 2., 0.1, 48.) + 1.0) / 2.0;
+
+    const FREQUENCY: f32 = 0.035;
+    return worley_2d((vec.as_vec2() + Vec2::new(offset, offset)) * FREQUENCY, 0.7).x + (0.2 * normalised_simplex_noise.powf(BIAS_EXPONENT));
 }
