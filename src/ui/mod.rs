@@ -70,14 +70,17 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         BackgroundColor(ANTIQUE_WHITE.into()),
     )).with_children(|parent|{
         for building in &buildings {
+            let mut image_node = ImageNode::new(asset_server.load(&building.sprite_path));
+            image_node.image_mode = NodeImageMode::Stretch;
+
             parent.spawn((
                 Node {
                     width: px(BUILDING_TILE_SIZE),
                     height: px(BUILDING_TILE_SIZE),
                     ..default()
                 },
-                ImageNode::new(asset_server.load(&building.sprite_path)),
-                BackgroundColor(GRAY.into()),
+                image_node,
+                // BackgroundColor(GRAY.into()),
                 building.clone()
             ));
         }
