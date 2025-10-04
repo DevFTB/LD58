@@ -1,3 +1,8 @@
+use crate::{
+    factory::logical::{DataSink, DataSource, LogicalLink},
+    grid::{Direction, GridPosition, GridSprite},
+};
+use bevy::platform::collections::{HashMap, HashSet};
 use bevy::{
     color::Color,
     ecs::{
@@ -7,12 +12,6 @@ use bevy::{
         query::{Added, With, Without},
         system::{Commands, Query},
     },
-};
-use bevy::platform::collections::{HashMap, HashSet};
-use bevy::prelude::World;
-use crate::{
-    factory::logical::{DataSink, DataSource, LogicalLink},
-    grid::{Direction, GridPosition, GridSprite},
 };
 
 #[derive(Component)]
@@ -177,6 +176,52 @@ fn insert_physical_connection(
 ) {
     commands.entity(source).insert(PhysicalSource(target, dir));
     commands.entity(target).insert(PhysicalSink(source, dir));
+}
+use bevy::prelude::*;
+
+pub fn on_physical_link_removed(
+    trigger: On<Remove, PhysicalLink>,
+    mut commands: Commands,
+    q_sources: Query<(Entity, &PhysicalSource)>,
+    q_sinks:   Query<(Entity, &PhysicalSink)>,
+    q_logicals: Query<(Entity, &LogicalLink)>, // lives on sink endpoints in your setup
+) {
+    let broken = trigger.entity;
+
+    // 1) Cut physical pointers from neighbors that referenced the broken segment
+    for (owner, src) in &q_sources {
+        if src.0 == broken {
+            if let Ok(mut e) = commands.get_entity(owner) {
+                e.remove::<PhysicalSource>();
+            }
+        }
+    }
+    for (owner, sink) in &q_sinks {
+        if sink.0 == broken {
+            if let Ok(mut e) = commands.get_entity(owner) {
+                e.remove::<PhysicalSink>();
+            }
+        }
+    }
+
+    // 2) Tear down any LogicalLink that traversed the broken segment
+    for (sink_entity, logical) in &q_logicals {
+        if logical.links.iter().any(|&seg| seg == broken) {
+            // Unmark all segments that still exist
+            for &seg in &logical.links {
+                if let Ok(mut e) = commands.get_entity(seg) {
+                    e.remove::<Linked>();
+                }
+            }
+            // Remove the logical link from its sink if it still exists
+            if let Ok(mut e) = commands.get_entity(sink_entity) {
+                println!("Logical Link removed");
+                e.remove::<LogicalLink>();
+            }
+        }
+    }
+
+    // Do not try to modify the broken entity itself; it may be despawned.
 }
 
 pub fn establish_logical_links(

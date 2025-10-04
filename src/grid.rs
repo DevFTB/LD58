@@ -97,6 +97,18 @@ pub struct Grid {
     pub scale: f32,
 }
 
+impl Grid {
+    // Helper: convert a world position to a GridPosition by snapping to the grid.
+    pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
+        let p = (world + self.scale / 2.)/ self.scale ;
+        // Use floor for "lower-left origin" style grids; use round() if that's your convention.
+        let gx = p.x.floor() as i8;
+        let gy = p.y.floor() as i8;
+        GridPosition(I8Vec2 { x: gx, y: gy })
+    }
+
+}
+
 #[derive(Component, Deref)]
 pub struct GridSprite(pub Color);
 

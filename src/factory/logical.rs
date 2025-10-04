@@ -1,11 +1,11 @@
 use crate::grid::{Direction, GridPosition, GridSprite};
-use bevy::prelude::{Deref, Query, Res, With};
+use bevy::prelude::{Query, Res, With};
+use bevy::time::Time;
 use bevy::{
     color::Color,
     ecs::{bundle::Bundle, component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
-use bevy::time::Time;
 
 #[derive(Component, Default, Debug)]
 pub struct FactoryTile;
