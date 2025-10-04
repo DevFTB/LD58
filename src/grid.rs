@@ -1,22 +1,43 @@
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
+use bevy::prelude::DerefMut;
 use bevy::{
-    app::{Plugin, PostUpdate, Startup}, asset::{Asset, Assets}, color::Color, ecs::{
-        component::Component, entity::Entity, lifecycle::RemovedComponents, query::Added, resource::Resource, system::{Commands, Query, Res, ResMut}, world::Ref
-    }, math::{primitives::Rectangle, I8Vec2, Vec2, Vec3, Vec4}, mesh::{Mesh, Mesh2d}, platform::collections::HashMap, prelude::Deref, reflect::TypePath, render::render_resource::AsBindGroup, shader::ShaderRef, sprite::Sprite, sprite_render::{AlphaMode2d, Material2d, Material2dPlugin, MeshMaterial2d}, transform::components::Transform, window::Window
+    app::{Plugin, PostUpdate, Startup},
+    asset::{Asset, Assets},
+    color::Color,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        query::Added,
+        resource::Resource,
+        system::{Commands, Query, Res, ResMut},
+        world::Ref,
+    },
+    math::{primitives::Rectangle, I8Vec2, Vec2, Vec3, Vec4},
+    mesh::{Mesh, Mesh2d},
+    platform::collections::HashMap,
+    prelude::Deref,
+    reflect::TypePath,
+    render::render_resource::AsBindGroup,
+    shader::ShaderRef,
+    sprite::Sprite,
+    sprite_render::{AlphaMode2d, Material2d, Material2dPlugin, MeshMaterial2d},
+    transform::components::Transform,
+    window::Window,
 };
+
 const GRID_SHADER_ASSET_PATH: &str = "shaders/grid_shader.wgsl";
 pub struct GridPlugin;
 
 // World map resource to track which grid positions are occupied by which entities
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Deref, DerefMut)]
 pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 
 // Function to check if a set of grid positions is free
-pub fn are_positions_free(world_map: &WorldMap, positions: &[GridPosition]) -> bool {
-    positions.iter().all(|pos| !world_map.0.contains_key(pos))
-}
-
 #[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone)]
 #[require(Transform)]
+#[component(on_insert = grid_position_added)]
+#[component(on_remove = grid_position_removed)]
 pub struct GridPosition(pub I8Vec2);
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -25,6 +46,52 @@ pub enum Direction {
     Down,
     Left,
     Up,
+}
+
+#[derive(Resource)]
+pub struct Grid {
+    pub scale: f32,
+}
+
+#[derive(Component, Deref)]
+pub struct GridSprite(pub Color);
+
+// This is the struct that will be passed to your shader
+#[derive(AsBindGroup, TypePath, Debug, Clone, Asset)]
+pub struct GridMaterial {
+    #[uniform(0)]
+    pub line_colour: Vec4,
+    #[uniform(0)]
+    pub line_width: f32,
+    #[uniform(0)]
+    pub grid_size: f32,
+    #[uniform(0)]
+    pub offset: Vec2,
+    #[uniform(0)]
+    pub resolution: Vec2,
+    #[uniform(0)]
+    pub grid_intensity: f32,
+}
+
+impl Plugin for GridPlugin {
+    fn build(&self, app: &mut bevy::app::App) {
+        app.insert_resource(Grid { scale: 64.0 });
+        app.insert_resource(WorldMap::default());
+        app.add_plugins(Material2dPlugin::<GridMaterial>::default());
+        app.add_systems(Startup, setup_grid);
+        app.add_systems(PostUpdate, (transform_to_grid, spawn_grid_sprite_system));
+    }
+}
+
+impl Grid {
+    // Helper: convert a world position to a GridPosition by snapping to the grid.
+    pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
+        let p = (world + self.scale / 2.) / self.scale;
+        // Use floor for "lower-left origin" style grids; use round() if that's your convention.
+        let gx = p.x.floor() as i8;
+        let gy = p.y.floor() as i8;
+        GridPosition(I8Vec2 { x: gx, y: gy })
+    }
 }
 impl Direction {
     pub fn opposite(&self) -> Direction {
@@ -80,57 +147,6 @@ impl GridPosition {
             Direction::Up => GridPosition(I8Vec2::new(self.0.x, self.0.y - 1)),
         }
     }
-
-}
-
-/// Calculates all grid cells occupied by a building given its base position and dimensions.
-/// The base position is the anchor cell (typically the top-left corner).
-/// Returns a vector of all I8Vec2 positions that the building occupies.
-pub fn calculate_occupied_cells(base_position: I8Vec2, width: i8, height: i8) -> Vec<I8Vec2> {
-    let mut cells = Vec::new();
-    for dx in 0..width {
-        for dy in 0..height {
-            cells.push(I8Vec2::new(base_position.x + dx, base_position.y + dy));
-        }
-    }
-    cells
-}
-
-#[derive(Resource)]
-pub struct Grid {
-    pub scale: f32,
-}
-
-impl Grid {
-    // Helper: convert a world position to a GridPosition by snapping to the grid.
-    pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
-        let p = (world + self.scale / 2.)/ self.scale ;
-        // Use floor for "lower-left origin" style grids; use round() if that's your convention.
-        let gx = p.x.floor() as i8;
-        let gy = p.y.floor() as i8;
-        GridPosition(I8Vec2 { x: gx, y: gy })
-    }
-
-}
-
-#[derive(Component, Deref)]
-pub struct GridSprite(pub Color);
-
-// This is the struct that will be passed to your shader
-#[derive(AsBindGroup, TypePath, Debug, Clone, Asset)]
-pub struct GridMaterial {
-    #[uniform(0)]
-    pub line_colour: Vec4,
-    #[uniform(0)]
-    pub line_width: f32,
-    #[uniform(0)]
-    pub grid_size: f32,
-    #[uniform(0)]
-    pub offset: Vec2,
-    #[uniform(0)]
-    pub resolution: Vec2,
-    #[uniform(0)]
-    pub grid_intensity: f32,
 }
 
 impl Material2d for GridMaterial {
@@ -142,38 +158,23 @@ impl Material2d for GridMaterial {
         AlphaMode2d::Blend
     }
 }
+fn grid_position_added(mut world: DeferredWorld, context: HookContext) {
+    let entity = context.entity;
 
-impl Plugin for GridPlugin {
-    fn build(&self, app: &mut bevy::app::App) {
-        app.insert_resource(Grid { scale: 64.0 });
-        app.insert_resource(WorldMap::default());
-        app.add_plugins(Material2dPlugin::<GridMaterial>::default());
-        app.add_systems(Startup, setup_grid);
-        app.add_systems(PostUpdate, (transform_to_grid, spawn_grid_sprite_system, update_world_map_added, update_world_map_removed));
-    }
+    let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
+    let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
+
+    world_map.insert(grid_position, entity);
 }
 
-// System to add newly placed entities to the world map
-fn update_world_map_added(
-    mut world_map: ResMut<WorldMap>,
-    query: Query<(Entity, &GridPosition), Added<GridPosition>>,
-) {
-    for (entity, grid_pos) in query.iter() {
-        world_map.0.insert(*grid_pos, entity);
-    }
-}
+fn grid_position_removed(mut world: DeferredWorld, context: HookContext) {
+    let entity = context.entity;
 
-// System to remove entities from world map when GridPosition is removed
-fn update_world_map_removed(
-    mut world_map: ResMut<WorldMap>,
-    mut removed: RemovedComponents<GridPosition>,
-) {
-    for removed_entity in removed.read() {
-        // Remove all entries for this entity
-        world_map.0.retain(|_pos, entity| *entity != removed_entity);
-    }
-}
+    let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
+    let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
 
+    world_map.remove(&grid_position);
+}
 
 fn setup_grid(
     mut commands: Commands,
@@ -245,4 +246,16 @@ fn spawn_grid_sprite_system(
             },
         );
     }
+}
+pub fn calculate_occupied_cells(base_position: I8Vec2, width: i8, height: i8) -> Vec<I8Vec2> {
+    let mut cells = Vec::new();
+    for dx in 0..width {
+        for dy in 0..height {
+            cells.push(I8Vec2::new(base_position.x + dx, base_position.y + dy));
+        }
+    }
+    cells
+}
+pub fn are_positions_free(world_map: &WorldMap, positions: &[GridPosition]) -> bool {
+    positions.iter().all(|pos| !world_map.0.contains_key(pos))
 }
