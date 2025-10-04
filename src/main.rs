@@ -8,18 +8,22 @@ use crate::{
         physical::PhysicalLink,
     },
     grid::{Grid, GridPlugin, GridPosition},
+    ui::{UIPlugin}
 };
 use crate::grid::Direction;
 
 mod camera;
 mod factory;
 mod grid;
+mod things;
+mod ui;
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugins(GameCameraPlugin)
+        .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
         .add_systems(Startup, startup)
