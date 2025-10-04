@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_dylib",
+ "noisy_bevy",
 ]
 
 [[package]]
@@ -3058,6 +3059,15 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+]
+
+[[package]]
+name = "noisy_bevy"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b586a7d36eab9a74f83d6438ea384faec89d4fb6c05500a3528c0ba733cb209"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

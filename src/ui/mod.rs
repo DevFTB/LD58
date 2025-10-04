@@ -41,16 +41,16 @@ impl Plugin for UIPlugin {
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // i tried really hard to abstract this into a .ron file for way too long but failed horribly. hence what is currently here
     let buildings = [
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
-        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings/building_placeholder.png")},
     ];
 
     // spawn the bottom bar with factory draggables

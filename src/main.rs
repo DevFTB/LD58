@@ -3,18 +3,30 @@ use bevy::{math::I8Vec2, prelude::*};
 use crate::{
     camera::GameCameraPlugin,
     grid::{Grid, GridPlugin, GridPosition},
-    ui::{UIPlugin}
+    ui::{UIPlugin},
+    world_gen::{WorldGenPlugin},
 };
 
 mod camera;
 mod grid;
 mod ui;
+mod world_gen;
+
+#[derive(Component, Default)]
+pub enum Faction {
+    Government,
+    #[default]
+    Corporate,
+    Academia,
+    Criminal
+}
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugins(GameCameraPlugin)
+        .add_plugins(WorldGenPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_systems(Startup, startup)
