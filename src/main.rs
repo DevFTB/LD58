@@ -1,4 +1,4 @@
-use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
+use bevy::{math::Vec2, platform::collections::HashMap, prelude::*};
 
 use crate::{
     camera::GameCameraPlugin,
@@ -43,22 +43,22 @@ fn main() {
 
 fn startup(mut commands: Commands) {
     commands.spawn(Source::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 1, y: 1 }),
+        GridPosition(IVec2 { x: 1, y: 1 }),
         Direction::Right,
         Dataset {
             contents: HashMap::new(),
         }
     ));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(IVec2 {
         x: 2,
         y: 1,
     })));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(IVec2 {
         x: 3,
         y: 1,
     })));
     commands.spawn(Sink::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 4, y: 1 }),
+        GridPosition(IVec2 { x: 4, y: 1 }),
         Direction::Left,
         Dataset {
             contents: HashMap::new(),

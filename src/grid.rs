@@ -10,7 +10,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
         world::Ref,
     },
-    math::{I8Vec2, Vec2, Vec3, Vec4, primitives::Rectangle},
+    math::{IVec2,Vec2, Vec3, Vec4, primitives::Rectangle},
     mesh::{Mesh, Mesh2d},
     prelude::Deref,
     reflect::TypePath,
@@ -24,9 +24,9 @@ use bevy::{
 const GRID_SHADER_ASSET_PATH: &str = "shaders/grid_shader.wgsl";
 pub struct GridPlugin;
 
-#[derive(Component, Deref, PartialEq, Eq, Hash)]
+#[derive(Component, Deref, PartialEq, Eq, Hash, Default)]
 #[require(Transform)]
-pub struct GridPosition(pub I8Vec2);
+pub struct GridPosition(pub IVec2);
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Direction {
@@ -51,28 +51,28 @@ impl GridPosition {
         vec![
             (
                 Direction::Left,
-                GridPosition(I8Vec2 {
+                GridPosition(IVec2 {
                     x: self.x - 1,
                     y: self.y,
                 }),
             ),
             (
                 Direction::Right,
-                GridPosition(I8Vec2 {
+                GridPosition(IVec2 {
                     x: self.x + 1,
                     y: self.y,
                 }),
             ),
             (
                 Direction::Up,
-                GridPosition(I8Vec2 {
+                GridPosition(IVec2 {
                     x: self.x,
                     y: self.y - 1,
                 }),
             ),
             (
                 Direction::Down,
-                GridPosition(I8Vec2 {
+                GridPosition(IVec2 {
                     x: self.x,
                     y: self.y + 1,
                 }),
@@ -83,10 +83,10 @@ impl GridPosition {
     /// Returns a new GridPosition offset by one tile in the given direction.
     pub fn add(&self, direction: Direction) -> GridPosition {
         match direction {
-            Direction::Right => GridPosition(I8Vec2::new(self.0.x + 1, self.0.y)),
-            Direction::Down => GridPosition(I8Vec2::new(self.0.x, self.0.y + 1)),
-            Direction::Left => GridPosition(I8Vec2::new(self.0.x - 1, self.0.y)),
-            Direction::Up => GridPosition(I8Vec2::new(self.0.x, self.0.y - 1)),
+            Direction::Right => GridPosition(IVec2::new(self.0.x + 1, self.0.y)),
+            Direction::Down => GridPosition(IVec2::new(self.0.x, self.0.y + 1)),
+            Direction::Left => GridPosition(IVec2::new(self.0.x - 1, self.0.y)),
+            Direction::Up => GridPosition(IVec2::new(self.0.x, self.0.y - 1)),
         }
     }
 
