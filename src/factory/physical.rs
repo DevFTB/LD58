@@ -261,7 +261,6 @@ pub fn establish_logical_links(
             }
 
             let link = LogicalLink { links: full_links, throughput, source: source_entity, sink: sink_entity};
-            println!("Logical link established! {:?}", link);
             commands
                 .entity(sink_entity)
                 .insert(link);

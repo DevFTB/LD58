@@ -92,6 +92,19 @@ impl GridPosition {
 
 }
 
+/// Calculates all grid cells occupied by a building given its base position and dimensions.
+/// The base position is the anchor cell (typically the top-left corner).
+/// Returns a vector of all I8Vec2 positions that the building occupies.
+pub fn calculate_occupied_cells(base_position: I8Vec2, width: i8, height: i8) -> Vec<I8Vec2> {
+    let mut cells = Vec::new();
+    for dx in 0..width {
+        for dy in 0..height {
+            cells.push(I8Vec2::new(base_position.x + dx, base_position.y + dy));
+        }
+    }
+    cells
+}
+
 #[derive(Resource)]
 pub struct Grid {
     pub scale: f32,
