@@ -3,6 +3,7 @@ use bevy::{
 };
 
 use crate::things::buildings::BuildingType;
+use crate::grid::{WorldMap, GridPosition, calculate_occupied_cells, are_positions_free};
 
 pub struct UIPlugin;
 
@@ -192,17 +193,18 @@ fn handle_building_click(
 }
 
 fn update_selected_building_position(
-    mut selected_query: Query<(&mut Transform, &BuildingRotation), With<SelectedBuilding>>,
+    mut selected_query: Query<(&mut Transform, &mut Sprite, &BuildingRotation), With<SelectedBuilding>>,
     selected_building_type: Res<SelectedBuildingType>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     grid: Res<crate::grid::Grid>,
+    world_map: Res<WorldMap>,
 ) {
     if let Some(world_position) = get_mouse_world_position(&windows, &camera_query) {
         if let Some(building_type) = &selected_building_type.0 {
             let data = building_type.data();
             
-            for (mut transform, rotation) in selected_query.iter_mut() {
+            for (mut transform, mut sprite, rotation) in selected_query.iter_mut() {
                 // Apply rotation to dimensions for snapping
                 let (width, height) = if rotation.0 % 2 == 1 {
                     (data.grid_height, data.grid_width) // Swap for odd rotations
@@ -210,18 +212,38 @@ fn update_selected_building_position(
                     (data.grid_width, data.grid_height)
                 };
                 
-                // Snap to grid - position building so mouse-over cell is the anchor
-                let grid_x = ((world_position.x / grid.scale).round()) as i8;
-                let grid_y = ((world_position.y / grid.scale).round()) as i8;
+                // Snap to grid - center building on mouse cursor
+                let mouse_grid_x = world_position.x / grid.scale;
+                let mouse_grid_y = world_position.y / grid.scale;
                 
-                // Calculate center position so the building occupies whole grid cells
-                // The anchor cell (mouse-over) becomes the "primary" cell
-                let center_x = (grid_x as f32 + (width - 1) as f32 / 2.0) * grid.scale;
-                let center_y = (grid_y as f32 - (height - 1) as f32 / 2.0) * grid.scale;
+                // Calculate anchor position by snapping center to nearest valid position
+                let center_slot_x = mouse_grid_x.round();
+                let center_slot_y = mouse_grid_y.round();
+                
+                let anchor_x = (center_slot_x - (width - 1) as f32 / 2.0) as i8;
+                let anchor_y = (center_slot_y - (height - 1) as f32 / 2.0) as i8;
+                let grid_pos = I8Vec2::new(anchor_x, anchor_y);
+                
+                // Calculate sprite center position relative to anchor
+                let center_x = (anchor_x as f32 + (width - 1) as f32 / 2.0) * grid.scale;
+                let center_y = (anchor_y as f32 + (height - 1) as f32 / 2.0) * grid.scale;
                 
                 let snapped_position = Vec3::new(center_x, center_y, 100.0);
                 
                 transform.translation = snapped_position;
+
+                // Check if positions are occupied
+                let occupied_positions = calculate_occupied_cells(grid_pos, width, height)
+                    .into_iter()
+                    .map(GridPosition)
+                    .collect::<Vec<_>>();
+                if are_positions_free(&world_map, &occupied_positions) {
+                    // Valid placement - normal color
+                    sprite.color = Color::WHITE;
+                } else {
+                    // Invalid placement - tint red
+                    sprite.color = Color::srgb(1.0, 0.5, 0.5);
+                }
             }
         }
     }
@@ -253,34 +275,56 @@ fn handle_placement_click(
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     grid: Res<crate::grid::Grid>,
+    world_map: Res<WorldMap>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) && !just_selected.0 {
         // Check if we have a selected building
         if let Some(building_type) = &selected_building_type.0 {
             // Get mouse position
             if let Some(world_position) = get_mouse_world_position(&windows, &camera_query) {
-                // Calculate grid position
-                let grid_x = ((world_position.x / grid.scale).round()) as i8;
-                let grid_y = ((world_position.y / grid.scale).round()) as i8;
-                let base_position = I8Vec2::new(grid_x, grid_y);
-                
-                // Get building data and apply rotation
+                // Get building data and apply rotation first
+                let data = building_type.data();
                 let rotation = selected_query.iter().next().map(|(_, r)| r.0).unwrap_or(0);
                 
-                // Send construction event
-                construct_events.write(ConstructBuildingEvent {
-                    building_type: *building_type,
-                    grid_position: base_position,
-                    rotation,
-                });
+                let (width, height) = if rotation % 2 == 1 {
+                    (data.grid_height, data.grid_width) // Swap for odd rotations
+                } else {
+                    (data.grid_width, data.grid_height)
+                };
                 
-                // Despawn the dragged building
-                for (entity, _rotation) in selected_query.iter() {
-                    commands.entity(entity).despawn();
+                // Calculate grid position by centering on mouse
+                let mouse_grid_x = world_position.x / grid.scale;
+                let mouse_grid_y = world_position.y / grid.scale;
+                let center_slot_x = mouse_grid_x.round();
+                let center_slot_y = mouse_grid_y.round();
+                
+                let anchor_x = (center_slot_x - (width - 1) as f32 / 2.0) as i8;
+                let anchor_y = (center_slot_y - (height - 1) as f32 / 2.0) as i8;
+                let base_position = I8Vec2::new(anchor_x, anchor_y);
+
+                let occupied_positions = calculate_occupied_cells(base_position, width, height)
+                    .into_iter()
+                    .map(GridPosition)
+                    .collect::<Vec<_>>();
+                
+                // Only place if positions are free
+                if are_positions_free(&world_map, &occupied_positions) {
+                    // Send construction event
+                    construct_events.write(ConstructBuildingEvent {
+                        building_type: *building_type,
+                        grid_position: base_position,
+                        rotation,
+                    });
+                    
+                    // Despawn the dragged building
+                    for (entity, _rotation) in selected_query.iter() {
+                        commands.entity(entity).despawn();
+                    }
+                    
+                    // Clear selection
+                    selected_building_type.0 = None;
                 }
-                
-                // Clear selection
-                selected_building_type.0 = None;
+                // If occupied, do nothing - building stays selected and tinted red
             }
         }
     }
