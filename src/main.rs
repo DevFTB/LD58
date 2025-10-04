@@ -3,16 +3,19 @@ use bevy::{math::I8Vec2, prelude::*};
 use crate::{
     camera::GameCameraPlugin,
     grid::{Grid, GridPlugin, GridPosition},
+    ui::{UIPlugin}
 };
 
 mod camera;
 mod grid;
+mod ui;
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugins(GameCameraPlugin)
+        .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_systems(Startup, startup)
         .run();
