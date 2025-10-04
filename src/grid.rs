@@ -1,28 +1,19 @@
 use bevy::{
-    app::{Plugin, PostUpdate, Startup},
-    asset::{Asset, Assets},
-    color::Color,
-    ecs::{
-        component::Component,
-        entity::Entity,
-        query::Added,
-        resource::Resource,
-        system::{Commands, Query, Res, ResMut},
-        world::Ref,
-    },
-    math::{I8Vec2, Vec2, Vec3, Vec4, primitives::Rectangle},
-    mesh::{Mesh, Mesh2d},
-    prelude::Deref,
-    reflect::TypePath,
-    render::render_resource::AsBindGroup,
-    shader::ShaderRef,
-    sprite::Sprite,
-    sprite_render::{AlphaMode2d, Material2d, Material2dPlugin, MeshMaterial2d},
-    transform::components::Transform,
-    window::Window,
+    app::{Plugin, PostUpdate, Startup}, asset::{Asset, Assets}, color::Color, ecs::{
+        component::Component, entity::Entity, lifecycle::RemovedComponents, query::Added, resource::Resource, system::{Commands, Query, Res, ResMut}, world::Ref
+    }, math::{primitives::Rectangle, I8Vec2, Vec2, Vec3, Vec4}, mesh::{Mesh, Mesh2d}, platform::collections::HashMap, prelude::Deref, reflect::TypePath, render::render_resource::AsBindGroup, shader::ShaderRef, sprite::Sprite, sprite_render::{AlphaMode2d, Material2d, Material2dPlugin, MeshMaterial2d}, transform::components::Transform, window::Window
 };
 const GRID_SHADER_ASSET_PATH: &str = "shaders/grid_shader.wgsl";
 pub struct GridPlugin;
+
+// World map resource to track which grid positions are occupied by which entities
+#[derive(Resource, Default)]
+pub struct WorldMap(pub HashMap<GridPosition, Entity>);
+
+// Function to check if a set of grid positions is free
+pub fn are_positions_free(world_map: &WorldMap, positions: &[GridPosition]) -> bool {
+    positions.iter().all(|pos| !world_map.0.contains_key(pos))
+}
 
 #[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone)]
 #[require(Transform)]
@@ -113,8 +104,8 @@ pub struct Grid {
 impl Grid {
     // Helper: convert a world position to a GridPosition by snapping to the grid.
     pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
-        let p = (world + self.scale / 2.)/ self.scale ;
-        // Use floor for "lower-left origin" style grids; use round() if that's your convention.
+        let p = world / self.scale;
+        // Use floor for lower-left origin grids: each grid cell covers [n*scale, (n+1)*scale)
         let gx = p.x.floor() as i8;
         let gy = p.y.floor() as i8;
         GridPosition(I8Vec2 { x: gx, y: gy })
@@ -155,11 +146,34 @@ impl Material2d for GridMaterial {
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.insert_resource(Grid { scale: 64.0 });
+        app.insert_resource(WorldMap::default());
         app.add_plugins(Material2dPlugin::<GridMaterial>::default());
         app.add_systems(Startup, setup_grid);
-        app.add_systems(PostUpdate, (transform_to_grid, spawn_grid_sprite_system));
+        app.add_systems(PostUpdate, (transform_to_grid, spawn_grid_sprite_system, update_world_map_added, update_world_map_removed));
     }
 }
+
+// System to add newly placed entities to the world map
+fn update_world_map_added(
+    mut world_map: ResMut<WorldMap>,
+    query: Query<(Entity, &GridPosition), Added<GridPosition>>,
+) {
+    for (entity, grid_pos) in query.iter() {
+        world_map.0.insert(*grid_pos, entity);
+    }
+}
+
+// System to remove entities from world map when GridPosition is removed
+fn update_world_map_removed(
+    mut world_map: ResMut<WorldMap>,
+    mut removed: RemovedComponents<GridPosition>,
+) {
+    for removed_entity in removed.read() {
+        // Remove all entries for this entity
+        world_map.0.retain(|_pos, entity| *entity != removed_entity);
+    }
+}
+
 
 fn setup_grid(
     mut commands: Commands,
