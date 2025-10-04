@@ -13,24 +13,23 @@
 //     transform::components::Transform,
 // };
 use bevy::{
-    color::palettes::css::ANTIQUE_WHITE,
-    color::palettes::css::GRAY,
-    color::palettes::css::BROWN,
-    prelude::*
+    color::palettes::css::{ANTIQUE_WHITE, BROWN, GRAY}, ecs::error::info, prelude::*
 };
 
 pub struct UIPlugin;
 
 const BUILDING_BAR_WIDTH_PCT: f32 = 70.0;
 const BUILDING_BAR_HEIGHT_PCT: f32 = 12.0;
-const BUILDING_SLOTS: i64 = 10;
 const BUILDING_TILE_SIZE: i64 = 64;
 
 const RIGHT_BAR_WIDTH_PCT: f32 = 20.0;
 
-// struct BuildingType{
-
-// }
+#[derive(Component, Clone)]
+pub struct UIBuilding{
+    building_name: String,
+    sprite_path: String,
+    // size: 
+}
 
 
 impl Plugin for UIPlugin {
@@ -39,7 +38,21 @@ impl Plugin for UIPlugin {
     }
 }
 
-fn startup(mut commands: Commands) {
+fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // i tried really hard to abstract this into a .ron file for way too long but failed horribly. hence what is currently here
+    let buildings = [
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+        UIBuilding{building_name: String::from("placeholder"), sprite_path: String::from(r"buildings\building_placeholder.png")},
+    ];
+
     // spawn the bottom bar with factory draggables
     commands.spawn((
         Node {
@@ -56,14 +69,16 @@ fn startup(mut commands: Commands) {
         },
         BackgroundColor(ANTIQUE_WHITE.into()),
     )).with_children(|parent|{
-        for _ in 0..BUILDING_SLOTS {
+        for building in &buildings {
             parent.spawn((
                 Node {
                     width: px(BUILDING_TILE_SIZE),
                     height: px(BUILDING_TILE_SIZE),
                     ..default()
                 },
-                BackgroundColor(GRAY.into())
+                ImageNode::new(asset_server.load(&building.sprite_path)),
+                BackgroundColor(GRAY.into()),
+                building.clone()
             ));
         }
     });
@@ -83,5 +98,6 @@ fn startup(mut commands: Commands) {
             ..default()
         },
         BackgroundColor(BROWN.into()),
+        ZIndex(-1),
     ));
 }
