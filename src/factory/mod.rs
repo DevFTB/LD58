@@ -4,7 +4,7 @@ use bevy::{
 };
 use bevy::app::Update;
 use crate::factory::logical::pass_data;
-use crate::factory::physical::{connect_links, connect_physical_inputs, connect_physical_outputs, establish_logical_links};
+use crate::factory::physical::{connect_links,  connect_physical_links_to_data, establish_logical_links};
 
 pub mod logical;
 pub mod physical;
@@ -15,7 +15,7 @@ impl Plugin for FactoryPlugin {
         app.add_systems(Update, pass_data);
         app.add_systems(
             PostUpdate,
-            (connect_physical_inputs, connect_physical_outputs, connect_links, establish_logical_links).chain(),
+            (connect_physical_links_to_data, connect_links, establish_logical_links).chain(),
         );
     }
 }

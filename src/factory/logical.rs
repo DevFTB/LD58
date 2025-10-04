@@ -38,12 +38,16 @@ pub struct Dataset {
     // Maps each data type present in the packet to a set of its attributes.
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
 }
-#[derive(Component, Deref)]
+#[derive(Component)]
 #[require(DataBuffer)]
-pub struct DataInput(Direction);
+pub struct DataSink {
+    pub(crate) input_direction: Direction,
+}
 
-#[derive(Component, Deref)]
-pub struct DataOutput(Direction);
+#[derive(Component)]
+pub struct DataSource {
+    pub(crate) output_direction: Direction,
+}
 
 #[derive(Component, Default)]
 pub struct DataBuffer {
@@ -63,7 +67,7 @@ impl Source {
         (
             position,
             Source { packet, rate: 1. },
-            DataOutput(direction),
+            DataSource { output_direction: direction },
             GridSprite(Color::linear_rgba(0., 1., 0., 1.)),
         )
     }
@@ -79,7 +83,7 @@ impl Sink {
         (
             position,
             Sink { packet },
-            DataInput(direction),
+            DataSink { input_direction: direction },
             DataBuffer{shape: None, value: 0.},
             GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
         )
@@ -89,14 +93,14 @@ impl Sink {
 #[derive(Component, Debug)]
 pub struct LogicalLink {
     pub links: Vec<Entity>,
-    pub(crate) output_entity: Entity,
-    pub(crate) input_entity: Entity,
+    pub(crate) source: Entity,
+    pub(crate) sink: Entity,
     pub throughput: f32,
 }
 
-pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataInput>>, data_outputs: Query<&Source, With<DataOutput>>, time: Res<Time>) {
+pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataSink>>, data_outputs: Query<&Source, With<DataSource>>, time: Res<Time>) {
    for (mut buffer, link) in data_inputs {
-        let source= data_outputs.get(link.output_entity).unwrap();
+        let source= data_outputs.get(link.source).unwrap();
         if let Some(shape) = &buffer.shape {
             if source.packet != *shape {
                 buffer.shape = Some(source.packet.clone());

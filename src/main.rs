@@ -42,8 +42,23 @@ fn startup(mut commands: Commands) {
         x: 3,
         y: 1,
     })));
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+        x: 3,
+        y: 2,
+    })));
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+        x: 3,
+        y: 3,
+    })));
     commands.spawn(Sink::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 4, y: 1 }),
+        GridPosition(I8Vec2 { x: 4, y: 2 }),
+        Direction::Left,
+        Dataset {
+            contents: HashMap::new(),
+        },
+    ));
+    commands.spawn(Sink::get_spawn_bundle(
+        GridPosition(I8Vec2 { x: 3, y: 4 }),
         Direction::Left,
         Dataset {
             contents: HashMap::new(),

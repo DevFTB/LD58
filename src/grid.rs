@@ -24,7 +24,7 @@ use bevy::{
 const GRID_SHADER_ASSET_PATH: &str = "shaders/grid_shader.wgsl";
 pub struct GridPlugin;
 
-#[derive(Component, Deref, PartialEq, Eq, Hash)]
+#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone)]
 #[require(Transform)]
 pub struct GridPosition(pub I8Vec2);
 
