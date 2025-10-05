@@ -1,18 +1,13 @@
-use crate::grid::{Direction, GridPosition, GridSprite};
-use bevy::prelude::{Deref, Query, Res, With};
+use crate::grid::Direction;
+use bevy::prelude::{DetectChanges, Query, Ref, Res};
+use bevy::sprite::Text2d;
+use bevy::time::Time;
 use bevy::{
-    color::Color,
-    ecs::{bundle::Bundle, component::Component, entity::Entity},
+    ecs::{component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
-use bevy::time::Time;
-
-#[derive(Component, Default, Debug)]
-pub struct FactoryTile;
-
-#[derive(Component, Default, Debug)]
-#[require(FactoryTile)]
-pub struct Locked;
+use core::fmt;
+use std::fmt::Write;
 
 // The fundamental types of data
 #[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -21,6 +16,17 @@ pub enum BasicDataType {
     Economic,    // B
     Behavioural, // C
     Telemetry,   // D
+}
+
+impl BasicDataType {
+    pub(crate) fn to_shorthand(&self) -> &str {
+        match self {
+            BasicDataType::Biometric => "A",
+            BasicDataType::Economic => "B",
+            BasicDataType::Behavioural => "C",
+            BasicDataType::Telemetry => "D",
+        }
+    }
 }
 
 // Attributes that modify a data stream
@@ -32,81 +38,154 @@ pub enum DataAttribute {
     Illegal,
 }
 
+impl DataAttribute {
+    pub(crate) fn to_shorthand(&self) -> &str {
+        match self {
+            DataAttribute::Aggregated => "+",
+            DataAttribute::DeIdentified => "-",
+            DataAttribute::Cleaned => "*",
+            DataAttribute::Illegal => "$",
+        }
+    }
+}
+
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct Dataset {
     // The core of the data packet.
     // Maps each data type present in the packet to a set of its attributes.
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
 }
-#[derive(Component, Deref)]
-#[require(DataBuffer)]
-pub struct DataInput(Direction);
 
-#[derive(Component, Deref)]
-pub struct DataOutput(Direction);
+impl Dataset {
+    pub fn with_attribute(mut self, attr: DataAttribute) -> Dataset {
+        for (_, set) in self.contents.iter_mut() {
+            set.insert(attr);
+        }
 
-#[derive(Component, Default)]
-pub struct DataBuffer {
-    shape: Option<Dataset>,
-    value: f32,
-}
-
-// Component for entities that can be connected (inputs/outputs of machines)
-#[derive(Component)]
-pub struct Source {
-    packet: Dataset,
-    rate: f32,
-}
-
-impl Source {
-    pub fn get_spawn_bundle(position: GridPosition, direction: Direction, packet: Dataset, ) -> impl Bundle {
-        (
-            position,
-            Source { packet, rate: 1. },
-            DataOutput(direction),
-            GridSprite(Color::linear_rgba(0., 1., 0., 1.)),
-        )
+        self
     }
 }
-
 #[derive(Component)]
-pub struct Sink {
-    packet: Dataset,
+pub struct DataSink {
+    pub direction: Direction,
+    pub buffer: DataBuffer,
 }
 
-impl Sink {
-    pub fn get_spawn_bundle(position: GridPosition, direction: Direction, packet: Dataset) -> impl Bundle {
-        (
-            position,
-            Sink { packet },
-            DataInput(direction),
-            DataBuffer{shape: None, value: 0.},
-            GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-        )
+#[derive(Component)]
+pub struct DataSource {
+    pub(crate) direction: Direction,
+    pub(crate) throughput: f32,
+    pub(crate) buffer: DataBuffer,
+    pub(crate) limited: bool,
+}
+
+#[derive(Default, Debug)]
+pub struct DataBuffer {
+    pub(crate) shape: Option<Dataset>,
+    pub(crate) value: f32,
+}
+impl fmt::Display for DataBuffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let type_string = self.shape.as_ref().map_or(String::from("None"), |shape| {
+            shape
+                .contents
+                .iter()
+                .flat_map(|(k, v)| {
+                    [
+                        k.to_shorthand().to_string(),
+                        v.iter()
+                            .map(|attr| attr.to_shorthand())
+                            .collect::<Vec<_>>()
+                            .join("")
+                            .to_string(),
+                    ]
+                })
+                .collect::<Vec<_>>()
+                .join("")
+                .to_string()
+        });
+        write!(f, "{}: {}", type_string, self.value.round())
+    }
+}
+impl DataBuffer {
+    pub(crate) fn set_shape(&mut self, p0: Option<&Dataset>) {
+        let are_different = if let (Some(s1), Some(s2)) = (self.shape.as_ref(), p0) {
+            // Case 1: Both are Some. Compare their values by dereferencing.
+            *s1 != *s2
+        } else {
+            // Case 2: One is Some and the other is None.
+            // `is_some()` will be different (true vs false), so they are not equal.
+            // If both are None, `is_some()` is the same (false vs false), so they are equal.
+            self.shape.is_some() != p0.is_some()
+        };
+
+        if are_different {
+            println!("{:?} != {:?}", self.shape, &p0);
+            self.shape = p0.cloned();
+            self.value = 0.;
+        }
+    }
+
+    pub(crate) fn add(&mut self, dataset: &Dataset, amount: f32) {
+        self.set_shape(Some(dataset));
+
+        self.value += amount;
+    }
+    pub(crate) fn remove(&mut self, amount: f32) {
+        self.value = (self.value - amount).min(0.);
     }
 }
 
 #[derive(Component, Debug)]
 pub struct LogicalLink {
     pub links: Vec<Entity>,
-    pub(crate) output_entity: Entity,
-    pub(crate) input_entity: Entity,
+    pub(crate) source: Entity,
+    pub(crate) sink: Entity,
     pub throughput: f32,
 }
-
-pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataInput>>, data_outputs: Query<&Source, With<DataOutput>>, time: Res<Time>) {
-   for (mut buffer, link) in data_inputs {
-        let source= data_outputs.get(link.output_entity).unwrap();
-        if let Some(shape) = &buffer.shape {
-            if source.packet != *shape {
-                buffer.shape = Some(source.packet.clone());
-                buffer.value = 0.;
-            }
-        } else {
-            buffer.shape = Some(source.packet.clone());
-            buffer.value = 0.;
+pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
+    for link in query {
+        if link.is_added() {
+            println!("Added LogicalLink {:?}", link);
         }
+    }
+}
 
-        buffer.value += source.rate * time.delta_secs();
-   }
+pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
+    for (entity, sink, mut text) in query {
+        if sink.is_changed() {
+            // println!(
+            //     "Sink {:?} storing {:?} of amount {:?}",
+            //     entity, sink.buffer.shape, sink.buffer.value
+            //
+            // );
+            text.0 = format!("{}", sink.buffer);
+        }
+    }
+}
+
+pub fn pass_data_system(
+    mut sources: Query<&mut DataSource>,
+    sinks: Query<(&mut DataSink, &LogicalLink)>,
+    time: Res<Time>,
+) {
+    for (mut sink, link) in sinks {
+        let mut source = sources.get_mut(link.source).unwrap();
+        pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+    }
+}
+pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
+    sink.buffer.set_shape(source.buffer.shape.as_ref());
+    let packet = if source.limited {
+        source.buffer.value.min(source.throughput * secs)
+    } else {
+        source.throughput
+    };
+    sink.buffer.value += packet;
+    source.buffer.value -= packet;
+}
+pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, amount: f32) {
+    let amount = amount.min(sink.buffer.value);
+    source.buffer.value += amount;
+    sink.buffer.value -= amount;
 }
