@@ -45,11 +45,11 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    test::spawn_splitter_test(&mut commands);
-    test::spawn_delinker_test(&mut commands);
-    test::spawn_combiner_test(&mut commands);
-    test::spawn_trunking_test(&mut commands);
-    test::spawn_sized_sink_test(&mut commands);
+    // test::spawn_splitter_test(&mut commands);
+    // test::spawn_delinker_test(&mut commands);
+    // test::spawn_combiner_test(&mut commands);
+    // test::spawn_trunking_test(&mut commands);
+    // test::spawn_sized_sink_test(&mut commands);
 }
 
 pub fn remove_physical_link_on_right_click(

@@ -417,7 +417,7 @@ fn spawn_source(
     let mut entity = commands.spawn((
         source,
         ZIndex(3),
-        Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
+        Text2d::new(format!("{}: {throughput}", dataset)),
     ));
 
     if let Some(actual_faction) = faction {
