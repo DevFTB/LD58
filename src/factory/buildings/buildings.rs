@@ -1,22 +1,38 @@
 use bevy::prelude::*;
 
-
 #[derive(Clone)]
 pub enum BuildingSpecificData {
-    Collector { collection_rate: f32, collector_type: String },
-    Aggregator { loss_rate: f32, speed: f32 },
-    Link { throughput: f32 },
-    Splitter { outputs: i32, loss_rate: f32 },
-    Combiner { inputs: i32, loss_rate: f32 },
-    Decoupler { outputs: i32, loss_rate: f32 }
+    Collector {
+        collection_rate: f32,
+        collector_type: String,
+    },
+    Aggregator {
+        loss_rate: f32,
+        speed: f32,
+    },
+    Link {
+        throughput: f32,
+    },
+    Splitter {
+        outputs: i32,
+        loss_rate: f32,
+    },
+    Combiner {
+        inputs: i32,
+        loss_rate: f32,
+    },
+    Decoupler {
+        outputs: i32,
+        loss_rate: f32,
+    },
 }
 
 #[derive(Clone)]
 pub struct BuildingData {
     // Common UI fields
     pub sprite_path: String,
-    pub grid_width: i8,
-    pub grid_height: i8,
+    pub grid_width: i64,
+    pub grid_height: i64,
     pub cost: i32,
     pub name: String,
     // Specific gameplay attributes
