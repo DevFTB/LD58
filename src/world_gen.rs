@@ -61,23 +61,23 @@ pub struct Sink {
 }
 
 // might need to change min/max logic a bit if not even lol
-const WORLD_SIZE: i64 = 500;
+const WORLD_SIZE: i64 = 250;
 const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
 const WORLD_MAX: i64 = (WORLD_SIZE / 2) - 1;
 
-const STARTING_AREA_SIZE: i64 = 20;
+const STARTING_AREA_SIZE: i64 = 8;
 const INITIAL_FACTION_SINKS: [(I64Vec2, Faction); 4] = [
-    (I64Vec2::new(0, 7), Faction::Government),
-    (I64Vec2::new(7, 0), Faction::Corporate),
-    (I64Vec2::new(0, -7), Faction::Criminal),
-    (I64Vec2::new(-7, 0), Faction::Academia),
+    (I64Vec2::new(0, 4), Faction::Government),
+    (I64Vec2::new(4, 0), Faction::Corporate),
+    (I64Vec2::new(0, -4), Faction::Criminal),
+    (I64Vec2::new(-4, 0), Faction::Academia),
 ];
 
 // basic sources per 1000 unlocked tiles
 const BASIC_SOURCE_DENSITY: i32 = 10;
 const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
-const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
+const FACTION_CLUSTER_THRESHOLD: f32 = 0.30;
 // check to stop broken clusters from spawning because of start area cutting through them
 const MIN_CLUSTER_SIZE: i32 = 6;
 
@@ -518,15 +518,15 @@ fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {
 }
 
 fn get_locked_tile_noise(vec: I64Vec2, offset: f32) -> f32 {
-    const SIMPLEX_FREQUENCY: f32 = 0.035;
+    const SIMPLEX_FREQUENCY: f32 = 0.8;
     const BIAS_EXPONENT: f32 = 2.0;
     let normalised_simplex_noise =
         (fbm_simplex_2d_seeded(vec.as_vec2() * SIMPLEX_FREQUENCY, 2, 2., 0.1, 48.) + 1.0) / 2.0;
 
-    const FREQUENCY: f32 = 0.035;
+    const FREQUENCY: f32 = 0.08;
     return worley_2d(
         (vec.as_vec2() + Vec2::new(offset, offset)) * FREQUENCY,
         0.55,
     )
-    .x + (0.2 * normalised_simplex_noise.powf(BIAS_EXPONENT));
+    .x + (0.1 * normalised_simplex_noise.powf(BIAS_EXPONENT));
 }
