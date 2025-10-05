@@ -160,7 +160,9 @@ pub fn spawn_splitter_test(commands: &mut Commands) {
     commands.spawn(Splitter::get_bundle(
         GridPosition(I64Vec2 { x: 3, y: 1 }),
         50.,
-        Direction::Right, /* f32 */ /* grid::Direction */
+        Direction::Right, /* f32 */
+        /* grid::Direction */
+        2,
     ));
     commands.spawn(PhysicalLink::get_bundle(GridPosition(I64Vec2 {
         x: 4,

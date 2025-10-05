@@ -1,6 +1,6 @@
-use bevy_rand::prelude::*;
-use bevy_prng::WyRand;
 extern crate core;
+use bevy_prng::WyRand;
+use bevy_rand::prelude::*;
 
 use crate::{
     assets::AssetPlugin,
@@ -9,8 +9,8 @@ use crate::{
     factions::FactionsPlugin,
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
-    world_gen::{WorldGenPlugin},
     ui::UIPlugin,
+    world_gen::WorldGenPlugin,
 };
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -24,15 +24,6 @@ mod grid;
 mod test;
 mod ui;
 mod world_gen;
-
-#[derive(Component, Default, Debug, Clone)]
-pub enum Faction {
-    Government,
-    #[default]
-    Corporate,
-    Academia,
-    Criminal
-}
 
 fn main() {
     App::new()

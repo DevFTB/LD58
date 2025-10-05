@@ -1,9 +1,9 @@
-use crate::factory::buildings::Tiles;
+use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{pass_data_internal, DataBuffer, DataSink, DataSource};
 use crate::grid::{Direction, GridPosition, GridSprite};
 use bevy::color::Color;
-use bevy::ecs::related;
-use bevy::prelude::{Bundle, Component, Query, Res, Time};
+use bevy::ecs::relationship::RelatedSpawner;
+use bevy::prelude::{Bundle, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
 
@@ -17,40 +17,36 @@ impl Splitter {
         position: GridPosition,
         throughput: f32,
         source_dir: Direction,
+        source_count: i8,
     ) -> impl Bundle {
         (
             Splitter { throughput },
             position,
-            related!(Tiles[
-                (
-                    DataSink {
-                        direction: source_dir.opposite(),
-                        buffer: DataBuffer::default(),
-                    },
-                    position,
-                    GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 1.0)),
-                    Text2d::default(),
-                ),
-                (
-                    DataSource {
-                        direction: source_dir,
-                        throughput,
-                        limited: true,
-                        buffer: DataBuffer::default()
-                    },
-                    position
-                ),
-                (
-                    GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 1.0)),
-                    DataSource {
-                        direction: source_dir,
-                        throughput,
-                        limited: true,
-                        buffer: DataBuffer::default()
-                    },
-                    position.offset(Direction::Up, 1)
-                )
-            ]),
+            Tiles::spawn(SpawnWith(
+                move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
+                    for i in 0..source_count {
+                        spawner.spawn((
+                            GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 1.0)),
+                            DataSource {
+                                direction: source_dir,
+                                throughput,
+                                limited: true,
+                                buffer: DataBuffer::default(),
+                            },
+                            position.offset(Direction::Up, i as i64),
+                        ));
+                    }
+                    spawner.spawn((
+                        DataSink {
+                            direction: source_dir.opposite(),
+                            buffer: DataBuffer::default(),
+                        },
+                        position,
+                        GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 1.0)),
+                        Text2d::default(),
+                    ));
+                },
+            )),
         )
     }
 }
