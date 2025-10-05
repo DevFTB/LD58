@@ -1,16 +1,16 @@
-use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
-use bevy::window::PrimaryWindow;
+use crate::factory::buildings::aggregator::Aggregator;
+use crate::factory::buildings::{SinkBuilding, SourceBuilding};
+use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
+use crate::grid::Direction;
 use crate::{
     camera::GameCameraPlugin,
-    factory::{
-        FactoryPlugin,
-        logical::{Dataset, Sink, Source},
-        physical::PhysicalLink,
-    },
+    factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
-    ui::{UIPlugin}
+    ui::UIPlugin,
 };
-use crate::grid::Direction;
+use bevy::platform::collections::HashSet;
+use bevy::window::PrimaryWindow;
+use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
 
 mod camera;
 mod factory;
@@ -32,13 +32,25 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    commands.spawn(Source::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 1, y: 1 }),
+    commands.spawn(SourceBuilding::get_spawn_bundle(
+        GridPosition(I8Vec2 { x: 0, y: 1 }),
         Direction::Right,
         Dataset {
-            contents: HashMap::new(),
-        }
+            contents: HashMap::from([(
+                BasicDataType::Behavioural,
+                HashSet::<DataAttribute>::new(),
+            )]),
+        },
     ));
+    commands.spawn(Aggregator::get_bundle(
+        GridPosition(I8Vec2 { x: 1, y: 1 }),
+        1.0,
+        Direction::Right,
+    ));
+    // commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+    //     x: 1,
+    //     y: 1,
+    // })));
     commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
         x: 2,
         y: 1,
@@ -55,19 +67,15 @@ fn startup(mut commands: Commands) {
         x: 3,
         y: 3,
     })));
-    commands.spawn(Sink::get_spawn_bundle(
+    commands.spawn(SinkBuilding::get_spawn_bundle(
         GridPosition(I8Vec2 { x: 4, y: 2 }),
         Direction::Left,
-        Dataset {
-            contents: HashMap::new(),
-        },
+        None,
     ));
-    commands.spawn(Sink::get_spawn_bundle(
+    commands.spawn(SinkBuilding::get_spawn_bundle(
         GridPosition(I8Vec2 { x: 3, y: 4 }),
         Direction::Left,
-        Dataset {
-            contents: HashMap::new(),
-        },
+        None,
     ));
 }
 
@@ -106,7 +114,10 @@ pub fn remove_physical_link_on_right_click(
     };
 
     // Find a PhysicalLink occupying this grid cell
-    if let Some((entity, _)) = links.iter().find(|(_, gp)| **gp == grid.world_to_grid(world_pos)) {
+    if let Some((entity, _)) = links
+        .iter()
+        .find(|(_, gp)| **gp == grid.world_to_grid(world_pos))
+    {
         // Option A: fully despawn the entity (removes sprite, etc.)
         commands.entity(entity).remove::<PhysicalLink>();
         commands.entity(entity).despawn();

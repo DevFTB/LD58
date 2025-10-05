@@ -32,44 +32,30 @@ impl PhysicalLink {
     pub fn get_spawn_bundle(position: GridPosition) -> impl Bundle {
         (
             position,
-            PhysicalLink {
-                throughput: 234.,
-            },
+            PhysicalLink { throughput: 234. },
             GridSprite(Color::linear_rgba(0.0, 0.0, 1.0, 1.0)),
         )
     }
 }
 
-
 pub fn connect_physical_links_to_data(
     query: Query<(Entity, &GridPosition), Added<PhysicalLink>>,
     mut commands: Commands,
-    outputs: Query<
-        (
-            Entity,
-            &GridPosition,
-            &DataSource
-        ),
-        Without<PhysicalSource>,
-    >,
-    inputs: Query<
-        (
-            Entity,
-            &GridPosition,
-            &DataSink
-        ),
-        Without<PhysicalSink>,
-    >,
+    outputs: Query<(Entity, &GridPosition, &DataSource), Without<PhysicalSource>>,
+    inputs: Query<(Entity, &GridPosition, &DataSink), Without<PhysicalSink>>,
 ) {
     for (entity, new_grid_position) in query.iter() {
         let neighbours = new_grid_position.neighbours();
         // Determine directionality in input
-        let candidate = outputs.iter()
-            .filter_map(|(input_entity,grid_pos, output)|
-                neighbours.iter()
+        let candidate = outputs
+            .iter()
+            .filter_map(|(input_entity, grid_pos, output)| {
+                neighbours
+                    .iter()
                     .find(|(dir, pos)| grid_pos == pos && output.output_direction == dir.opposite())
                     .map(|(dir, _)| (input_entity, dir))
-            ).next();
+            })
+            .next();
 
         if let Some((neighbour_entity, dir)) = candidate {
             insert_physical_connection(&mut commands, neighbour_entity, entity, *dir);
@@ -79,15 +65,58 @@ pub fn connect_physical_links_to_data(
     for (entity, new_grid_position) in query.iter() {
         let neighbours = new_grid_position.neighbours();
         // Determine directionality in input
-        let candidate = inputs.iter()
-            .filter_map(|(input_entity,grid_pos,input)|
-                neighbours.iter()
+        let candidate = inputs
+            .iter()
+            .filter_map(|(input_entity, grid_pos, input)| {
+                neighbours
+                    .iter()
                     .find(|(dir, pos)| grid_pos == pos && input.input_direction == dir.opposite())
                     .map(|(dir, _)| (input_entity, dir))
-            ).next();
+            })
+            .next();
 
         if let Some((neighbour_entity, dir)) = candidate {
             insert_physical_connection(&mut commands, entity, neighbour_entity, *dir);
+        }
+    }
+}
+
+pub fn connect_direct(
+    mut commands: Commands,
+    sources: Query<
+        (Entity, &GridPosition, &DataSource),
+        (Without<PhysicalSource>, Without<DataSink>),
+    >,
+    sinks: Query<(Entity, &GridPosition, &DataSink), (Without<PhysicalSink>, Without<DataSource>)>,
+    existing_links: Query<&LogicalLink>,
+) {
+    for (source_entity, source_pos, source) in sources.iter() {
+        // Check each sink to see if it's a neighbor
+        for (sink_entity, sink_pos, sink) in sinks.iter() {
+            // Skip if this sink already has a logical link
+            if existing_links.get(sink_entity).is_ok() {
+                continue;
+            }
+
+            // Check if they're neighbors
+            let neighbors = source_pos.neighbours();
+            if let Some((dir, _)) = neighbors.iter().find(|(_, pos)| pos == sink_pos) {
+                // Verify direction compatibility:
+                // source's output_direction should match the direction to the sink
+                // sink's input_direction should match the opposite direction (from sink to source)
+                if source.output_direction == *dir && sink.input_direction == dir.opposite() {
+                    // Create a direct logical link with no intermediate physical links
+                    let link = LogicalLink {
+                        links: Vec::new(),             // No physical links in between
+                        throughput: source.throughput, // Use source throughput as there's no bottleneck
+                        source: source_entity,
+                        sink: sink_entity,
+                    };
+
+                    insert_physical_connection(&mut commands, source_entity, sink_entity, *dir);
+                    commands.entity(sink_entity).insert(link);
+                }
+            }
         }
     }
 }
@@ -96,7 +125,15 @@ pub fn connect_links(
     mut commands: Commands,
     new_links: Query<Entity, Added<PhysicalLink>>,
     // Merge the info we need into one query to avoid repeatedly looking up in multiple queries.
-    links: Query<(Entity, &GridPosition, Option<&PhysicalSink>, Option<&PhysicalSource>), With<PhysicalLink>>,
+    links: Query<
+        (
+            Entity,
+            &GridPosition,
+            Option<&PhysicalSink>,
+            Option<&PhysicalSource>,
+        ),
+        With<PhysicalLink>,
+    >,
 ) {
     // Deterministic pass order is often helpful for debugging.
     let mut to_process: Vec<Entity> = new_links.iter().collect();
@@ -138,7 +175,7 @@ pub fn connect_links(
             if nbr_out.is_none() && me_in.is_none() && !would_create_cycle(me, nbr, &links) {
                 // If you have Direction::opposite(), prefer using it. Otherwise compute reverse dir as needed.
                 let back_dir = dir_to_nbr.opposite();
-                insert_physical_connection(&mut commands, nbr, me,back_dir);
+                insert_physical_connection(&mut commands, nbr, me, back_dir);
             }
         }
     }
@@ -149,7 +186,15 @@ pub fn connect_links(
 fn would_create_cycle(
     from: Entity,
     to: Entity,
-    links: &Query<(Entity, &GridPosition, Option<&PhysicalSink>, Option<&PhysicalSource>), With<PhysicalLink>>,
+    links: &Query<
+        (
+            Entity,
+            &GridPosition,
+            Option<&PhysicalSink>,
+            Option<&PhysicalSource>,
+        ),
+        With<PhysicalLink>,
+    >,
 ) -> bool {
     // Walk from `to` following outputs; if we can reach `from`, adding `from -> to` closes a cycle.
     let mut current = to;
@@ -171,11 +216,11 @@ fn would_create_cycle(
 fn insert_physical_connection(
     commands: &mut Commands,
     source: Entity,
-    target: Entity,
+    sink: Entity,
     dir: Direction,
 ) {
-    commands.entity(source).insert(PhysicalSource(target, dir));
-    commands.entity(target).insert(PhysicalSink(source, dir));
+    commands.entity(source).insert(PhysicalSource(sink, dir));
+    commands.entity(sink).insert(PhysicalSink(source, dir));
 }
 use bevy::prelude::*;
 
@@ -183,7 +228,7 @@ pub fn on_physical_link_removed(
     trigger: On<Remove, PhysicalLink>,
     mut commands: Commands,
     q_sources: Query<(Entity, &PhysicalSource)>,
-    q_sinks:   Query<(Entity, &PhysicalSink)>,
+    q_sinks: Query<(Entity, &PhysicalSink)>,
     q_logicals: Query<(Entity, &LogicalLink)>, // lives on sink endpoints in your setup
 ) {
     let broken = trigger.entity;
@@ -226,16 +271,24 @@ pub fn on_physical_link_removed(
 
 pub fn establish_logical_links(
     mut commands: Commands,
-    query: Query<Entity, (With<PhysicalSink>, With<PhysicalSource>, Added<PhysicalLink>)>,
+    query: Query<
+        Entity,
+        (
+            With<PhysicalSink>,
+            With<PhysicalSource>,
+            Added<PhysicalLink>,
+        ),
+    >,
     inputs: Query<&PhysicalSink>,
     outputs: Query<&PhysicalSource>,
-    links: Query<&PhysicalLink>
+    links: Query<&PhysicalLink>,
 ) {
-
     let mut dirty = HashSet::<Entity>::new();
 
     for entity in query.iter() {
-        if dirty.contains(&entity) { continue;}
+        if dirty.contains(&entity) {
+            continue;
+        }
         if let (Ok(PhysicalSink(next_input, _)), Ok(PhysicalSource(next_output, _))) =
             (inputs.get(entity), outputs.get(entity))
         {
@@ -244,7 +297,7 @@ pub fn establish_logical_links(
             let (sink_entity, mut downstream_links) = walk_chain(&outputs, Some(*next_output));
 
             let (Some(sink_entity), Some(source_entity)) = (sink_entity, source_entity) else {
-                continue
+                continue;
             };
 
             let mut full_links = Vec::<Entity>::new();
@@ -252,7 +305,10 @@ pub fn establish_logical_links(
             full_links.push(entity);
             full_links.append(&mut downstream_links);
 
-            let throughput = full_links.iter().map(|e| links.get(*e).unwrap().throughput).reduce(f32::min)
+            let throughput = full_links
+                .iter()
+                .map(|e| links.get(*e).unwrap().throughput)
+                .reduce(f32::min)
                 .unwrap_or(0.);
 
             for link in full_links.iter() {
@@ -260,32 +316,40 @@ pub fn establish_logical_links(
                 dirty.insert(link.clone());
             }
 
-            let link = LogicalLink { links: full_links, throughput, source: source_entity, sink: sink_entity};
-            commands
-                .entity(sink_entity)
-                .insert(link);
-
+            let link = LogicalLink {
+                links: full_links,
+                throughput,
+                source: source_entity,
+                sink: sink_entity,
+            };
+            commands.entity(sink_entity).insert(link);
         }
     }
 }
 trait NextHop {
-fn next(&self) -> Entity;
+    fn next(&self) -> Entity;
 }
 impl NextHop for PhysicalSink {
-    fn next(&self) -> Entity { self.0 }
+    fn next(&self) -> Entity {
+        self.0
+    }
 }
 impl NextHop for PhysicalSource {
-    fn next(&self) -> Entity { self.0 }
+    fn next(&self) -> Entity {
+        self.0
+    }
 }
 
 fn walk_chain<C: NextHop + bevy::prelude::Component>(
     q: &Query<&C>,
     start: Option<Entity>,
 ) -> (Option<Entity>, Vec<Entity>) {
-    let Some(mut curr) = start else { return (None, Vec::new()) };
+    let Some(mut curr) = start else {
+        return (None, Vec::new());
+    };
 
-    let mut nodes = Vec::new();     // includes start and every hop we follow
-    let mut seen = HashSet::new();  // cycle guard
+    let mut nodes = Vec::new(); // includes start and every hop we follow
+    let mut seen = HashSet::new(); // cycle guard
 
     nodes.push(curr);
     seen.insert(curr);

@@ -161,14 +161,12 @@ fn get_mouse_world_position(
     camera_query: &Query<(&Camera, &GlobalTransform)>,
 ) -> Option<Vec3> {
     if let (Ok(window), Ok((camera, camera_transform))) = (windows.single(), camera_query.single())
+        && let Some(cursor_position) = window.cursor_position()
+        && let Ok(world_position) = camera.viewport_to_world(camera_transform, cursor_position)
     {
-        if let Some(cursor_position) = window.cursor_position() {
-            if let Ok(world_position) = camera.viewport_to_world(camera_transform, cursor_position)
-            {
-                return Some(world_position.origin);
-            }
-        }
+        return Some(world_position.origin);
     }
+
     None
 }
 
@@ -178,49 +176,46 @@ fn handle_building_click(
         (Entity, &Interaction, &UIBuilding),
         (Changed<Interaction>, With<UIBuilding>),
     >,
-    asset_server: Res<AssetServer>,
-    mut selected_building_type: ResMut<SelectedBuildingType>,
-    mut just_selected: ResMut<JustSelected>,
     selected_query: Query<Entity, With<SelectedBuilding>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     grid: Res<crate::grid::Grid>,
+    asset_server: Res<AssetServer>,
+    mut selected_building_type: ResMut<SelectedBuildingType>,
+    mut just_selected: ResMut<JustSelected>,
 ) {
     for (_entity, interaction, building) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                // Remove any existing selected building
-                for selected_entity in selected_query.iter() {
-                    commands.entity(selected_entity).despawn();
-                }
-                // Set the selected building type
-                selected_building_type.0 = Some(building.building_type);
-                just_selected.0 = true;
-
-                // Get initial mouse position
-                let initial_position =
-                    get_mouse_world_position(&windows, &camera_query).unwrap_or(Vec3::ZERO);
-
-                // Spawn a dragged building sprite at mouse position
-                let data = building.building_type.data();
-                let sprite_size = Vec2::new(
-                    data.grid_width as f32 * grid.scale,
-                    data.grid_height as f32 * grid.scale,
-                );
-
-                commands.spawn((
-                    SelectedBuilding,
-                    BuildingRotation(0),
-                    Sprite {
-                        image: asset_server.load(&data.sprite_path),
-                        custom_size: Some(sprite_size),
-                        ..default()
-                    },
-                    Transform::from_xyz(initial_position.x, initial_position.y, 100.0),
-                    ZIndex(10), // Ensure it renders above UI
-                ));
+        if *interaction == Interaction::Pressed {
+            // Remove any existing selected building
+            for selected_entity in selected_query.iter() {
+                commands.entity(selected_entity).despawn();
             }
-            _ => {}
+            // Set the selected building type
+            selected_building_type.0 = Some(building.building_type);
+            just_selected.0 = true;
+
+            // Get initial mouse position
+            let initial_position =
+                get_mouse_world_position(&windows, &camera_query).unwrap_or(Vec3::ZERO);
+
+            // Spawn a dragged building sprite at mouse position
+            let data = building.building_type.data();
+            let sprite_size = Vec2::new(
+                data.grid_width as f32 * grid.scale,
+                data.grid_height as f32 * grid.scale,
+            );
+
+            commands.spawn((
+                SelectedBuilding,
+                BuildingRotation(0),
+                Sprite {
+                    image: asset_server.load(&data.sprite_path),
+                    custom_size: Some(sprite_size),
+                    ..default()
+                },
+                Transform::from_xyz(initial_position.x, initial_position.y, 100.0),
+                ZIndex(10), // Ensure it renders above UI
+            ));
         }
     }
 }
@@ -236,50 +231,50 @@ fn update_selected_building_position(
     grid: Res<crate::grid::Grid>,
     world_map: Res<WorldMap>,
 ) {
-    if let Some(world_position) = get_mouse_world_position(&windows, &camera_query) {
-        if let Some(building_type) = &selected_building_type.0 {
-            let data = building_type.data();
+    if let Some(world_position) = get_mouse_world_position(&windows, &camera_query)
+        && let Some(building_type) = &selected_building_type.0
+    {
+        let data = building_type.data();
 
-            for (mut transform, mut sprite, rotation) in selected_query.iter_mut() {
-                // Convert mouse position to grid coordinates - this is our anchor cell
-                let snapped_grid_pos = grid.world_to_grid(world_position.xy());
+        for (mut transform, mut sprite, rotation) in selected_query.iter_mut() {
+            // Convert mouse position to grid coordinates - this is our anchor cell
+            let snapped_grid_pos = grid.world_to_grid(world_position.xy());
 
-                // Get the world center of the anchor cell
-                let anchor_cell_center = grid.grid_to_world_center(&snapped_grid_pos);
+            // Get the world center of the anchor cell
+            let anchor_cell_center = grid.grid_to_world_center(&snapped_grid_pos);
 
-                // Calculate offset from anchor to sprite center based on rotation
-                // For a 3x1 building, the center is (width-1)/2 cells away from anchor
-                let offset = ((data.grid_width - 1) as f32 / 2.0) * grid.scale;
+            // Calculate offset from anchor to sprite center based on rotation
+            // For a 3x1 building, the center is (width-1)/2 cells away from anchor
+            let offset = ((data.grid_width - 1) as f32 / 2.0) * grid.scale;
 
-                let (sprite_center_x, sprite_center_y) = match rotation.0 % 4 {
-                    0 => (anchor_cell_center.x + offset, anchor_cell_center.y), // extends right
-                    1 => (anchor_cell_center.x, anchor_cell_center.y - offset), // extends down
-                    2 => (anchor_cell_center.x - offset, anchor_cell_center.y), // extends left
-                    3 => (anchor_cell_center.x, anchor_cell_center.y + offset), // extends up
-                    _ => unreachable!(),
-                };
+            let (sprite_center_x, sprite_center_y) = match rotation.0 % 4 {
+                0 => (anchor_cell_center.x + offset, anchor_cell_center.y), // extends right
+                1 => (anchor_cell_center.x, anchor_cell_center.y - offset), // extends down
+                2 => (anchor_cell_center.x - offset, anchor_cell_center.y), // extends left
+                3 => (anchor_cell_center.x, anchor_cell_center.y + offset), // extends up
+                _ => unreachable!(),
+            };
 
-                let snapped_position = Vec3::new(sprite_center_x, sprite_center_y, 100.0);
-                transform.translation = snapped_position;
+            let snapped_position = Vec3::new(sprite_center_x, sprite_center_y, 100.0);
+            transform.translation = snapped_position;
 
-                // Check if positions are occupied using rotated cell calculation
-                let occupied_positions = calculate_occupied_cells_rotated(
-                    *snapped_grid_pos,
-                    data.grid_width,
-                    data.grid_height,
-                    rotation.0,
-                )
-                .into_iter()
-                .map(GridPosition)
-                .collect::<Vec<_>>();
+            // Check if positions are occupied using rotated cell calculation
+            let occupied_positions = calculate_occupied_cells_rotated(
+                *snapped_grid_pos,
+                data.grid_width,
+                data.grid_height,
+                rotation.0,
+            )
+            .into_iter()
+            .map(GridPosition)
+            .collect::<Vec<_>>();
 
-                if are_positions_free(&world_map, &occupied_positions) {
-                    // Valid placement - normal color
-                    sprite.color = Color::WHITE;
-                } else {
-                    // Invalid placement - tint red
-                    sprite.color = Color::srgb(1.0, 0.5, 0.5);
-                }
+            if are_positions_free(&world_map, &occupied_positions) {
+                // Valid placement - normal color
+                sprite.color = Color::WHITE;
+            } else {
+                // Invalid placement - tint red
+                sprite.color = Color::srgb(1.0, 0.5, 0.5);
             }
         }
     }
@@ -293,12 +288,12 @@ fn handle_building_rotate(
     >,
     selected_building_type: Res<SelectedBuildingType>,
 ) {
-    if key_input.just_pressed(KeyCode::KeyR) {
-        if let Some(_building_type) = &selected_building_type.0 {
-            for (_entity, mut building_transform, mut rotation) in &mut selected_query {
-                rotation.0 = (rotation.0 + 1) % 4;
-                building_transform.rotate_z(-std::f32::consts::FRAC_PI_2);
-            }
+    if key_input.just_pressed(KeyCode::KeyR)
+        && let Some(_building_type) = &selected_building_type.0
+    {
+        for (_entity, mut building_transform, mut rotation) in &mut selected_query {
+            rotation.0 = (rotation.0 + 1) % 4;
+            building_transform.rotate_z(-std::f32::consts::FRAC_PI_2);
         }
     }
 }

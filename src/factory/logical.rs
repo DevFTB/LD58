@@ -1,9 +1,8 @@
-use crate::grid::{Direction, GridPosition, GridSprite};
-use bevy::prelude::{Query, Res, With};
+use crate::grid::Direction;
+use bevy::prelude::{DetectChanges, Query, Ref, Res};
 use bevy::time::Time;
 use bevy::{
-    color::Color,
-    ecs::{bundle::Bundle, component::Component, entity::Entity},
+    ecs::{component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
 
@@ -38,55 +37,43 @@ pub struct Dataset {
     // Maps each data type present in the packet to a set of its attributes.
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
 }
+
+impl Dataset {
+    pub fn with_attribute(mut self, attr: DataAttribute) -> Dataset {
+        for (_, set) in self.contents.iter_mut() {
+            set.insert(attr);
+        }
+
+        self
+    }
+}
 #[derive(Component)]
-#[require(DataBuffer)]
 pub struct DataSink {
-    pub(crate) input_direction: Direction,
+    pub input_direction: Direction,
+    pub buffer: DataBuffer,
 }
 
 #[derive(Component)]
 pub struct DataSource {
     pub(crate) output_direction: Direction,
+    pub(crate) throughput: f32,
+    pub(crate) buffer: DataBuffer,
+    pub(crate) limited: bool,
 }
 
-#[derive(Component, Default)]
+#[derive(Default)]
 pub struct DataBuffer {
-    shape: Option<Dataset>,
-    value: f32,
+    pub(crate) shape: Option<Dataset>,
+    pub(crate) value: f32,
 }
 
-// Component for entities that can be connected (inputs/outputs of machines)
-#[derive(Component)]
-pub struct Source {
-    packet: Dataset,
-    rate: f32,
-}
-
-impl Source {
-    pub fn get_spawn_bundle(position: GridPosition, direction: Direction, packet: Dataset, ) -> impl Bundle {
-        (
-            position,
-            Source { packet, rate: 1. },
-            DataSource { output_direction: direction },
-            GridSprite(Color::linear_rgba(0., 1., 0., 1.)),
-        )
-    }
-}
-
-#[derive(Component)]
-pub struct Sink {
-    packet: Dataset,
-}
-
-impl Sink {
-    pub fn get_spawn_bundle(position: GridPosition, direction: Direction, packet: Dataset) -> impl Bundle {
-        (
-            position,
-            Sink { packet },
-            DataSink { input_direction: direction },
-            DataBuffer{shape: None, value: 0.},
-            GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-        )
+impl DataBuffer {
+    pub(crate) fn set_shape(&mut self, p0: &Option<Dataset>) {
+        if self.shape != *p0 {
+            println!("{:?} != {:?}", self.shape, &p0);
+            self.shape = p0.clone();
+            self.value = 0.;
+        }
     }
 }
 
@@ -97,20 +84,47 @@ pub struct LogicalLink {
     pub(crate) sink: Entity,
     pub throughput: f32,
 }
-
-pub fn pass_data(data_inputs: Query<(&mut DataBuffer, &LogicalLink), With<DataSink>>, data_outputs: Query<&Source, With<DataSource>>, time: Res<Time>) {
-   for (mut buffer, link) in data_inputs {
-        let source= data_outputs.get(link.source).unwrap();
-        if let Some(shape) = &buffer.shape {
-            if source.packet != *shape {
-                buffer.shape = Some(source.packet.clone());
-                buffer.value = 0.;
-            }
-        } else {
-            buffer.shape = Some(source.packet.clone());
-            buffer.value = 0.;
+pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
+    for link in query {
+        if link.is_added() {
+            println!("Added LogicalLink {:?}", link);
         }
+    }
+}
 
-        buffer.value += source.rate * time.delta_secs();
-   }
+pub fn debug_sinks(query: Query<(Entity, Ref<DataSink>)>) {
+    for (entity, sink) in query {
+        if sink.is_changed() {
+            println!(
+                "Sink {:?} storing {:?} of amount {:?}",
+                entity, sink.buffer.shape, sink.buffer.value
+            );
+        }
+    }
+}
+
+pub fn pass_data_system(
+    mut sources: Query<&mut DataSource>,
+    sinks: Query<(&mut DataSink, &LogicalLink)>,
+    time: Res<Time>,
+) {
+    for (mut sink, link) in sinks {
+        let mut source = sources.get_mut(link.source).unwrap();
+        pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+    }
+}
+pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
+    sink.buffer.set_shape(&source.buffer.shape);
+    let packet = if source.limited {
+        source.buffer.value.min(source.throughput * secs)
+    } else {
+        source.throughput
+    };
+    sink.buffer.value += packet;
+    source.buffer.value -= packet;
+}
+pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, rate: f32, secs: f32) {
+    let amount = rate * secs;
+    source.buffer.value += amount;
+    sink.buffer.value -= amount;
 }
