@@ -8,6 +8,8 @@ use bevy::sprite::Text2d;
 
 pub mod aggregator;
 pub mod buildings;
+pub(crate) mod combiner;
+pub mod delinker;
 pub(crate) mod splitter;
 
 #[derive(Component, Debug, Deref, DerefMut)]
@@ -21,7 +23,7 @@ pub struct Tile(Entity);
 #[derive(Component)]
 pub struct SourceBuilding;
 impl SourceBuilding {
-    pub fn get_spawn_bundle(
+    pub fn get_bundle(
         position: GridPosition,
         direction: Direction,
         packet: Dataset,
@@ -52,7 +54,7 @@ impl SourceBuilding {
 pub struct SinkBuilding;
 
 impl SinkBuilding {
-    pub fn get_spawn_bundle(
+    pub fn get_bundle(
         position: GridPosition,
         direction: Direction,
         shape: Option<Dataset>,

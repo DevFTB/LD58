@@ -1,4 +1,6 @@
 use crate::factory::buildings::aggregator::do_aggregation;
+use crate::factory::buildings::combiner::do_combining;
+use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::logical::{debug_logical_links, pass_data_system, visualise_sinks};
 use crate::factory::physical::{
@@ -23,8 +25,7 @@ impl Plugin for FactoryPlugin {
             Update,
             (
                 pass_data_system,
-                do_aggregation,
-                do_splitting,
+                (do_delinking, do_aggregation, do_splitting, do_combining),
                 visualise_sinks,
             )
                 .chain(),
