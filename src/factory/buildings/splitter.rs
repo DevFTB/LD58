@@ -77,8 +77,8 @@ pub fn do_splitting(
 
         let shape = &sink.buffer.shape;
         if shape.is_some() {
-            source1.buffer.set_shape(&shape);
-            source2.buffer.set_shape(&shape);
+            source1.buffer.set_shape(shape.as_ref());
+            source2.buffer.set_shape(shape.as_ref());
 
             let amount = (sink.buffer.value / 2.).min(splitter.throughput / 2. * time.delta_secs());
 

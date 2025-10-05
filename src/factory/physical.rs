@@ -30,7 +30,7 @@ pub struct PhysicalLink {
 pub struct Linked;
 
 impl PhysicalLink {
-    pub fn get_spawn_bundle(position: GridPosition) -> impl Bundle {
+    pub fn get_bundle(position: GridPosition) -> impl Bundle {
         (
             position,
             PhysicalLink { throughput: 234. },
