@@ -32,7 +32,7 @@ pub struct FactionSquare;
 #[derive(Component)]
 #[require(ClusterID, FactionComponent)]
 pub struct FactionCluster {
-    center: IVec2,
+    center: I64Vec2,
 }
 
 #[derive(Component, Default)]
@@ -57,16 +57,16 @@ pub struct Sink {
 }
 
 // might need to change min/max logic a bit if not even lol
-const WORLD_SIZE: i32 = 500;
-const WORLD_MIN: i32 = -(WORLD_SIZE / 2);
-const WORLD_MAX: i32 = (WORLD_SIZE / 2) - 1;
+const WORLD_SIZE: i64 = 500;
+const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
+const WORLD_MAX: i64 = (WORLD_SIZE / 2) - 1;
 
-const STARTING_AREA_SIZE: i32 = 20;
-const INITIAL_FACTION_SINKS: [(IVec2, Faction); 4] = [
-    (IVec2::new(0,7), Faction::Government),
-    (IVec2::new(7,0), Faction::Corporate),
-    (IVec2::new(0,-7), Faction::Criminal),
-    (IVec2::new(-7,0), Faction::Academia),
+const STARTING_AREA_SIZE: i64 = 20;
+const INITIAL_FACTION_SINKS: [(I64Vec2, Faction); 4] = [
+    (I64Vec2::new(0,7), Faction::Government),
+    (I64Vec2::new(7,0), Faction::Corporate),
+    (I64Vec2::new(0,-7), Faction::Criminal),
+    (I64Vec2::new(-7,0), Faction::Academia),
 ];
 
 // basic sources per 1000 unlocked tiles
@@ -86,15 +86,15 @@ impl Plugin for WorldGenPlugin {
 
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Single<&mut WyRand, With<GlobalRng>>) {
     // apply logic to determine which ones start locked
-    let mut unlocked_cells: Vec<IVec2> = Vec::new();
-    let mut locked_cells: Vec<IVec2> = Vec::new();
+    let mut unlocked_cells: Vec<I64Vec2> = Vec::new();
+    let mut locked_cells: Vec<I64Vec2> = Vec::new();
 
     // let mut rng = rand::rng();
     let noise_offset: f32 = rng.random_range(-1000.0..1000.0);
 
     for i in WORLD_MIN..=WORLD_MAX {
         for j in WORLD_MIN..=WORLD_MAX {
-            let cell_vec = IVec2::new(i, j);
+            let cell_vec = I64Vec2::new(i, j);
             if in_start_area(cell_vec) || get_locked_tile_noise(cell_vec, noise_offset) > FACTION_CLUSTER_THRESHOLD {
                 unlocked_cells.push(cell_vec);
             } else {
@@ -104,26 +104,26 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
     }
 
     // label faction clusters using a bfs
-    let mut locked_queue: Vec<IVec2> = locked_cells.clone();
-    let valid_nodes: HashSet<IVec2> = locked_cells.iter().cloned().collect();
-    let mut visited: HashSet<IVec2> = HashSet::new();
+    let mut locked_queue: Vec<I64Vec2> = locked_cells.clone();
+    let valid_nodes: HashSet<I64Vec2> = locked_cells.iter().cloned().collect();
+    let mut visited: HashSet<I64Vec2> = HashSet::new();
 
     // grid_pos -> cluster_id
-    let mut cluster_map: HashMap<IVec2, i64> = HashMap::new();
+    let mut cluster_map: HashMap<I64Vec2, i64> = HashMap::new();
 
     // defines free spots to spawn faction sources
-    let mut faction_source_locations: HashMap<i64, HashSet<IVec2>> = HashMap::new();
+    let mut faction_source_locations: HashMap<i64, HashSet<I64Vec2>> = HashMap::new();
 
     // cluster_id -> grid_pos
-    let mut center_map: HashMap<i64, IVec2> = HashMap::new();
+    let mut center_map: HashMap<i64, I64Vec2> = HashMap::new();
 
     let mut cluster_id: i64 = 0;
 
     while let Some(current) = locked_queue.pop() {
         if visited.insert(current) {
             // new cluster
-            let mut queue: VecDeque<IVec2> = VecDeque::new();
-            let mut cluster_nodes: Vec<IVec2> = Vec::new();
+            let mut queue: VecDeque<I64Vec2> = VecDeque::new();
+            let mut cluster_nodes: Vec<I64Vec2> = Vec::new();
 
             // TODO: consider sticking noise calc in hashmap at the start if performance issues from recalcs
             let mut center_node = (current, get_locked_tile_noise(current, noise_offset));
@@ -164,7 +164,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
                 // subtraction on the noise from the center insted of cutting it
                 unlocked_cells.extend(cluster_nodes.iter().copied());
 
-                let remove_set: HashSet<IVec2> = cluster_nodes.into_iter().collect();
+                let remove_set: HashSet<I64Vec2> = cluster_nodes.into_iter().collect();
                 locked_cells.retain(|e| {!remove_set.contains(e)});
             }
         }
@@ -243,12 +243,12 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
     {
         // make sure they don't spawn on top of starting sinks: there might be a better way...
         // todo: refactor if necessary
-        let mut sink_locs = HashSet::<IVec2>::new();
+        let mut sink_locs = HashSet::<I64Vec2>::new();
 
         for (vec, _) in INITIAL_FACTION_SINKS {
             for x in vec.x-1..=vec.x+1 {
                 for y in vec.y-1..=vec.y+1 {
-                    sink_locs.insert(IVec2::new(x, y));
+                    sink_locs.insert(I64Vec2::new(x, y));
                 }
             }
         }
@@ -278,13 +278,13 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
 
 }
 
-fn spawn_cluster_datasets(cluster_id: i64, n: i32, reputation: i32, faction:Faction, available_spawns: &HashSet<IVec2>, rng: &mut WyRand, commands: &mut Commands) {
+fn spawn_cluster_datasets(cluster_id: i64, n: i32, reputation: i32, faction:Faction, available_spawns: &HashSet<I64Vec2>, rng: &mut WyRand, commands: &mut Commands) {
     let dataset = get_faction_source_dataset(faction.clone(), reputation, rng);
     let throughput = get_faction_source_throughput(reputation);
 
     for cell_vec in available_spawns.into_iter()
         .copied()
-        .collect::<Vec<IVec2>>().choose_multiple(rng, n.try_into().unwrap())
+        .collect::<Vec<I64Vec2>>().choose_multiple(rng, n.try_into().unwrap())
     {
         spawn_source(*cell_vec, throughput, dataset.clone(), Some(faction.clone()), commands);
     }
@@ -305,7 +305,7 @@ fn get_basic_source_dataset(rng: &mut WyRand) -> Dataset {
     }
 }
 
-fn get_basic_source_throughput(vec: IVec2) -> i32 {
+fn get_basic_source_throughput(vec: I64Vec2) -> i32 {
     // TODO: introduce some randomness if desired
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
@@ -336,7 +336,7 @@ fn get_faction_source_dataset(faction: Faction, reputation: i32, rng: &mut WyRan
     return Dataset{contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())])}
 }
 
-fn get_faction_cluster_reputation(vec: IVec2) -> i32 {
+fn get_faction_cluster_reputation(vec: I64Vec2) -> i32 {
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
     if length_f64 <= 80. {
@@ -348,7 +348,7 @@ fn get_faction_cluster_reputation(vec: IVec2) -> i32 {
     }
 }
 
-fn spawn_source(vec: IVec2, throughput: i32, dataset: Dataset, faction: Option<Faction>, commands: &mut Commands) {
+fn spawn_source(vec: I64Vec2, throughput: i32, dataset: Dataset, faction: Option<Faction>, commands: &mut Commands) {
     if let Some(actual_faction) = faction {
         commands.spawn((
             GridPosition(vec),
@@ -375,23 +375,23 @@ fn spawn_source(vec: IVec2, throughput: i32, dataset: Dataset, faction: Option<F
     }
 }
 
-fn in_start_area(vec: IVec2) -> bool {
+fn in_start_area(vec: I64Vec2) -> bool {
     return vec.length_squared() < STARTING_AREA_SIZE.pow(2);
 }
 
 // this option implementation is sus and hack refactor later lol
 // this whole funciton is so sus shahahahahahah
-fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap<IVec2, i64>>,  cluster_hash_set: Option<&mut HashSet<IVec2>>, commands: &mut Commands) {
+fn spawn_faction_sink(vec: I64Vec2, faction: Faction, cluster_map: Option<&HashMap<I64Vec2, i64>>,  cluster_hash_set: Option<&mut HashSet<I64Vec2>>, commands: &mut Commands) {
     let mut sink_parent = commands.spawn((
         SinkParent,
         // ClusterID(cluster_id),
         FactionComponent(faction)
     ));
 
-    let mut sink_vecs: Vec::<IVec2> = Vec::new();
+    let mut sink_vecs: Vec::<I64Vec2> = Vec::new();
     for x in vec.x-1..=vec.x+1 {
         for y in vec.y-1..=vec.y+1 {
-            let cur_vec = IVec2::new(x, y);
+            let cur_vec = I64Vec2::new(x, y);
             if let Some(cluster_map_val) = cluster_map {
                 if cluster_map_val.contains_key(&cur_vec) {
                     sink_vecs.push(cur_vec);
@@ -413,7 +413,7 @@ fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap
 
     // remove sink location from allowable source spawn locations
     if let Some(cluster_hash_set_val) = cluster_hash_set {
-        let remove_set: HashSet<IVec2> = sink_vecs.into_iter().collect();
+        let remove_set: HashSet<I64Vec2> = sink_vecs.into_iter().collect();
         cluster_hash_set_val.retain(|e| !remove_set.contains(e));
     }
 
@@ -436,7 +436,7 @@ fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap
 
 }
 
-fn map_grid_pos_to_faction(vec: IVec2) -> Faction {
+fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {
     let y = vec.y;
     let x = vec.x;
     return match ( y >= x, y >= -x ) {
@@ -451,7 +451,7 @@ fn map_grid_pos_to_faction(vec: IVec2) -> Faction {
     };
 }
 
-fn get_locked_tile_noise(vec: IVec2, offset: f32) -> f32 {
+fn get_locked_tile_noise(vec: I64Vec2, offset: f32) -> f32 {
     const SIMPLEX_FREQUENCY: f32 = 0.035;
     const BIAS_EXPONENT: f32 = 2.0;
     let normalised_simplex_noise = (

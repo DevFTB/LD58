@@ -34,7 +34,7 @@ pub struct GridPlugin;
 pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 
 // Function to check if a set of grid positions is free
-#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone)]
+#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default)]
 #[require(Transform)]
 #[component(on_insert = grid_position_added)]
 #[component(on_remove = grid_position_removed)]

@@ -3,7 +3,7 @@ use crate::events::{AddNewsfeedItemEvent, NewsLibrary};
 use crate::factions::{Faction, FactionReputations};
 use crate::events::event_data::{get_news_headline};
 use crate::assets::GameAssets;
-use rand::seq::SliceRandom;
+use rand::prelude::IndexedRandom;
 
 /// Component to mark the root entity of the newsfeed UI.
 #[derive(Component)]
@@ -209,7 +209,7 @@ pub fn generate_news(
     timer.tick(time.delta());
 
     if timer.just_finished() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let factions = vec![Faction::Corporate, Faction::Academia, Faction::Government, Faction::Criminal];
         let faction = *factions.choose(&mut rng).unwrap();
         let rep = reputations.get(faction).clamp(0, 100) as u32;
