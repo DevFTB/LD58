@@ -266,9 +266,10 @@ fn startup(
         let mut sink_locs = HashSet::<I64Vec2>::new();
 
         for (vec, _) in INITIAL_FACTION_SINKS {
-            for x in vec.x - 1..=vec.x + 1 {
-                for y in vec.y - 1..=vec.y + 1 {
-                    sink_locs.insert(I64Vec2::new(x, y));
+            // 2x2 area: (x, y), (x+1, y), (x, y+1), (x+1, y+1)
+            for dx in 0..2 {
+                for dy in 0..2 {
+                    sink_locs.insert(I64Vec2::new(vec.x + dx, vec.y + dy));
                 }
             }
         }
@@ -459,9 +460,10 @@ fn spawn_faction_sink(
     ));
 
     let mut sink_vecs: Vec<I64Vec2> = Vec::new();
-    for x in vec.x - 1..=vec.x + 1 {
-        for y in vec.y - 1..=vec.y + 1 {
-            let cur_vec = I64Vec2::new(x, y);
+    // 2x2 area: (x, y), (x+1, y), (x, y+1), (x+1, y+1)
+    for dx in 0..2 {
+        for dy in 0..2 {
+            let cur_vec = I64Vec2::new(vec.x + dx, vec.y + dy);
             if let Some(cluster_map_val) = cluster_map {
                 if cluster_map_val.contains_key(&cur_vec) {
                     sink_vecs.push(cur_vec);
