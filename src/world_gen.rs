@@ -18,24 +18,33 @@ pub struct Locked;
 pub struct Cell;
 
 #[derive(Component)]
-#[require(Faction, Cell)]
-pub struct FactionSquare{
-    cluster_id: i64
-}
+#[require(FactionComponent, Cell, ClusterID)]
+pub struct FactionSquare;
 
 #[derive(Component)]
+#[require(ClusterID, FactionComponent)]
 pub struct FactionCluster {
-    id: i64,
     center: IVec2,
-    faction: Faction
 }
+
+#[derive(Component, Default)]
+#[require(FactionComponent)]
+pub struct ClusterID(i64);
+
+// single component abstraction for sinks. these manage contract, hold faction etc.
+// can be made up of many sink block children
+#[derive(Component)]
+pub struct SinkParent;
+
+#[derive(Component, Default)]
+pub struct FactionComponent(Faction);
 
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i32 = 500;
 const WORLD_MIN: i32 = -(WORLD_SIZE / 2);
 const WORLD_MAX: i32 = (WORLD_SIZE / 2) - 1; 
 
-const FACTION_CLUSTER_THRESHOLD: f32 = 0.35;
+const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
 
 
 impl Plugin for WorldGenPlugin {
@@ -126,13 +135,13 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         commands.spawn((
             Locked,
             GridPosition(cell_vec),
-            GridSprite(Color::linear_rgba(0., 0.5, 1., 1.)),
+            GridSprite(Color::linear_rgba(0., 0.5, 1., 0.8)),
         ));
     }
 
-    for (cell_vec, cluster_id) in cluster_map {
+    for (cell_vec, cluster_id) in &cluster_map {
         commands.spawn((
-            GridPosition(cell_vec),
+            GridPosition(*cell_vec),
             Text2d::new(format!("{cluster_id}")),
         ));
     }
@@ -144,19 +153,73 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         }).collect::<HashMap<i64, Faction>>());
 
     // debug printing to ensure that gen logic is working
-    for (cluster_id, cell_vec) in center_map {
-        if let Some(faction) = cluster_faction.get(&cluster_id) {
+    for (cluster_id, cell_vec) in &center_map {
+        if let Some(faction) = cluster_faction.get(cluster_id) {
             commands.spawn((
-                GridPosition(cell_vec),
+                GridPosition(*cell_vec),
                 GridSprite(Color::linear_rgba(1., 0.5, 1., 1.)),
                 Text2d::new(format!("{:?}: {cluster_id}", faction)),
                 ZIndex(4)
             ));
         } else {
-            !panic!("{cluster_id} has no faction");
+            panic!("{cluster_id} has no faction");
         }
 
     }
+
+    // spawn faction sinks
+    for (cluster_id, cell_vec) in &center_map {
+        if let Some(faction) = cluster_faction.get(cluster_id) {
+            spawn_faction_sink(*cell_vec, *cluster_id, faction.clone(), &cluster_map, &mut commands);
+        } else {
+            panic!("{cluster_id} has no faction");
+        }
+    }
+
+}
+
+fn spawn_faction_sink(vec: IVec2, cluster_id: i64, faction: Faction, cluster_map: &HashMap<IVec2, i64>, commands: &mut Commands) {
+    let mut sink_parent = commands.spawn((
+        SinkParent,
+        ClusterID(cluster_id),
+        FactionComponent(faction)
+    ));
+
+    let mut sink_vecs: Vec::<IVec2> = Vec::new();
+    for x in vec.x-1..=vec.x+1 {
+        for y in vec.y-1..=vec.y+1 {
+            let cur_vec = IVec2::new(x, y);
+            if cluster_map.contains_key(&cur_vec) {
+                sink_vecs.push(cur_vec);
+            }
+        }
+    }
+
+    for grid_vec in sink_vecs {
+        commands.spawn((
+                GridPosition(grid_vec),
+                GridSprite(Color::linear_rgba(1., 1., 1., 1.)),
+                ZIndex(3)
+        ));
+    }  
+
+    // println!("sink_vecs: {:?}", sink_vecs);
+
+    // TODO: figure out how to actually spawn individual sink cells and ultimate hierachy
+
+    // sink_parent.with_children(|parent| {
+    //     // todo spawn actual sink stuff lol
+    //     for grid_vec in sink_vecs {
+    //         parent.spawn((
+    //                 GridPosition(grid_vec),
+    //                 GridSprite(Color::linear_rgba(1., 1., 1., 1.)),
+    //                 ZIndex(3)
+    //         ));
+    //     }  
+    // });
+
+
+
 }
 
 fn map_grid_pos_to_faction(vec: IVec2) -> Faction {
@@ -186,6 +249,6 @@ fn get_locked_tile_noise(vec: IVec2, offset: f32) -> f32 {
     + 1.0) / 2.0;
 
     const FREQUENCY: f32 = 0.035;
-    return worley_2d((vec.as_vec2() + Vec2::new(offset, offset)) * FREQUENCY, 0.5).x
+    return worley_2d((vec.as_vec2() + Vec2::new(offset, offset)) * FREQUENCY, 0.55).x
         + (0.2 * normalised_simplex_noise.powf(BIAS_EXPONENT));
 }
