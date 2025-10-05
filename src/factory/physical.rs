@@ -52,7 +52,7 @@ pub fn connect_physical_links_to_data(
             .filter_map(|(input_entity, grid_pos, output)| {
                 neighbours
                     .iter()
-                    .find(|(dir, pos)| grid_pos == pos && output.output_direction == dir.opposite())
+                    .find(|(dir, pos)| grid_pos == pos && output.direction == dir.opposite())
                     .map(|(dir, _)| (input_entity, dir))
             })
             .next();
@@ -70,7 +70,7 @@ pub fn connect_physical_links_to_data(
             .filter_map(|(input_entity, grid_pos, input)| {
                 neighbours
                     .iter()
-                    .find(|(dir, pos)| grid_pos == pos && input.input_direction == dir.opposite())
+                    .find(|(dir, pos)| grid_pos == pos && input.direction == dir.opposite())
                     .map(|(dir, _)| (input_entity, dir))
             })
             .next();
@@ -104,7 +104,7 @@ pub fn connect_direct(
                 // Verify direction compatibility:
                 // source's output_direction should match the direction to the sink
                 // sink's input_direction should match the opposite direction (from sink to source)
-                if source.output_direction == *dir && sink.input_direction == dir.opposite() {
+                if source.direction == *dir && sink.direction == dir.opposite() {
                     // Create a direct logical link with no intermediate physical links
                     let link = LogicalLink {
                         links: Vec::new(),             // No physical links in between

@@ -1,14 +1,11 @@
 use bevy::{
     color::palettes::css::{ANTIQUE_WHITE, BROWN},
-    math::I8Vec2,
+    math::I64Vec2,
     prelude::*,
 };
 
-use crate::grid::{
-    GridPosition, WorldMap, are_positions_free, calculate_occupied_cells,
-    calculate_occupied_cells_rotated,
-};
-use crate::things::buildings::BuildingType;
+use crate::factory::buildings::buildings::BuildingType;
+use crate::grid::{are_positions_free, calculate_occupied_cells_rotated, GridPosition, WorldMap};
 
 pub struct UIPlugin;
 
@@ -21,7 +18,7 @@ const RIGHT_BAR_WIDTH_PCT: f32 = 20.0;
 #[derive(Event, Message)]
 pub struct ConstructBuildingEvent {
     pub building_type: BuildingType,
-    pub grid_position: I8Vec2,
+    pub grid_position: I64Vec2,
     pub rotation: u8,
 }
 

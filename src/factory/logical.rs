@@ -1,17 +1,11 @@
 use crate::grid::Direction;
 use bevy::prelude::{DetectChanges, Query, Ref, Res};
+use bevy::sprite::Text2d;
 use bevy::time::Time;
 use bevy::{
     ecs::{component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
-
-#[derive(Component, Default, Debug)]
-pub struct FactoryTile;
-
-#[derive(Component, Default, Debug)]
-#[require(FactoryTile)]
-pub struct Locked;
 
 // The fundamental types of data
 #[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -49,13 +43,13 @@ impl Dataset {
 }
 #[derive(Component)]
 pub struct DataSink {
-    pub input_direction: Direction,
+    pub direction: Direction,
     pub buffer: DataBuffer,
 }
 
 #[derive(Component)]
 pub struct DataSource {
-    pub(crate) output_direction: Direction,
+    pub(crate) direction: Direction,
     pub(crate) throughput: f32,
     pub(crate) buffer: DataBuffer,
     pub(crate) limited: bool,
@@ -92,13 +86,15 @@ pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     }
 }
 
-pub fn debug_sinks(query: Query<(Entity, Ref<DataSink>)>) {
-    for (entity, sink) in query {
+pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
+    for (entity, sink, mut text) in query {
         if sink.is_changed() {
-            println!(
-                "Sink {:?} storing {:?} of amount {:?}",
-                entity, sink.buffer.shape, sink.buffer.value
-            );
+            // println!(
+            //     "Sink {:?} storing {:?} of amount {:?}",
+            //     entity, sink.buffer.shape, sink.buffer.value
+            //
+            // );
+            text.0 = sink.buffer.value.to_string();
         }
     }
 }
@@ -123,8 +119,8 @@ pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f3
     sink.buffer.value += packet;
     source.buffer.value -= packet;
 }
-pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, rate: f32, secs: f32) {
-    let amount = rate * secs;
+pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, amount: f32) {
+    let amount = amount.min(sink.buffer.value);
     source.buffer.value += amount;
     sink.buffer.value -= amount;
 }

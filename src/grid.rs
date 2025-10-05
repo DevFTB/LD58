@@ -1,5 +1,6 @@
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
+use bevy::math::I64Vec2;
 use bevy::prelude::{Changed, DerefMut};
 use bevy::{
     app::{Plugin, PostUpdate, Startup},
@@ -11,9 +12,8 @@ use bevy::{
         query::Added,
         resource::Resource,
         system::{Commands, Query, Res, ResMut},
-        world::Ref,
     },
-    math::{I8Vec2, Vec2, Vec3, Vec4, primitives::Rectangle},
+    math::{primitives::Rectangle, Vec2, Vec3, Vec4},
     mesh::{Mesh, Mesh2d},
     platform::collections::HashMap,
     prelude::Deref,
@@ -38,7 +38,7 @@ pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 #[require(Transform)]
 #[component(on_insert = grid_position_added)]
 #[component(on_remove = grid_position_removed)]
-pub struct GridPosition(pub I8Vec2);
+pub struct GridPosition(pub I64Vec2);
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Direction {
@@ -92,9 +92,9 @@ impl Grid {
     pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
         let p = (world - self.base_offset) / self.scale;
         // Use floor for "lower-left origin" style grids; use round() if that's your convention.
-        let gx = p.x.floor() as i8;
-        let gy = p.y.floor() as i8;
-        GridPosition(I8Vec2 { x: gx, y: gy })
+        let gx = p.x.floor() as i64;
+        let gy = p.y.floor() as i64;
+        GridPosition(I64Vec2 { x: gx, y: gy })
     }
 
     // bottom left corner
@@ -128,28 +128,28 @@ impl GridPosition {
         vec![
             (
                 Direction::Left,
-                GridPosition(I8Vec2 {
+                GridPosition(I64Vec2 {
                     x: self.x - 1,
                     y: self.y,
                 }),
             ),
             (
                 Direction::Right,
-                GridPosition(I8Vec2 {
+                GridPosition(I64Vec2 {
                     x: self.x + 1,
                     y: self.y,
                 }),
             ),
             (
                 Direction::Up,
-                GridPosition(I8Vec2 {
+                GridPosition(I64Vec2 {
                     x: self.x,
                     y: self.y - 1,
                 }),
             ),
             (
                 Direction::Down,
-                GridPosition(I8Vec2 {
+                GridPosition(I64Vec2 {
                     x: self.x,
                     y: self.y + 1,
                 }),
@@ -158,12 +158,12 @@ impl GridPosition {
     }
 
     /// Returns a new GridPosition offset by one tile in the given direction.
-    pub fn add(&self, direction: Direction) -> GridPosition {
+    pub fn offset(&self, direction: Direction, amount: i64) -> GridPosition {
         match direction {
-            Direction::Right => GridPosition(I8Vec2::new(self.0.x + 1, self.0.y)),
-            Direction::Down => GridPosition(I8Vec2::new(self.0.x, self.0.y + 1)),
-            Direction::Left => GridPosition(I8Vec2::new(self.0.x - 1, self.0.y)),
-            Direction::Up => GridPosition(I8Vec2::new(self.0.x, self.0.y - 1)),
+            Direction::Right => GridPosition(I64Vec2::new(self.0.x + amount, self.0.y)),
+            Direction::Up => GridPosition(I64Vec2::new(self.0.x, self.0.y + amount)),
+            Direction::Left => GridPosition(I64Vec2::new(self.0.x - amount, self.0.y)),
+            Direction::Down => GridPosition(I64Vec2::new(self.0.x, self.0.y - amount)),
         }
     }
 }
@@ -266,47 +266,47 @@ fn spawn_grid_sprite_system(
         );
     }
 }
-pub fn calculate_occupied_cells(base_position: I8Vec2, width: i8, height: i8) -> Vec<I8Vec2> {
+pub fn calculate_occupied_cells(base_position: I64Vec2, width: i64, height: i64) -> Vec<I64Vec2> {
     let mut cells = Vec::new();
     for dx in 0..width {
         for dy in 0..height {
-            cells.push(I8Vec2::new(base_position.x + dx, base_position.y + dy));
+            cells.push(I64Vec2::new(base_position.x + dx, base_position.y + dy));
         }
     }
     cells
 }
 
 pub fn calculate_occupied_cells_rotated(
-    anchor_position: I8Vec2,
-    width: i8,
-    height: i8,
+    anchor_position: I64Vec2,
+    width: i64,
+    height: i64,
     rotation: u8,
-) -> Vec<I8Vec2> {
+) -> Vec<I64Vec2> {
     let mut cells = Vec::new();
 
     match rotation % 4 {
         0 => {
             // Rotation 0 (0°): extends right
             for i in 0..width {
-                cells.push(I8Vec2::new(anchor_position.x + i, anchor_position.y));
+                cells.push(I64Vec2::new(anchor_position.x + i, anchor_position.y));
             }
         }
         1 => {
             // Rotation 1 (90° CW): extends down
             for i in 0..width {
-                cells.push(I8Vec2::new(anchor_position.x, anchor_position.y - i));
+                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y - i));
             }
         }
         2 => {
             // Rotation 2 (180°): extends left
             for i in 0..width {
-                cells.push(I8Vec2::new(anchor_position.x - i, anchor_position.y));
+                cells.push(I64Vec2::new(anchor_position.x - i, anchor_position.y));
             }
         }
         3 => {
             // Rotation 3 (270° CW): extends up
             for i in 0..width {
-                cells.push(I8Vec2::new(anchor_position.x, anchor_position.y + i));
+                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y + i));
             }
         }
         _ => unreachable!(),

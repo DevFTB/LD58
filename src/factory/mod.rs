@@ -1,5 +1,6 @@
 use crate::factory::buildings::aggregator::do_aggregation;
-use crate::factory::logical::pass_data_system;
+use crate::factory::buildings::splitter::do_splitting;
+use crate::factory::logical::{debug_logical_links, pass_data_system, visualise_sinks};
 use crate::factory::physical::{
     connect_direct, connect_links, connect_physical_links_to_data, establish_logical_links,
     on_physical_link_removed,
@@ -23,7 +24,8 @@ impl Plugin for FactoryPlugin {
             (
                 pass_data_system,
                 do_aggregation,
-                // debug_sinks
+                do_splitting,
+                visualise_sinks,
             )
                 .chain(),
         );
@@ -34,7 +36,7 @@ impl Plugin for FactoryPlugin {
                 connect_links,
                 establish_logical_links,
                 connect_direct,
-                // debug_logical_links,
+                debug_logical_links,
             )
                 .chain(),
         );

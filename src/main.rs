@@ -1,4 +1,5 @@
 use crate::factory::buildings::aggregator::Aggregator;
+use crate::factory::buildings::splitter::Splitter;
 use crate::factory::buildings::{SinkBuilding, SourceBuilding};
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 use crate::grid::Direction;
@@ -10,12 +11,11 @@ use crate::{
 };
 use bevy::platform::collections::HashSet;
 use bevy::window::PrimaryWindow;
-use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
+use bevy::{math::I64Vec2, platform::collections::HashMap, prelude::*};
 
 mod camera;
 mod factory;
 mod grid;
-mod things;
 mod ui;
 
 fn main() {
@@ -33,7 +33,7 @@ fn main() {
 
 fn startup(mut commands: Commands) {
     commands.spawn(SourceBuilding::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 0, y: 1 }),
+        GridPosition(I64Vec2 { x: 0, y: 1 }),
         Direction::Right,
         Dataset {
             contents: HashMap::from([(
@@ -43,40 +43,55 @@ fn startup(mut commands: Commands) {
         },
     ));
     commands.spawn(Aggregator::get_bundle(
-        GridPosition(I8Vec2 { x: 1, y: 1 }),
+        GridPosition(I64Vec2 { x: 1, y: 1 }),
         1.0,
         Direction::Right,
     ));
-    // commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+    // commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I64Vec2 {
     //     x: 1,
     //     y: 1,
     // })));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I64Vec2 {
         x: 2,
         y: 1,
     })));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
-        x: 3,
+    commands.spawn(Splitter::get_bundle(
+        GridPosition(I64Vec2 { x: 3, y: 1 }),
+        50.,
+        Direction::Right, /* f32 */ /* grid::Direction */
+    ));
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I64Vec2 {
+        x: 4,
         y: 1,
     })));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
-        x: 3,
+    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I64Vec2 {
+        x: 4,
         y: 2,
     })));
-    commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I8Vec2 {
-        x: 3,
-        y: 3,
-    })));
     commands.spawn(SinkBuilding::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 4, y: 2 }),
+        GridPosition(I64Vec2 { x: 5, y: 1 }),
         Direction::Left,
         None,
     ));
     commands.spawn(SinkBuilding::get_spawn_bundle(
-        GridPosition(I8Vec2 { x: 3, y: 4 }),
+        GridPosition(I64Vec2 { x: 5, y: 2 }),
         Direction::Left,
         None,
     ));
+    // commands.spawn(PhysicalLink::get_spawn_bundle(GridPosition(I64Vec2 {
+    //     x: 3,
+    //     y: 3,
+    // })));
+    // commands.spawn(SinkBuilding::get_spawn_bundle(
+    //     GridPosition(I64Vec2 { x: 4, y: 2 }),
+    //     Direction::Left,
+    //     None,
+    // ));
+    // commands.spawn(SinkBuilding::get_spawn_bundle(
+    //     GridPosition(I64Vec2 { x: 3, y: 4 }),
+    //     Direction::Left,
+    //     None,
+    // ));
 }
 
 pub fn remove_physical_link_on_right_click(
