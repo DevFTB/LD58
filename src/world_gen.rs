@@ -146,7 +146,6 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
 
             // println!("cluster nodes: {:?}", cluster_nodes);
             // if condition stops tiny clusters formed by start area breaking them up
-            // note: cells are still locked - will be locked forever--- TODO: if issue fix lol
             if cluster_nodes.length() >= MIN_CLUSTER_SIZE.try_into().unwrap() {
                 // found all nodes for current cluster: log cluster id for all nodes and center
                 cluster_map.extend(
@@ -158,6 +157,15 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
                 center_map.insert(cluster_id, center_node.0);
 
                 cluster_id += 1;
+            }
+            else {
+                // hacky fix to unlock relevant cells
+                // the cut still looks funny rthough lol, to fix might be able to apply a falling
+                // subtraction on the noise from the center insted of cutting it
+                unlocked_cells.extend(cluster_nodes.iter().copied());
+
+                let remove_set: HashSet<IVec2> = cluster_nodes.into_iter().collect();
+                locked_cells.retain(|e| {!remove_set.contains(e)});
             }
         }
     }
