@@ -2,30 +2,39 @@ use bevy::{math::I8Vec2, platform::collections::HashMap, prelude::*};
 
 use crate::{
     camera::GameCameraPlugin,
+    events::EventsPlugin,
     factory::{
         FactoryPlugin,
         logical::{Dataset, Sink, Source},
         physical::PhysicalLink,
     },
-    grid::{Grid, GridPlugin, GridPosition},
-    ui::{UIPlugin}
+    grid::{GridPlugin, GridPosition},
+    factions::FactionsPlugin,
+    ui::{UIPlugin},
+    assets::AssetPlugin
 };
 use crate::grid::Direction;
 
 mod camera;
+mod events;
 mod factory;
 mod grid;
+mod factions;
 mod things;
 mod ui;
+mod assets;
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .add_plugins(AssetPlugin)
         .add_plugins(DefaultPlugins)
+        .add_plugins(EventsPlugin)
         .add_plugins(GameCameraPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
+        .add_plugins(FactionsPlugin)
         .add_systems(Startup, startup)
         .run();
 }

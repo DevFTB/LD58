@@ -9,7 +9,6 @@ use bevy::{
         system::{Commands, Query},
     },
 };
-use bevy::prelude::World;
 use crate::{
     factory::logical::{DataInput, DataOutput, LogicalLink},
     grid::{Direction, GridPosition, GridSprite},
