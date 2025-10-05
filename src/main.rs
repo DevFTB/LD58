@@ -9,15 +9,22 @@ use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 use crate::grid::Direction;
 use crate::{
     camera::GameCameraPlugin,
+    events::EventsPlugin,
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
+    factions::FactionsPlugin,
     ui::UIPlugin,
+    assets::AssetPlugin
 };
 use bevy::platform::collections::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy::{math::I64Vec2, platform::collections::HashMap, prelude::*};
 
+
+mod factions;
+mod assets;
 mod camera;
+mod events;
 mod factory;
 mod grid;
 mod ui;
@@ -25,11 +32,14 @@ mod ui;
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .add_plugins(AssetPlugin)
         .add_plugins(DefaultPlugins)
+        .add_plugins(EventsPlugin)
         .add_plugins(GameCameraPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
+        .add_plugins(FactionsPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, remove_physical_link_on_right_click)
         .run();

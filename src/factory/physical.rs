@@ -13,6 +13,7 @@ use bevy::{
         system::{Commands, Query},
     },
 };
+use bevy::prelude::World;
 
 #[derive(Component)]
 pub struct PhysicalSink(Entity, Direction);

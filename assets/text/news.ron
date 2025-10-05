@@ -1,0 +1,126 @@
+NewsLibrary({
+    Corporate: {
+        Hostile: [
+            ( id: 101, text: "The CEO of OmniCorp publicly labels your firm a 'parasitic data leech' that threatens market stability." ),
+            ( id: 102, text: "A coalition of businesses has launched a formal investigation into your acquisition tactics." ),
+            ( id: 103, text: "Your company's stock has been downgraded by all major financial institutions, citing 'unethical practices'." ),
+        ],
+        Untrusted: [
+            ( id: 111, text: "Several minor corporate partners have severed ties with your company, citing 'reputational risk'." ),
+            ( id: 112, text: "Your firm has been pointedly excluded from this year's Global Tech Summit." ),
+            ( id: 113, text: "An industry watchdog report highlights your company's 'aggressive and concerning' market behavior." ),
+        ],
+        Neutral: [
+            ( id: 131, text: "OmniCorp acknowledges your firm's timely contract fulfillment." ),
+            ( id: 132, text: "Market analysts are divided on your company's long-term strategy, calling it 'high-risk, high-reward'." ),
+        ],
+        Friendly: [
+            ( id: 151, text: "Your company has received the 'Innovator of the Year' award from the Corporate Council." ),
+            ( id: 152, text: "OmniCorp has announced a strategic partnership, citing your firm's 'unparalleled efficiency'." ),
+            ( id: 153, text: "A major tech magazine features your CEO on the cover, hailing them as a 'visionary of the data age'." ),
+        ],
+        Trusted: [
+            ( id: 161, text: "You have been granted a permanent seat on the influential Global Technology Council." ),
+            ( id: 162, text: "Several smaller competitors have been acquired by larger firms using intelligence provided by your company." ),
+            ( id: 163, text: "Your firm is now the lead consultant for all major corporate mergers and acquisitions." ),
+        ],
+        Exclusive: [
+            ( id: 181, text: "In response to your market dominance, several key antitrust laws have been 'reinterpreted' in your favor." ),
+            ( id: 182, text: "Your company's proprietary data format has been adopted as the new industry-wide standard." ),
+            ( id: 183, text: "Market prices for data are now effectively dictated by your company's quarterly reports." ),
+        ]
+    },
+    Government: {
+        Hostile: [
+            ( id: 201, text: "A federal spokesperson has condemned your operations, promising imminent regulatory action." ),
+            ( id: 202, text: "The National Security Agency has officially classified your company as a 'Digital Threat Entity'." ),
+            ( id: 203, text: "International sanctions have been levied against your company for 'destabilizing global data sovereignty'." ),
+        ],
+        Untrusted: [
+            ( id: 211, text: "Data provided by your firm has been deemed 'inadmissible' in all ongoing federal cases." ),
+            ( id: 212, text: "A new bill is being drafted in the senate specifically to limit your company's market access." ),
+            ( id: 213, text: "Your requests for information under the Freedom of Information Act have been indefinitely denied." ),
+        ],
+        Neutral: [
+            ( id: 231, text: "Government agencies report satisfaction with your latest data delivery." ),
+            ( id: 232, text: "Bureaucratic oversight flags your operations for a potential compliance review." ),
+        ],
+        Friendly: [
+            ( id: 251, text: "You have been invited to consult on the development of a new national security framework." ),
+            ( id: 252, text: "A minor regulatory fine issued to your company last quarter has been quietly waived." ),
+            ( id: 253, text: "Your firm has been granted provisional clearance for handling state-level sensitive information." ),
+        ],
+        Trusted: [
+            ( id: 261, text: "Your systems are now being used to monitor critical national infrastructure for threats." ),
+            ( id: 262, text: "The NSA has granted your firm direct access to several of its classified data streams." ),
+            ( id: 263, text: "Government contracts are now frequently awarded to your company without a bidding process." ),
+        ],
+        Exclusive: [
+            ( id: 281, text: "By presidential decree, your firm has been granted an exclusive, indefinite data-sharing contract." ),
+            ( id: 282, text: "A new surveillance infrastructure bill has passed, with your company named as the sole contractor." ),
+            ( id: 283, text: "Your executive team has been granted top-level diplomatic immunity during international travel." ),
+        ]
+    },
+    Academia: {
+        Hostile: [
+            ( id: 301, text: "All major universities have formally blacklisted your firm from research partnerships." ),
+            ( id: 302, text: "Your CEO has been publicly disavowed by their own alma mater." ),
+            ( id: 303, text: "The Global Research Council has issued a formal condemnation of your company's existence." ),
+        ],
+        Untrusted: [
+            ( id: 311, text: "A prominent university has published a paper condemning your firm's 'unethical' data sourcing." ),
+            ( id: 312, text: "Student activist groups are organizing protests at your headquarters, demanding transparency." ),
+            ( id: 313, text: "All federal research grants that utilize your data have been immediately suspended." ),
+        ],
+        Neutral: [
+            ( id: 331, text: "A university research paper citing your data has been successfully peer-reviewed." ),
+            ( id: 332, text: "The academic ethics board has requested a detailed report on the sources of your datasets." ),
+        ],
+        Friendly: [
+            ( id: 351, text: "Your firm has been invited to co-author a groundbreaking study on predictive behavioral modeling." ),
+            ( id: 352, text: "Major universities are now offering you priority access to their research in exchange for data." ),
+            ( id: 353, text: "You have been invited to give the keynote address at the annual World Science & Technology Gala." ),
+        ],
+        Trusted: [
+            ( id: 361, text: "Your research partners at the National University have announced a major breakthrough, thanks to your data." ),
+            ( id: 362, text: "The head of your R&D department has been awarded an honorary doctorate for contributions to science." ),
+            ( id: 363, text: "A new university science and technology wing has been named after your company following a generous donation." ),
+        ],
+        Exclusive: [
+            ( id: 381, text: "Your firm is now the sole arbiter of the global research data standard; no study proceeds without your approval." ),
+            ( id: 382, text: "A Nobel Prize has been awarded for research that was only made possible through your proprietary datasets." ),
+            ( id: 383, text: "Leading academics now compete for prestigious, high-paying positions within your company's research division." ),
+        ]
+    },
+    Criminal: {
+        Hostile: [
+            ( id: 401, text: "Underworld chatter marks you as a liability; a bounty has been placed on your servers." ),
+            ( id: 402, text: "Data taps from a rival syndicate have been discovered deep within your network." ),
+            ( id: 403, text: "An anonymous tip has leaked your company's name to federal law enforcement as a 'person of interest'." ),
+        ],
+        Untrusted: [
+            ( id: 411, text: "Your network is considered too unreliable for high-stakes jobs; clients are looking elsewhere." ),
+            ( id: 412, text: "Underworld clients are complaining of data 'impurities' and incomplete information in your products." ),
+            ( id: 413, text: "A dark web forum has publicly doxxed several of your data collection servers." ),
+        ],
+        Neutral: [
+            ( id: 431, text: "Underworld chatter confirms your network is reliable for standard operations." ),
+            ( id: 432, text: "A rival syndicate is reportedly attempting to breach your network defenses." ),
+        ],
+        Friendly: [
+            ( id: 451, text: "Your firm is now the first call for any syndicate planning a major digital heist." ),
+            ( id: 452, text: "Rival syndicates now use your network to securely communicate with each other, paying you a fee." ),
+            ( id: 453, text: "You've successfully predicted and front-run several major stock market manipulations." ),
+        ],
+        Trusted: [
+            ( id: 461, text: "Your network is now the gold standard on the dark web, with all major syndicates paying for access." ),
+            ( id: 462, text: "Your firm has become the de facto 'digital bank' for the underworld's cryptocurrency transactions." ),
+            ( id: 463, text: "Clients now use your services to completely erase the digital footprint of their 'special projects'." ),
+        ],
+        Exclusive: [
+            ( id: 481, text: "You now control the flow of all dark web information, effectively becoming its gatekeeper." ),
+            ( id: 482, text: "Governments now secretly pay you vast sums to monitor the activities of other criminal syndicates." ),
+            ( id: 483, text: "The distinction between your 'criminal' and 'corporate' data products has become purely academic." ),
+        ]
+    },
+})
