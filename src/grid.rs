@@ -40,7 +40,7 @@ pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 #[component(on_remove = grid_position_removed)]
 pub struct GridPosition(pub I64Vec2);
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub enum Direction {
     Right,
     Down,
