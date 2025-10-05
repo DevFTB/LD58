@@ -7,10 +7,11 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
 };
 use core::fmt;
+use serde::Deserialize;
 use std::fmt::Write;
 
 // The fundamental types of data
-#[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deserialize)]
 pub enum BasicDataType {
     Biometric,   // A
     Economic,    // B
@@ -30,7 +31,7 @@ impl BasicDataType {
 }
 
 // Attributes that modify a data stream
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize)]
 pub enum DataAttribute {
     Aggregated,
     DeIdentified,
@@ -49,7 +50,7 @@ impl DataAttribute {
     }
 }
 
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
+#[derive(Component, Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Dataset {
     // The core of the data packet.
     // Maps each data type present in the packet to a set of its attributes.
@@ -120,7 +121,7 @@ impl DataBuffer {
         };
 
         if are_different {
-            println!("{:?} != {:?}", self.shape, &p0);
+            // println!("{:?} != {:?}", self.shape, &p0);
             self.shape = p0.cloned();
             self.value = 0.;
         }
