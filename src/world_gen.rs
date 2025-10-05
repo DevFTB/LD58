@@ -42,7 +42,15 @@ pub struct FactionComponent(Faction);
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i32 = 500;
 const WORLD_MIN: i32 = -(WORLD_SIZE / 2);
-const WORLD_MAX: i32 = (WORLD_SIZE / 2) - 1; 
+const WORLD_MAX: i32 = (WORLD_SIZE / 2) - 1;
+
+const STARTING_AREA_SIZE: i32 = 20;
+const INITIAL_FACTION_SINKS: [(IVec2, Faction); 4] = [
+    (IVec2::new(0,7), Faction::Government),
+    (IVec2::new(7,0), Faction::Corporate),
+    (IVec2::new(0,-7), Faction::Criminal),
+    (IVec2::new(-7,0), Faction::Academia),
+];
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
 
@@ -64,7 +72,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for i in WORLD_MIN..=WORLD_MAX {
         for j in WORLD_MIN..=WORLD_MAX {
             let cell_vec = IVec2::new(i, j);
-            if get_locked_tile_noise(cell_vec, noise_offset) > FACTION_CLUSTER_THRESHOLD {
+            if in_start_area(cell_vec) || get_locked_tile_noise(cell_vec, noise_offset) > FACTION_CLUSTER_THRESHOLD {
                 unlocked_cells.push(cell_vec);
             } else {
                 locked_cells.push(cell_vec);
@@ -170,18 +178,29 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // spawn faction sinks
     for (cluster_id, cell_vec) in &center_map {
         if let Some(faction) = cluster_faction.get(cluster_id) {
-            spawn_faction_sink(*cell_vec, *cluster_id, faction.clone(), &cluster_map, &mut commands);
+            // spawn_faction_sink(*cell_vec, *cluster_id, faction.clone(), &cluster_map, &mut commands);
+            spawn_faction_sink(*cell_vec, faction.clone(), Some(&cluster_map), &mut commands);
         } else {
             panic!("{cluster_id} has no faction");
         }
     }
 
+    // spawn intitial faction sinks
+    for (cell_vec, faction) in INITIAL_FACTION_SINKS {
+        spawn_faction_sink(cell_vec, faction, Option::None, &mut commands);
+    }
+
 }
 
-fn spawn_faction_sink(vec: IVec2, cluster_id: i64, faction: Faction, cluster_map: &HashMap<IVec2, i64>, commands: &mut Commands) {
+fn in_start_area(vec: IVec2) -> bool {
+    return vec.length_squared() < STARTING_AREA_SIZE.pow(2);
+}
+
+// this option implementation is sus and hack refactor later lol
+fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap<IVec2, i64>>, commands: &mut Commands) {
     let mut sink_parent = commands.spawn((
         SinkParent,
-        ClusterID(cluster_id),
+        // ClusterID(cluster_id),
         FactionComponent(faction)
     ));
 
@@ -189,7 +208,10 @@ fn spawn_faction_sink(vec: IVec2, cluster_id: i64, faction: Faction, cluster_map
     for x in vec.x-1..=vec.x+1 {
         for y in vec.y-1..=vec.y+1 {
             let cur_vec = IVec2::new(x, y);
-            if cluster_map.contains_key(&cur_vec) {
+            if let Some(cluster_map_val) = cluster_map  &&
+                cluster_map_val.contains_key(&cur_vec) {
+                sink_vecs.push(cur_vec);
+            } else {
                 sink_vecs.push(cur_vec);
             }
         }

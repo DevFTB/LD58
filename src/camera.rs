@@ -30,7 +30,7 @@ impl Plugin for GameCameraPlugin {
         app.insert_resource(CameraSettings {
             // In orthographic projections, we specify camera scale relative to a default value of 1,
             // in which one unit in world space corresponds to one pixel.
-            orthographic_zoom_range: 0.5..5.0,
+            orthographic_zoom_range: 0.5..10.0,
             // This value was hand-tuned to ensure that zooming in and out feels smooth but not slow.
             orthographic_zoom_speed: 0.2,
         });
