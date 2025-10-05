@@ -74,6 +74,8 @@ const BASIC_SOURCE_DENSITY: i32 = 10;
 const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
+// check to stop broken clusters from spawning because of start area cutting through them
+const MIN_CLUSTER_SIZE: i32 = 6;
 
 
 impl Plugin for WorldGenPlugin {
@@ -143,20 +145,20 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
             }
 
             // println!("cluster nodes: {:?}", cluster_nodes);
+            // if condition stops tiny clusters formed by start area breaking them up
+            // note: cells are still locked - will be locked forever--- TODO: if issue fix lol
+            if cluster_nodes.length() >= MIN_CLUSTER_SIZE.try_into().unwrap() {
+                // found all nodes for current cluster: log cluster id for all nodes and center
+                cluster_map.extend(
+                    cluster_nodes.iter().cloned().map(|key| (key, cluster_id))
+                );
 
-            // found all nodes for current cluster: log cluster id for all nodes and center
-            cluster_map.extend(
-                cluster_nodes.iter().cloned().map(|key| (key, cluster_id))
-            );
+                faction_source_locations.insert(cluster_id, cluster_nodes.into_iter().collect());
 
-            faction_source_locations.insert(cluster_id, cluster_nodes.into_iter().collect());
+                center_map.insert(cluster_id, center_node.0);
 
-            center_map.insert(cluster_id, center_node.0);
-
-            cluster_id += 1;
-        } else {
-            // cluster already visited
-            continue
+                cluster_id += 1;
+            }
         }
     }
 
