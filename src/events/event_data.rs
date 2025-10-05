@@ -1,7 +1,7 @@
 use crate::events::{InteractiveEventData, EventChoice, EventConsequence, ConsequenceType, NewsLibrary, NewsItem};
 use crate::factions::{Faction, reputation_score_to_level};
 use bevy::prelude::*;
-use rand::seq::SliceRandom;
+use rand::prelude::IndexedRandom;
 
 /// Generate a news headline based on faction and reputation level.
 /// Excludes recently used event IDs.
@@ -39,12 +39,12 @@ pub fn get_news_headline<'a>(
             .filter(|item| !recent_ids.contains(&item.id))
             .collect();
         
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         return available_items.choose(&mut rng).map(|item| (item.id, item.text.clone()));
     }
     
     // Select a random item
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     available_items.choose(&mut rng).map(|item| (item.id, item.text.clone()))
 }
 

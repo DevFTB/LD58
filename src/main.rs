@@ -1,3 +1,5 @@
+use bevy_rand::prelude::*;
+use bevy_prng::WyRand;
 extern crate core;
 
 use crate::factory::buildings::aggregator::Aggregator;
@@ -12,6 +14,7 @@ use crate::{
     events::EventsPlugin,
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
+    world_gen::{WorldGenPlugin},
     factions::FactionsPlugin,
     ui::UIPlugin,
     assets::AssetPlugin
@@ -28,14 +31,26 @@ mod events;
 mod factory;
 mod grid;
 mod ui;
+mod world_gen;
+
+#[derive(Component, Default, Debug, Clone)]
+pub enum Faction {
+    Government,
+    #[default]
+    Corporate,
+    Academia,
+    Criminal
+}
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(AssetPlugin)
         .add_plugins(DefaultPlugins)
+        .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(EventsPlugin)
         .add_plugins(GameCameraPlugin)
+        .add_plugins(WorldGenPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
