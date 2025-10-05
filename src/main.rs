@@ -19,7 +19,7 @@ mod grid;
 mod ui;
 mod world_gen;
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Debug)]
 pub enum Faction {
     Government,
     #[default]
