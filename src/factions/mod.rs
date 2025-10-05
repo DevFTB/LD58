@@ -2,13 +2,14 @@ use bevy::prelude::*;
 use serde::Deserialize;
 
 /// Enum for the four factions in the game.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Default)]
 #[repr(u8)]
 pub enum Faction {
     Criminal = 0,
+    #[default]
     Corporate = 1,
     Government = 2,
-    Academia  = 3,
+    Academia = 3,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
@@ -80,12 +81,12 @@ impl Plugin for FactionsPlugin {
 
 pub fn reputation_score_to_level(score: u32) -> ReputationLevel {
     match score {
-        0..=15 => ReputationLevel::Hostile,   // Hostile
+        0..=15 => ReputationLevel::Hostile,     // Hostile
         16..=30 => ReputationLevel::Untrusted,  // Untrusted
-        31..=45 => ReputationLevel::Neutral,  // Neutral
-        46..=60 => ReputationLevel::Friendly,  // Friendly
-        61..=80 => ReputationLevel::Trusted,  // Trusted
+        31..=45 => ReputationLevel::Neutral,    // Neutral
+        46..=60 => ReputationLevel::Friendly,   // Friendly
+        61..=80 => ReputationLevel::Trusted,    // Trusted
         81..=100 => ReputationLevel::Exclusive, // Exclusive
-        _ => ReputationLevel::Neutral, // Default to neutral if out of bounds
+        _ => ReputationLevel::Neutral,          // Default to neutral if out of bounds
     }
 }

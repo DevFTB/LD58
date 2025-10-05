@@ -11,6 +11,7 @@ pub mod buildings;
 pub(crate) mod combiner;
 pub mod delinker;
 pub(crate) mod splitter;
+pub(crate) mod trunker;
 
 #[derive(Component, Debug, Deref, DerefMut)]
 #[relationship_target(relationship = Tile, linked_spawn)]
@@ -27,6 +28,7 @@ impl SourceBuilding {
         position: GridPosition,
         direction: Direction,
         packet: Dataset,
+        throughput: f32,
     ) -> impl Bundle {
         (
             SourceBuilding,
@@ -34,7 +36,7 @@ impl SourceBuilding {
             related!(
                 Tiles[(
                     DataSource {
-                        throughput: 1.,
+                        throughput,
                         direction: direction.clone(),
                         buffer: DataBuffer {
                             shape: Some(packet),
