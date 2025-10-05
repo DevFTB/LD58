@@ -1,4 +1,6 @@
 use bevy::{math::Vec2, platform::collections::HashMap, prelude::*};
+use bevy_rand::prelude::*;
+use bevy_prng::WyRand;
 
 use crate::{
     camera::GameCameraPlugin,
@@ -32,6 +34,7 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
+        .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(GameCameraPlugin)
         .add_plugins(WorldGenPlugin)
         .add_plugins(UIPlugin)

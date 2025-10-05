@@ -1,12 +1,20 @@
-use std::collections::{VecDeque};
+use std::{collections::{btree_map::Range, VecDeque}, ops::RangeInclusive};
 
 use bevy::{
-    color::palettes::css::{ANTIQUE_WHITE, BROWN, GRAY}, ecs::error::info, math::I64Vec2, platform::collections::{HashMap, HashSet}, prelude::*
+    color::palettes::css::{ANTIQUE_WHITE, BROWN, GRAY}, ecs::error::info, math::I64Vec2, platform::collections::{HashMap, HashSet}, prelude::*, render::render_resource::encase::private::Length
 };
+use bevy::prelude::*;
 use noisy_bevy::{fbm_simplex_2d_seeded, worley_2d};
 use rand::Rng;
+
 use super::Faction;
 use super::grid::{GridPosition, GridSprite};
+use super::{Dataset};
+use crate::factory::logical::{BasicDataType, DataAttribute};
+
+use bevy_rand::prelude::GlobalRng;
+use bevy_prng::WyRand;
+use rand::prelude::IndexedRandom;
 
 pub struct WorldGenPlugin;
 
@@ -39,6 +47,15 @@ pub struct SinkParent;
 #[derive(Component, Default)]
 pub struct FactionComponent(Faction);
 
+// placeholder for now - refactor later to fit with rest of codes -
+// will probably move throughput and dataset out to separate components?
+// main purpose is to give me a spot to put in throughput and dataset for now
+#[derive(Component)]
+pub struct Sink {
+    throughput: i32,
+    dataset: Dataset,
+}
+
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i32 = 500;
 const WORLD_MIN: i32 = -(WORLD_SIZE / 2);
@@ -52,6 +69,10 @@ const INITIAL_FACTION_SINKS: [(IVec2, Faction); 4] = [
     (IVec2::new(-7,0), Faction::Academia),
 ];
 
+// basic sources per 1000 unlocked tiles
+const BASIC_SOURCE_DENSITY: i32 = 10;
+const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 1..=2;
+
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
 
 
@@ -61,12 +82,12 @@ impl Plugin for WorldGenPlugin {
     }
 }
 
-fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Single<&mut WyRand, With<GlobalRng>>) {
     // apply logic to determine which ones start locked
     let mut unlocked_cells: Vec<IVec2> = Vec::new();
     let mut locked_cells: Vec<IVec2> = Vec::new();
 
-    let mut rng = rand::rng();
+    // let mut rng = rand::rng();
     let noise_offset: f32 = rng.random_range(-1000.0..1000.0);
 
     for i in WORLD_MIN..=WORLD_MAX {
@@ -190,6 +211,81 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>) {
         spawn_faction_sink(cell_vec, faction, Option::None, &mut commands);
     }
 
+
+    let basic_source_amount = (unlocked_cells.length() as i32 / 1000) * BASIC_SOURCE_DENSITY;
+    // spawn basic sources
+    // TODO: make sure they don't span on top of starting sinks
+    for cell_vec in unlocked_cells.choose_multiple(&mut rng, basic_source_amount.try_into().unwrap())
+    {
+        spawn_source(
+            *cell_vec,
+            get_basic_source_throughput(*cell_vec),
+            get_basic_source_dataset(&mut rng),
+            Option::None,
+            &mut commands
+        );
+    }
+
+
+}
+
+fn get_basic_source_dataset(rng: &mut WyRand) -> Dataset {
+    let basic_datasets: [Dataset; 4] = [
+        Dataset{contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())])},
+        Dataset{contents: HashMap::from([(BasicDataType::Behavioural, HashSet::<DataAttribute>::new())])},
+        Dataset{contents: HashMap::from([(BasicDataType::Economic, HashSet::<DataAttribute>::new())])},
+        Dataset{contents: HashMap::from([(BasicDataType::Telemetry, HashSet::<DataAttribute>::new())])}
+    ];
+
+    if let Some(chosen_dataset) = basic_datasets.choose(rng) {
+        return chosen_dataset.clone();
+    } else {
+        panic!("no basic source dataset or choose broken")
+    }
+}
+
+fn get_basic_source_throughput(vec: IVec2) -> i32 {
+    // TODO: introduce some randomness if desired
+    let length_f64_squared = vec.length_squared() as f64;
+    let length_f64 = length_f64_squared.sqrt();
+    if length_f64 <= 40. {
+        50
+    } else if length_f64 <= 60. {
+        100
+    } else if length_f64 <= 100. {
+        150
+    } else if length_f64 <= 150. {
+        200
+    } else {
+        250
+    }
+}
+
+fn spawn_source(vec: IVec2, throughput: i32, dataset: Dataset, faction: Option<Faction>, commands: &mut Commands) {
+    if let Some(actual_faction) = faction {
+        commands.spawn((
+            GridPosition(vec),
+            GridSprite(Color::linear_rgba(1., 1., 0., 1.)),
+            ZIndex(3),
+            Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
+            Sink{
+                throughput: throughput,
+                dataset: dataset
+            },
+            FactionComponent(actual_faction),
+        ));
+    } else {
+        commands.spawn((
+            GridPosition(vec),
+            GridSprite(Color::linear_rgba(1., 1., 0., 1.)),
+            ZIndex(3),
+            Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
+            Sink{
+                throughput: throughput,
+                dataset: dataset
+            }
+        ));
+    }
 }
 
 fn in_start_area(vec: IVec2) -> bool {
@@ -208,9 +304,10 @@ fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap
     for x in vec.x-1..=vec.x+1 {
         for y in vec.y-1..=vec.y+1 {
             let cur_vec = IVec2::new(x, y);
-            if let Some(cluster_map_val) = cluster_map  &&
-                cluster_map_val.contains_key(&cur_vec) {
-                sink_vecs.push(cur_vec);
+            if let Some(cluster_map_val) = cluster_map {
+                if cluster_map_val.contains_key(&cur_vec) {
+                    sink_vecs.push(cur_vec);
+                }
             } else {
                 sink_vecs.push(cur_vec);
             }
