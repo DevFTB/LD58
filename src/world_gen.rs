@@ -1,7 +1,7 @@
 use std::{collections::{btree_map::Range, VecDeque}, ops::RangeInclusive};
 
 use bevy::{
-    color::palettes::css::{ANTIQUE_WHITE, BROWN, GRAY}, ecs::error::info, math::I64Vec2, platform::collections::{HashMap, HashSet}, prelude::*, render::render_resource::encase::private::Length
+    color::palettes::css::{ANTIQUE_WHITE, BROWN, GRAY}, ecs::error::info, math::I64Vec2, platform::collections::{HashMap, HashSet}, prelude::*, reflect::Array, render::render_resource::encase::private::Length
 };
 use bevy::prelude::*;
 use noisy_bevy::{fbm_simplex_2d_seeded, worley_2d};
@@ -71,7 +71,7 @@ const INITIAL_FACTION_SINKS: [(IVec2, Faction); 4] = [
 
 // basic sources per 1000 unlocked tiles
 const BASIC_SOURCE_DENSITY: i32 = 10;
-const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 1..=2;
+const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
 
@@ -109,6 +109,9 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
     // grid_pos -> cluster_id
     let mut cluster_map: HashMap<IVec2, i64> = HashMap::new();
 
+    // defines free spots to spawn faction sources
+    let mut faction_source_locations: HashMap<i64, HashSet<IVec2>> = HashMap::new();
+
     // cluster_id -> grid_pos
     let mut center_map: HashMap<i64, IVec2> = HashMap::new();
 
@@ -143,8 +146,10 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
 
             // found all nodes for current cluster: log cluster id for all nodes and center
             cluster_map.extend(
-                cluster_nodes.into_iter().map(|key| (key, cluster_id))
+                cluster_nodes.iter().cloned().map(|key| (key, cluster_id))
             );
+
+            faction_source_locations.insert(cluster_id, cluster_nodes.into_iter().collect());
 
             center_map.insert(cluster_id, center_node.0);
 
@@ -181,13 +186,19 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
             (cluster_id, map_grid_pos_to_faction(*center_vec))
         }).collect::<HashMap<i64, Faction>>());
 
+    // map each cluster to a reputation amount
+    let cluster_reputation: HashMap<i64, i32> = HashMap::from(center_map.iter()
+        .map(|(&cluster_id, center_vec)| {
+            (cluster_id, get_faction_cluster_reputation(*center_vec))
+        }).collect::<HashMap<i64, i32>>());
+
     // debug printing to ensure that gen logic is working
     for (cluster_id, cell_vec) in &center_map {
-        if let Some(faction) = cluster_faction.get(cluster_id) {
+        if let (Some(faction), Some(reputation)) = (cluster_faction.get(cluster_id), cluster_reputation.get(cluster_id)) {
             commands.spawn((
                 GridPosition(*cell_vec),
                 GridSprite(Color::linear_rgba(1., 0.5, 1., 1.)),
-                Text2d::new(format!("{:?}: {cluster_id}", faction)),
+                Text2d::new(format!("{:?}: {cluster_id}, rep: {reputation}", faction)),
                 ZIndex(4)
             ));
         } else {
@@ -197,10 +208,14 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
     }
 
     // spawn faction sinks
+    // pass faction_source_locations in to remove sink locations from source spawn points
+    // super dirty but whatevs
     for (cluster_id, cell_vec) in &center_map {
         if let Some(faction) = cluster_faction.get(cluster_id) {
             // spawn_faction_sink(*cell_vec, *cluster_id, faction.clone(), &cluster_map, &mut commands);
-            spawn_faction_sink(*cell_vec, faction.clone(), Some(&cluster_map), &mut commands);
+            if let Some(cluster_allowable_spawns) = faction_source_locations.get_mut(cluster_id) {
+                spawn_faction_sink(*cell_vec, faction.clone(), Some(&cluster_map), Some(cluster_allowable_spawns),&mut commands);
+            }
         } else {
             panic!("{cluster_id} has no faction");
         }
@@ -208,7 +223,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
 
     // spawn intitial faction sinks
     for (cell_vec, faction) in INITIAL_FACTION_SINKS {
-        spawn_faction_sink(cell_vec, faction, Option::None, &mut commands);
+        spawn_faction_sink(cell_vec, faction, Option::None, Option::None, &mut commands);
     }
 
 
@@ -239,7 +254,30 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
         }
     }
 
+    // spawn faction sources
+    for cluster_id in center_map.keys() {
+        let n_spawns = rng.random_range(SOURCES_PER_FACTION_CLUSTER);
+        if let (Some(avaiable_spawns), Some(reputation), Some(faction)) =
+            (faction_source_locations.get(cluster_id), cluster_reputation.get(cluster_id), cluster_faction.get(cluster_id)) {
+            spawn_cluster_datasets( *cluster_id, n_spawns, *reputation, faction.clone(), avaiable_spawns, &mut rng, &mut commands);
+        } else {
+            panic!("{cluster_id} missing from a required hashmap")
+        }
+    }
 
+
+}
+
+fn spawn_cluster_datasets(cluster_id: i64, n: i32, reputation: i32, faction:Faction, available_spawns: &HashSet<IVec2>, rng: &mut WyRand, commands: &mut Commands) {
+    let dataset = get_faction_source_dataset(faction.clone(), reputation, rng);
+    let throughput = get_faction_source_throughput(reputation);
+
+    for cell_vec in available_spawns.into_iter()
+        .copied()
+        .collect::<Vec<IVec2>>().choose_multiple(rng, n.try_into().unwrap())
+    {
+        spawn_source(*cell_vec, throughput, dataset.clone(), Some(faction.clone()), commands);
+    }
 }
 
 fn get_basic_source_dataset(rng: &mut WyRand) -> Dataset {
@@ -271,6 +309,32 @@ fn get_basic_source_throughput(vec: IVec2) -> i32 {
         200
     } else {
         250
+    }
+}
+
+fn get_faction_source_throughput(reputation: i32) -> i32 {
+    // TODO: introduce some randomness if desired
+    match reputation {
+        6 => 400,
+        5 => 300,
+        4 => 150,
+        _ => 50
+    }
+}
+
+fn get_faction_source_dataset(faction: Faction, reputation: i32, rng: &mut WyRand) -> Dataset {
+    return Dataset{contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())])}
+}
+
+fn get_faction_cluster_reputation(vec: IVec2) -> i32 {
+    let length_f64_squared = vec.length_squared() as f64;
+    let length_f64 = length_f64_squared.sqrt();
+    if length_f64 <= 80. {
+        4
+    } else if length_f64 <= 130. {
+        5
+    } else {
+        6
     }
 }
 
@@ -306,7 +370,8 @@ fn in_start_area(vec: IVec2) -> bool {
 }
 
 // this option implementation is sus and hack refactor later lol
-fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap<IVec2, i64>>, commands: &mut Commands) {
+// this whole funciton is so sus shahahahahahah
+fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap<IVec2, i64>>,  cluster_hash_set: Option<&mut HashSet<IVec2>>, commands: &mut Commands) {
     let mut sink_parent = commands.spawn((
         SinkParent,
         // ClusterID(cluster_id),
@@ -327,13 +392,20 @@ fn spawn_faction_sink(vec: IVec2, faction: Faction, cluster_map: Option<&HashMap
         }
     }
 
-    for grid_vec in sink_vecs {
+
+    for grid_vec in &sink_vecs {
         commands.spawn((
-                GridPosition(grid_vec),
+                GridPosition(*grid_vec),
                 GridSprite(Color::linear_rgba(1., 1., 1., 1.)),
                 ZIndex(3)
         ));
     }  
+
+    // remove sink location from allowable source spawn locations
+    if let Some(cluster_hash_set_val) = cluster_hash_set {
+        let remove_set: HashSet<IVec2> = sink_vecs.into_iter().collect();
+        cluster_hash_set_val.retain(|e| !remove_set.contains(e));
+    }
 
     // println!("sink_vecs: {:?}", sink_vecs);
 
