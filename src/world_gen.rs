@@ -5,7 +5,6 @@ use bevy::math::I64Vec2;
 use bevy::platform::collections::HashMap;
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
-use bevy::reflect::Array;
 use bevy::render::render_resource::encase::private::Length;
 use noisy_bevy::{fbm_simplex_2d_seeded, worley_2d};
 use rand::Rng;
@@ -45,9 +44,6 @@ pub struct ClusterID(i64);
 
 // single component abstraction for sinks. these manage contract, hold faction etc.
 // can be made up of many sink block children
-#[derive(Component)]
-pub struct SinkParent;
-
 #[derive(Component, Default)]
 pub struct FactionComponent(Faction);
 
@@ -73,7 +69,7 @@ const FACTION_CLUSTER_THRESHOLD: f32 = 0.32;
 const MIN_CLUSTER_SIZE: i32 = 6;
 
 impl Plugin for WorldGenPlugin {
-    fn build(&self, app: &mut bevy::app::App) {
+    fn build(&self, app: &mut App) {
         app.add_systems(Startup, startup);
     }
 }
@@ -83,7 +79,7 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
-    let startup_span = info_span!("startup_span", name = "startup_span").entered();
+    let _startup_span = info_span!("startup_span", name = "startup_span").entered();
     // apply logic to determine which ones start locked
     let mut unlocked_cells: Vec<I64Vec2> = Vec::new();
     let mut locked_cells: Vec<I64Vec2> = Vec::new();
@@ -280,7 +276,7 @@ fn startup(
     // spawn faction sources
     for cluster_id in center_map.keys() {
         let n_spawns = rng.random_range(SOURCES_PER_FACTION_CLUSTER);
-        if let (Some(avaiable_spawns), Some(reputation), Some(faction)) = (
+        if let (Some(available_spawns), Some(reputation), Some(faction)) = (
             faction_source_locations.get(cluster_id),
             cluster_reputation.get(cluster_id),
             cluster_faction.get(cluster_id),
@@ -290,7 +286,7 @@ fn startup(
                 n_spawns,
                 *reputation,
                 faction.clone(),
-                avaiable_spawns,
+                available_spawns,
                 &mut rng,
                 &mut commands,
             );
@@ -301,7 +297,7 @@ fn startup(
 }
 
 fn spawn_cluster_datasets(
-    cluster_id: i64,
+    _cluster_id: i64,
     n: i32,
     reputation: i32,
     faction: Faction,
@@ -382,9 +378,9 @@ fn get_faction_source_throughput(reputation: i32) -> f32 {
 }
 
 fn get_faction_source_dataset(faction: Faction, reputation: i32, rng: &mut WyRand) -> Dataset {
-    return Dataset {
+    Dataset {
         contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
-    };
+    }
 }
 
 fn get_faction_cluster_reputation(vec: I64Vec2) -> i32 {
@@ -438,12 +434,6 @@ fn spawn_faction_sink(
     cluster_hash_set: Option<&mut HashSet<I64Vec2>>,
     commands: &mut Commands,
 ) {
-    let mut sink_parent = commands.spawn((
-        SinkParent,
-        // ClusterID(cluster_id),
-        FactionComponent(faction),
-    ));
-
     let mut sink_vecs: Vec<I64Vec2> = Vec::new();
     for x in position.x - 1..=position.x + 1 {
         for y in position.y - 1..=position.y + 1 {

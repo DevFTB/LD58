@@ -161,14 +161,9 @@ pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     }
 }
 
-pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
-    for (entity, sink, mut text) in query {
+pub fn visualise_sinks(query: Query<(Ref<DataSink>, &mut Text2d)>) {
+    for (sink, mut text) in query {
         if sink.is_changed() {
-            // println!(
-            //     "Sink {:?} storing {:?} of amount {:?}",
-            //     entity, sink.buffer.shape, sink.buffer.value
-            //
-            // );
             text.0 = format!("{}", sink.buffer);
         }
     }
