@@ -1,6 +1,6 @@
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
-use bevy::prelude::DerefMut;
+use bevy::prelude::{Changed, DerefMut};
 use bevy::{
     app::{Plugin, PostUpdate, Startup},
     asset::{Asset, Assets},
@@ -13,7 +13,7 @@ use bevy::{
         system::{Commands, Query, Res, ResMut},
         world::Ref,
     },
-    math::{primitives::Rectangle, I8Vec2, Vec2, Vec3, Vec4},
+    math::{I8Vec2, Vec2, Vec3, Vec4, primitives::Rectangle},
     mesh::{Mesh, Mesh2d},
     platform::collections::HashMap,
     prelude::Deref,
@@ -51,6 +51,7 @@ pub enum Direction {
 #[derive(Resource)]
 pub struct Grid {
     pub scale: f32,
+    pub base_offset: f32,
 }
 
 #[derive(Component, Deref)]
@@ -75,7 +76,10 @@ pub struct GridMaterial {
 
 impl Plugin for GridPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.insert_resource(Grid { scale: 64.0 });
+        app.insert_resource(Grid {
+            scale: 64.0,
+            base_offset: 0.,
+        });
         app.insert_resource(WorldMap::default());
         app.add_plugins(Material2dPlugin::<GridMaterial>::default());
         app.add_systems(Startup, setup_grid);
@@ -86,11 +90,26 @@ impl Plugin for GridPlugin {
 impl Grid {
     // Helper: convert a world position to a GridPosition by snapping to the grid.
     pub fn world_to_grid(&self, world: Vec2) -> GridPosition {
-        let p = (world + self.scale / 2.) / self.scale;
+        let p = (world - self.base_offset) / self.scale;
         // Use floor for "lower-left origin" style grids; use round() if that's your convention.
         let gx = p.x.floor() as i8;
         let gy = p.y.floor() as i8;
         GridPosition(I8Vec2 { x: gx, y: gy })
+    }
+
+    // bottom left corner
+    pub fn grid_to_world_corner(&self, pos: &GridPosition) -> Vec2 {
+        Vec2::new(
+            pos.x as f32 * self.scale + self.base_offset,
+            pos.y as f32 * self.scale + self.base_offset,
+        )
+    }
+
+    pub fn grid_to_world_center(&self, pos: &GridPosition) -> Vec2 {
+        Vec2::new(
+            pos.x as f32 * self.scale + self.base_offset + self.scale / 2.0,
+            pos.y as f32 * self.scale + self.base_offset + self.scale / 2.0,
+        )
     }
 }
 impl Direction {
@@ -200,25 +219,25 @@ fn setup_grid(
             line_colour: Vec4::new(1.0, 1.0, 1.0, 0.1),
             line_width: 0.5,
             grid_size: grid.scale / 2.0,
-            offset: Vec2::ZERO,
+            offset: Vec2::splat(grid.scale / 4.0),
             resolution: Vec2::new(width, height), // Match your quad size
             grid_intensity: 0.7,
         })),
         Transform::from_translation(Vec3 {
-            x: grid.scale / 2.,
-            y: grid.scale / 2.,
+            x: grid.base_offset + grid.scale / 2.0,
+            y: grid.base_offset + grid.scale / 2.0,
             z: 1.,
         }),
     ));
 }
 
-fn transform_to_grid(query: Query<(&mut Transform, Ref<GridPosition>)>, grid: Res<Grid>) {
+fn transform_to_grid(
+    query: Query<(&mut Transform, &GridPosition), Changed<GridPosition>>,
+    grid: Res<Grid>,
+) {
     for (mut transform, grid_pos) in query {
-        transform.translation = Vec3::new(
-            grid_pos.x as f32 * grid.scale,
-            grid_pos.y as f32 * grid.scale,
-            transform.translation.z,
-        );
+        let vec2 = grid.grid_to_world_center(grid_pos);
+        transform.translation = Vec3::new(vec2.x, vec2.y, transform.translation.z);
     }
 }
 
@@ -254,6 +273,45 @@ pub fn calculate_occupied_cells(base_position: I8Vec2, width: i8, height: i8) ->
             cells.push(I8Vec2::new(base_position.x + dx, base_position.y + dy));
         }
     }
+    cells
+}
+
+pub fn calculate_occupied_cells_rotated(
+    anchor_position: I8Vec2,
+    width: i8,
+    height: i8,
+    rotation: u8,
+) -> Vec<I8Vec2> {
+    let mut cells = Vec::new();
+
+    match rotation % 4 {
+        0 => {
+            // Rotation 0 (0°): extends right
+            for i in 0..width {
+                cells.push(I8Vec2::new(anchor_position.x + i, anchor_position.y));
+            }
+        }
+        1 => {
+            // Rotation 1 (90° CW): extends down
+            for i in 0..width {
+                cells.push(I8Vec2::new(anchor_position.x, anchor_position.y - i));
+            }
+        }
+        2 => {
+            // Rotation 2 (180°): extends left
+            for i in 0..width {
+                cells.push(I8Vec2::new(anchor_position.x - i, anchor_position.y));
+            }
+        }
+        3 => {
+            // Rotation 3 (270° CW): extends up
+            for i in 0..width {
+                cells.push(I8Vec2::new(anchor_position.x, anchor_position.y + i));
+            }
+        }
+        _ => unreachable!(),
+    }
+
     cells
 }
 pub fn are_positions_free(world_map: &WorldMap, positions: &[GridPosition]) -> bool {
