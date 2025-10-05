@@ -17,8 +17,7 @@ pub struct BlocksWorldClicks;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.add_message::<shop::ConstructBuildingEvent>()
-            .insert_resource(shop::SelectedBuildingType(None))
+        app.insert_resource(shop::SelectedBuildingType(None))
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .add_systems(Startup, startup)
             .add_systems(Startup, shop::spawn_building_shop)

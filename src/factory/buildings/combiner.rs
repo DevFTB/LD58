@@ -35,7 +35,7 @@ impl Combiner {
                                 buffer: DataBuffer::default(),
                             },
                             Text2d::default(),
-                            position.offset(Direction::Up, i as i64),
+                            position.offset(source_dir.rotate_counterclockwise(), i as i64),
                             GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 1.0)),
                         ));
                     }

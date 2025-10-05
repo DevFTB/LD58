@@ -33,7 +33,7 @@ impl Splitter {
                                 limited: true,
                                 buffer: DataBuffer::default(),
                             },
-                            position.offset(Direction::Up, i as i64),
+                            position.offset(source_dir.rotate_counterclockwise(), 1)
                         ));
                     }
                     spawner.spawn((

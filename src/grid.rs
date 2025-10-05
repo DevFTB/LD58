@@ -128,6 +128,24 @@ impl Direction {
             Direction::Up => Direction::Down,
         }
     }
+
+    pub fn rotate_clockwise(&self) -> Direction {
+        match self {
+            Direction::Right => Direction::Down,
+            Direction::Down => Direction::Left,
+            Direction::Left => Direction::Up,
+            Direction::Up => Direction::Right,
+        }
+    }
+
+    pub fn rotate_counterclockwise(&self) -> Direction {
+        match self {
+            Direction::Right => Direction::Up,
+            Direction::Up => Direction::Left,
+            Direction::Left => Direction::Down,
+            Direction::Down => Direction::Right,
+        }
+    }
 }
 
 impl GridPosition {
@@ -291,36 +309,42 @@ pub fn calculate_occupied_cells_rotated(
     anchor_position: I64Vec2,
     width: i64,
     height: i64,
-    rotation: u8,
+    direction: Direction,
 ) -> Vec<I64Vec2> {
     let mut cells = Vec::new();
 
-    match rotation % 4 {
-        0 => {
-            // Rotation 0 (0°): extends right
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x + i, anchor_position.y));
-            }
-        }
-        1 => {
-            // Rotation 1 (90° CW): extends down
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y - i));
-            }
-        }
-        2 => {
-            // Rotation 2 (180°): extends left
+    // Direction is the facing direction (where output/source is)
+    // Building extends perpendicular to the facing direction
+    // Anchor position is at the corner in the facing direction
+    match direction {
+        Direction::Up => {
+            // Facing up, extends left from anchor (which is bottom-right corner)
+            // Anchor is at the rightmost position
             for i in 0..width {
                 cells.push(I64Vec2::new(anchor_position.x - i, anchor_position.y));
             }
         }
-        3 => {
-            // Rotation 3 (270° CW): extends up
+        Direction::Right => {
+            // Facing right, extends upward from anchor (which is bottom-left corner)
+            // Anchor is at the bottom position
             for i in 0..width {
                 cells.push(I64Vec2::new(anchor_position.x, anchor_position.y + i));
             }
         }
-        _ => unreachable!(),
+        Direction::Down => {
+            // Facing down, extends right from anchor (which is top-left corner)
+            // Anchor is at the leftmost position
+            for i in 0..width {
+                cells.push(I64Vec2::new(anchor_position.x + i, anchor_position.y));
+            }
+        }
+        Direction::Left => {
+            // Facing left, extends downward from anchor (which is top-right corner)
+            // Anchor is at the top position
+            for i in 0..width {
+                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y - i));
+            }
+        }
     }
 
     cells

@@ -1,23 +1,16 @@
 use bevy::{
     color::palettes::css::ANTIQUE_WHITE,
-    math::I64Vec2,
     prelude::*,
 };
 
-use crate::grid::{WorldMap, GridPosition, are_positions_free, calculate_occupied_cells_rotated};
+use crate::grid::{WorldMap, GridPosition, Direction, are_positions_free, calculate_occupied_cells_rotated};
 use crate::factory::buildings::buildings::BuildingType;
+use crate::factory::ConstructBuildingEvent;
 use crate::ui::BlocksWorldClicks;
 
 pub const BUILDING_BAR_WIDTH_PCT: f32 = 70.0;
 pub const BUILDING_BAR_HEIGHT_PCT: f32 = 12.0;
 const BUILDING_TILE_SIZE: i64 = 64;
-
-#[derive(Event, Message)]
-pub struct ConstructBuildingEvent {
-    pub building_type: BuildingType,
-    pub grid_position: I64Vec2,
-    pub rotation: u8,
-}
 
 #[derive(Component, Clone)]
 pub struct UIBuilding {
@@ -28,7 +21,7 @@ pub struct UIBuilding {
 pub struct SelectedBuilding;
 
 #[derive(Component)]
-pub struct BuildingRotation(pub u8); // 0, 1, 2, 3 for 0°, 90°, 180°, 270°
+pub struct BuildingRotation(pub Direction);
 
 #[derive(Resource)]
 pub struct SelectedBuildingType(pub Option<BuildingType>);
@@ -136,7 +129,7 @@ pub fn handle_building_click(
 
             commands.spawn((
                 SelectedBuilding,
-                BuildingRotation(0),
+                BuildingRotation(Direction::Up),
                 Sprite {
                     image: asset_server.load(&data.sprite_path),
                     custom_size: Some(sprite_size),
@@ -166,25 +159,24 @@ pub fn update_selected_building_position(
         let data = building_type.data();
 
         for (mut transform, mut sprite, rotation) in selected_query.iter_mut() {
-            // Convert mouse position to grid coordinates - this is our anchor cell
+            // Snap mouse position to grid to get the anchor cell
             let snapped_grid_pos = grid.world_to_grid(world_position.xy());
-
-            // Get the world center of the anchor cell
-            let anchor_cell_center = grid.grid_to_world_center(&snapped_grid_pos);
-
-            // Calculate offset from anchor to sprite center based on rotation
-            // For a 3x1 building, the center is (width-1)/2 cells away from anchor
-            let offset = ((data.grid_width - 1) as f32 / 2.0) * grid.scale;
-
-            let (sprite_center_x, sprite_center_y) = match rotation.0 % 4 {
-                0 => (anchor_cell_center.x + offset, anchor_cell_center.y), // extends right
-                1 => (anchor_cell_center.x, anchor_cell_center.y - offset), // extends down
-                2 => (anchor_cell_center.x - offset, anchor_cell_center.y), // extends left
-                3 => (anchor_cell_center.x, anchor_cell_center.y + offset), // extends up
-                _ => unreachable!(),
+            let anchor_center = grid.grid_to_world_center(&snapped_grid_pos);
+            
+            // Calculate sprite position based on anchor and rotation
+            // The sprite extends from the anchor in the direction it's facing
+            // For a 3x1 building, sprite center is (width-1)/2 cells from anchor
+            let offset_cells = (data.grid_width - 1) as f32 * grid.scale / 2.0;
+            
+            // Position sprite center relative to anchor cell center
+            let sprite_pos = match rotation.0 {
+                Direction::Up => Vec2::new(anchor_center.x - offset_cells, anchor_center.y ),
+                Direction::Right => Vec2::new(anchor_center.x, anchor_center.y + offset_cells),
+                Direction::Down => Vec2::new(anchor_center.x + offset_cells, anchor_center.y),
+                Direction::Left => Vec2::new(anchor_center.x, anchor_center.y - offset_cells),
             };
 
-            let snapped_position = Vec3::new(sprite_center_x, sprite_center_y, 100.0);
+            let snapped_position = Vec3::new(sprite_pos.x, sprite_pos.y, 100.0);
             transform.translation = snapped_position;
 
             // Check if positions are occupied using rotated cell calculation
@@ -221,7 +213,7 @@ pub fn handle_building_rotate(
         && let Some(_building_type) = &selected_building_type.0
     {
         for (_entity, mut building_transform, mut rotation) in &mut selected_query {
-            rotation.0 = (rotation.0 + 1) % 4;
+            rotation.0 = rotation.0.rotate_clockwise();
             building_transform.rotate_z(-std::f32::consts::FRAC_PI_2);
         }
     }
@@ -254,7 +246,7 @@ pub fn handle_placement_click(
             if let Some(world_position) = get_mouse_world_position(&windows, &camera_query) {
                 // Get building data and rotation
                 let data = building_type.data();
-                let rotation = selected_query.iter().next().map(|(_, r)| r.0).unwrap_or(0);
+                let rotation = selected_query.iter().next().map(|(_, r)| r.0).unwrap_or(Direction::Up);
 
                 // Convert mouse position to grid coordinates - this is the anchor cell
                 let snapped_grid_pos = grid.world_to_grid(world_position.xy());
@@ -279,7 +271,7 @@ pub fn handle_placement_click(
                     construct_events.write(ConstructBuildingEvent {
                         building_type: *building_type,
                         grid_position: base_position,
-                        rotation,
+                        direction: rotation,
                     });
 
                     // Despawn the dragged building
@@ -295,3 +287,4 @@ pub fn handle_placement_click(
         }
     }
 }
+
