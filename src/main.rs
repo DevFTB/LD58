@@ -6,28 +6,28 @@ use crate::factory::buildings::aggregator::Aggregator;
 use crate::factory::buildings::combiner::Combiner;
 use crate::factory::buildings::delinker::Delinker;
 use crate::factory::buildings::splitter::Splitter;
+use crate::factory::buildings::trunker::Trunker;
 use crate::factory::buildings::{SinkBuilding, SourceBuilding};
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 use crate::grid::Direction;
 use crate::{
+    assets::AssetPlugin,
     camera::GameCameraPlugin,
     events::EventsPlugin,
+    factions::FactionsPlugin,
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
     world_gen::{WorldGenPlugin},
-    factions::FactionsPlugin,
     ui::UIPlugin,
-    assets::AssetPlugin
 };
 use bevy::platform::collections::HashSet;
 use bevy::window::PrimaryWindow;
 use bevy::{math::I64Vec2, platform::collections::HashMap, prelude::*};
 
-
-mod factions;
 mod assets;
 mod camera;
 mod events;
+mod factions;
 mod factory;
 mod grid;
 mod ui;
@@ -64,6 +64,7 @@ fn startup(mut commands: Commands) {
     spawn_splitter_test(&mut commands);
     spawn_delinker_test(&mut commands);
     spawn_combiner_test(&mut commands);
+    spawn_trunking_test(&mut commands);
 }
 
 fn spawn_combiner_test(commands: &mut Commands) {
@@ -76,6 +77,7 @@ fn spawn_combiner_test(commands: &mut Commands) {
                 HashSet::<DataAttribute>::new(),
             )]),
         },
+        5.0,
     ));
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -5, y: 2 }),
@@ -83,6 +85,7 @@ fn spawn_combiner_test(commands: &mut Commands) {
         Dataset {
             contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
         },
+        5.0,
     ));
     commands.spawn(Combiner::get_bundle(
         GridPosition(I64Vec2 { x: -4, y: 1 }),
@@ -92,6 +95,41 @@ fn spawn_combiner_test(commands: &mut Commands) {
     ));
     commands.spawn(SinkBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -3, y: 1 }),
+        Direction::Left,
+        None,
+    ));
+}
+fn spawn_trunking_test(commands: &mut Commands) {
+    commands.spawn(SourceBuilding::get_bundle(
+        GridPosition(I64Vec2 { x: -5, y: 5 }),
+        Direction::Right,
+        Dataset {
+            contents: HashMap::from([(
+                BasicDataType::Behavioural,
+                HashSet::<DataAttribute>::new(),
+            )]),
+        },
+        100.0,
+    ));
+    commands.spawn(SourceBuilding::get_bundle(
+        GridPosition(I64Vec2 { x: -5, y: 6 }),
+        Direction::Right,
+        Dataset {
+            contents: HashMap::from([(
+                BasicDataType::Behavioural,
+                HashSet::<DataAttribute>::new(),
+            )]),
+        },
+        5.0,
+    ));
+    commands.spawn(Trunker::get_bundle(
+        GridPosition(I64Vec2 { x: -4, y: 5 }),
+        10.0,
+        Direction::Right,
+        2,
+    ));
+    commands.spawn(SinkBuilding::get_bundle(
+        GridPosition(I64Vec2 { x: -3, y: 5 }),
         Direction::Left,
         None,
     ));
@@ -107,6 +145,7 @@ fn spawn_delinker_test(commands: &mut Commands) {
                 (BasicDataType::Biometric, HashSet::<DataAttribute>::new()),
             ]),
         },
+        5.0,
     ));
     commands.spawn(Aggregator::get_bundle(
         GridPosition(I64Vec2 { x: 1, y: 1 + 5 }),
@@ -158,6 +197,7 @@ fn spawn_splitter_test(commands: &mut Commands) {
                 HashSet::<DataAttribute>::new(),
             )]),
         },
+        5.0,
     ));
     commands.spawn(Aggregator::get_bundle(
         GridPosition(I64Vec2 { x: 1, y: 1 }),

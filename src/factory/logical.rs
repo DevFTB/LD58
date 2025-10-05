@@ -65,13 +65,13 @@ impl Dataset {
         self
     }
 }
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct DataSink {
     pub direction: Direction,
     pub buffer: DataBuffer,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub struct DataSource {
     pub(crate) direction: Direction,
     pub(crate) throughput: f32,
@@ -132,7 +132,7 @@ impl DataBuffer {
         self.value += amount;
     }
     pub(crate) fn remove(&mut self, amount: f32) {
-        self.value = (self.value - amount).min(0.);
+        self.value = (self.value - amount).max(0.);
     }
 }
 
@@ -177,12 +177,13 @@ pub fn pass_data_system(
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
     sink.buffer.set_shape(source.buffer.shape.as_ref());
     let packet = if source.limited {
-        source.buffer.value.min(source.throughput * secs)
+        source.buffer.value.clamp(0., source.throughput * secs)
     } else {
-        source.throughput
+        source.throughput * secs
     };
+
+    source.buffer.value = (source.buffer.value - packet).max(0.);
     sink.buffer.value += packet;
-    source.buffer.value -= packet;
 }
 pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, amount: f32) {
     let amount = amount.min(sink.buffer.value);
