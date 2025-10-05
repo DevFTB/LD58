@@ -32,7 +32,8 @@ impl SinkBuilding {
                             },
                             position,
                             GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-                            Text2d::new("0"),
+                            // Text2d removed for performance
+                            // Text2d::new("0"),
                         ));
                     });
                 },
@@ -80,7 +81,8 @@ impl SinkBuilding {
                                 },
                                 position,
                                 GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-                                Text2d::new("0"),
+                                // Text2d removed for performance
+                                // Text2d::new("0"),
                             ));
                         }
                         TilePlacement::Corner(h, v) => {
@@ -96,7 +98,8 @@ impl SinkBuilding {
                                 },
                                 pos,
                                 GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-                                Text2d::new("0"),
+                                // Text2d removed for performance
+                                // Text2d::new("0"),
                             ));
                             spawner.spawn((
                                 DataSink {
@@ -108,7 +111,8 @@ impl SinkBuilding {
                                 },
                                 pos,
                                 GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
-                                Text2d::new("0"),
+                                // Text2d removed for performance
+                                // Text2d::new("0"),
                             ));
                         }
                     });

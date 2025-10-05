@@ -15,7 +15,7 @@ use bevy::prelude::Commands;
 pub fn spawn_combiner_test(commands: &mut Commands) {
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -5, y: 1 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -23,14 +23,16 @@ pub fn spawn_combiner_test(commands: &mut Commands) {
             )]),
         },
         5.0,
+        false,
     ));
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -5, y: 2 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
         },
         5.0,
+        false,
     ));
     commands.spawn(Combiner::get_bundle(
         GridPosition(I64Vec2 { x: -4, y: 1 }),
@@ -52,7 +54,7 @@ pub fn spawn_sized_sink_test(commands: &mut Commands) {
     ));
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -1, y: -10 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -60,10 +62,11 @@ pub fn spawn_sized_sink_test(commands: &mut Commands) {
             )]),
         },
         10.0,
+        false,
     ));
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: 0, y: -11 }),
-        Direction::Up,
+        vec![Direction::Up],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -71,12 +74,13 @@ pub fn spawn_sized_sink_test(commands: &mut Commands) {
             )]),
         },
         100.0,
+        false,
     ));
 }
 pub fn spawn_trunking_test(commands: &mut Commands) {
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -5, y: 5 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -84,10 +88,11 @@ pub fn spawn_trunking_test(commands: &mut Commands) {
             )]),
         },
         100.0,
+        false,
     ));
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: -5, y: 6 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -95,6 +100,7 @@ pub fn spawn_trunking_test(commands: &mut Commands) {
             )]),
         },
         5.0,
+        false,
     ));
     commands.spawn(Trunker::get_bundle(
         GridPosition(I64Vec2 { x: -4, y: 5 }),
@@ -112,7 +118,7 @@ pub fn spawn_trunking_test(commands: &mut Commands) {
 pub fn spawn_delinker_test(commands: &mut Commands) {
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: 0, y: 1 + 5 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([
                 (BasicDataType::Behavioural, HashSet::<DataAttribute>::new()),
@@ -120,6 +126,7 @@ pub fn spawn_delinker_test(commands: &mut Commands) {
             ]),
         },
         5.0,
+        false,
     ));
     commands.spawn(Aggregator::get_bundle(
         GridPosition(I64Vec2 { x: 1, y: 1 + 5 }),
@@ -164,7 +171,7 @@ pub fn spawn_delinker_test(commands: &mut Commands) {
 pub fn spawn_splitter_test(commands: &mut Commands) {
     commands.spawn(SourceBuilding::get_bundle(
         GridPosition(I64Vec2 { x: 0, y: 1 }),
-        Direction::Right,
+        vec![Direction::Right],
         Dataset {
             contents: HashMap::from([(
                 BasicDataType::Behavioural,
@@ -172,6 +179,7 @@ pub fn spawn_splitter_test(commands: &mut Commands) {
             )]),
         },
         5.0,
+        false,
     ));
     commands.spawn(Aggregator::get_bundle(
         GridPosition(I64Vec2 { x: 1, y: 1 }),

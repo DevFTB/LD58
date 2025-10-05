@@ -3,12 +3,15 @@ use crate::factory::buildings::combiner::do_combining;
 use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
-use crate::factory::logical::{debug_logical_links, pass_data_system, visualise_sinks};
+use crate::factory::logical::{
+    debug_logical_links, pass_data_system, visualise_sinks, DataSink, DataSource,
+};
 use crate::factory::physical::{
     connect_direct, connect_links, connect_physical_links_to_data, establish_logical_links,
     on_physical_link_removed,
 };
 use bevy::app::Update;
+use bevy::prelude::{Added, Query};
 use bevy::{
     app::{Plugin, PostUpdate},
     ecs::schedule::IntoScheduleConfigs,
@@ -43,7 +46,11 @@ impl Plugin for FactoryPlugin {
                 connect_physical_links_to_data,
                 connect_links,
                 establish_logical_links,
-                connect_direct,
+                connect_direct.run_if(
+                    |q1: Query<(), Added<DataSource>>, q2: Query<(), Added<DataSink>>| {
+                        !q1.is_empty() || !q2.is_empty()
+                    },
+                ),
                 debug_logical_links,
             )
                 .chain(),

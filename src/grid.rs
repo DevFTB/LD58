@@ -47,7 +47,14 @@ pub enum Direction {
     Left,
     Up,
 }
-
+impl Direction {
+    pub const ALL: [Direction; 4] = [
+        Direction::Right,
+        Direction::Down,
+        Direction::Left,
+        Direction::Up,
+    ];
+}
 #[derive(Resource)]
 pub struct Grid {
     pub scale: f32,
@@ -167,7 +174,11 @@ impl GridPosition {
         }
     }
 }
-
+impl From<I64Vec2> for GridPosition {
+    fn from(value: I64Vec2) -> Self {
+        GridPosition(value)
+    }
+}
 impl Material2d for GridMaterial {
     fn fragment_shader() -> ShaderRef {
         GRID_SHADER_ASSET_PATH.into()

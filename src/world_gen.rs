@@ -1,21 +1,21 @@
 use crate::GridPosition;
 use std::{collections::VecDeque, ops::RangeInclusive};
 
+use bevy::math::I64Vec2;
+use bevy::platform::collections::HashMap;
+use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
-use bevy::{
-    math::I64Vec2,
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-    reflect::Array,
-    render::render_resource::encase::private::Length,
-};
+use bevy::reflect::Array;
+use bevy::render::render_resource::encase::private::Length;
 use noisy_bevy::{fbm_simplex_2d_seeded, worley_2d};
 use rand::Rng;
 
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
 use crate::factions::Faction;
-use crate::grid::GridSprite;
+use crate::factory::buildings::sink::SinkBuilding;
+use crate::factory::buildings::source::SourceBuilding;
+use crate::grid::{Direction, GridSprite};
 use bevy_prng::WyRand;
 use bevy_rand::prelude::GlobalRng;
 use rand::prelude::IndexedRandom;
@@ -51,15 +51,6 @@ pub struct SinkParent;
 #[derive(Component, Default)]
 pub struct FactionComponent(Faction);
 
-// placeholder for now - refactor later to fit with rest of codes -
-// will probably move throughput and dataset out to separate components?
-// main purpose is to give me a spot to put in throughput and dataset for now
-#[derive(Component)]
-pub struct Sink {
-    throughput: i32,
-    dataset: Dataset,
-}
-
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i64 = 500;
 const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
@@ -92,6 +83,7 @@ fn startup(
     asset_server: Res<AssetServer>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
+    let startup_span = info_span!("startup_span", name = "startup_span").entered();
     // apply logic to determine which ones start locked
     let mut unlocked_cells: Vec<I64Vec2> = Vec::new();
     let mut locked_cells: Vec<I64Vec2> = Vec::new();
@@ -176,10 +168,11 @@ fn startup(
         }
     }
 
-    // println!("cluster map: {:?}", cluster_map);
-    // println!("center map: {:?}", center_map);
+    println!("cluster map: {:?}", cluster_map);
+    println!("center map: {:?}", center_map);
 
-    // debug printing to ensure that gen logic is working
+    // Debug visualization disabled for performance - was spawning 100,000+ entities
+    // Uncomment only for debugging world generation
 
     for cell_vec in locked_cells {
         commands.spawn((
@@ -252,8 +245,8 @@ fn startup(
     }
 
     // spawn intitial faction sinks
-    for (cell_vec, faction) in INITIAL_FACTION_SINKS {
-        spawn_faction_sink(cell_vec, faction, Option::None, Option::None, &mut commands);
+    for (position, faction) in INITIAL_FACTION_SINKS {
+        spawn_faction_sink(position, faction, Option::None, Option::None, &mut commands);
     }
 
     let basic_source_amount = (unlocked_cells.length() as i32 / 1000) * BASIC_SOURCE_DENSITY;
@@ -361,30 +354,30 @@ fn get_basic_source_dataset(rng: &mut WyRand) -> Dataset {
     }
 }
 
-fn get_basic_source_throughput(vec: I64Vec2) -> i32 {
+fn get_basic_source_throughput(vec: I64Vec2) -> f32 {
     // TODO: introduce some randomness if desired
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
     if length_f64 <= 40. {
-        50
+        50.
     } else if length_f64 <= 60. {
-        100
+        100.
     } else if length_f64 <= 100. {
-        150
+        150.
     } else if length_f64 <= 150. {
-        200
+        200.
     } else {
-        250
+        250.
     }
 }
 
-fn get_faction_source_throughput(reputation: i32) -> i32 {
+fn get_faction_source_throughput(reputation: i32) -> f32 {
     // TODO: introduce some randomness if desired
     match reputation {
-        6 => 400,
-        5 => 300,
-        4 => 150,
-        _ => 50,
+        6 => 400.,
+        5 => 300.,
+        4 => 150.,
+        _ => 50.,
     }
 }
 
@@ -408,34 +401,27 @@ fn get_faction_cluster_reputation(vec: I64Vec2) -> i32 {
 
 fn spawn_source(
     vec: I64Vec2,
-    throughput: i32,
+    throughput: f32,
     dataset: Dataset,
     faction: Option<Faction>,
     commands: &mut Commands,
 ) {
+    let source = SourceBuilding::get_bundle(
+        vec.into(),
+        Direction::ALL.to_vec(),
+        dataset.clone(),
+        throughput,
+        false,
+    );
+
+    let mut entity = commands.spawn((
+        source,
+        ZIndex(3),
+        Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
+    ));
+
     if let Some(actual_faction) = faction {
-        commands.spawn((
-            GridPosition(vec),
-            GridSprite(Color::linear_rgba(1., 1., 0., 1.)),
-            ZIndex(3),
-            Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
-            Sink {
-                throughput: throughput,
-                dataset: dataset,
-            },
-            FactionComponent(actual_faction),
-        ));
-    } else {
-        commands.spawn((
-            GridPosition(vec),
-            GridSprite(Color::linear_rgba(1., 1., 0., 1.)),
-            ZIndex(3),
-            Text2d::new(format!("{:?}: {throughput}", dataset.clone())),
-            Sink {
-                throughput: throughput,
-                dataset: dataset,
-            },
-        ));
+        entity.insert(FactionComponent(actual_faction));
     }
 }
 
@@ -446,7 +432,7 @@ fn in_start_area(vec: I64Vec2) -> bool {
 // this option implementation is sus and hack refactor later lol
 // this whole funciton is so sus shahahahahahah
 fn spawn_faction_sink(
-    vec: I64Vec2,
+    position: I64Vec2,
     faction: Faction,
     cluster_map: Option<&HashMap<I64Vec2, i64>>,
     cluster_hash_set: Option<&mut HashSet<I64Vec2>>,
@@ -459,8 +445,8 @@ fn spawn_faction_sink(
     ));
 
     let mut sink_vecs: Vec<I64Vec2> = Vec::new();
-    for x in vec.x - 1..=vec.x + 1 {
-        for y in vec.y - 1..=vec.y + 1 {
+    for x in position.x - 1..=position.x + 1 {
+        for y in position.y - 1..=position.y + 1 {
             let cur_vec = I64Vec2::new(x, y);
             if let Some(cluster_map_val) = cluster_map {
                 if cluster_map_val.contains_key(&cur_vec) {
@@ -486,20 +472,8 @@ fn spawn_faction_sink(
         cluster_hash_set_val.retain(|e| !remove_set.contains(e));
     }
 
-    // println!("sink_vecs: {:?}", sink_vecs);
-
-    // TODO: figure out how to actually spawn individual sink cells and ultimate hierachy
-
-    // sink_parent.with_children(|parent| {
-    //     // todo spawn actual sink stuff lol
-    //     for grid_vec in sink_vecs {
-    //         parent.spawn((
-    //                 GridPosition(grid_vec),
-    //                 GridSprite(Color::linear_rgba(1., 1., 1., 1.)),
-    //                 ZIndex(3)
-    //         ));
-    //     }
-    // });
+    let sink = SinkBuilding::get_sized_bundle(position.into(), 2, None);
+    commands.spawn(sink);
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {
