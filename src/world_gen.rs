@@ -61,7 +61,7 @@ pub struct Sink {
 }
 
 // might need to change min/max logic a bit if not even lol
-const WORLD_SIZE: i64 = 250;
+const WORLD_SIZE: i64 = 100;
 const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
 const WORLD_MAX: i64 = (WORLD_SIZE / 2) - 1;
 
@@ -79,7 +79,7 @@ const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.30;
 // check to stop broken clusters from spawning because of start area cutting through them
-const MIN_CLUSTER_SIZE: i32 = 6;
+const MIN_CLUSTER_SIZE: i32 = 20;
 
 impl Plugin for WorldGenPlugin {
     fn build(&self, app: &mut bevy::app::App) {
