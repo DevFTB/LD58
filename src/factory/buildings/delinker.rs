@@ -1,12 +1,13 @@
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource, Dataset};
-use crate::grid::{Direction, GridPosition, GridSprite};
+use crate::grid::{Direction, GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::platform::collections::HashMap;
 use bevy::prelude::{Bundle, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
+use crate::grid::GridAtlasSprite;
 
 #[derive(Component)]
 pub struct Delinker {
@@ -17,14 +18,32 @@ impl Delinker {
     pub fn get_bundle(
         position: GridPosition,
         throughput: f32,
-        source_dir: Direction,
+        orientation: Orientation,
         source_count: i8,
+        atlas_index: usize,
+        grid_width: i64,
+        grid_height: i64,
     ) -> impl Bundle {
         (
             Delinker { throughput },
             position,
+            GridAtlasSprite {
+                atlas_index,
+                grid_width,
+                grid_height,
+                orientation,
+            },
             Tiles::spawn(SpawnWith(
                 move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
+                    spawner.spawn((
+                        DataSink {
+                            direction: orientation.direction.opposite(),
+                            buffer: DataBuffer::default(),
+                        },
+                        position,
+                        GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
+                        Text2d::default(),
+                    ));
                     for i in 0..source_count {
                         spawner.spawn((
                             DataSource {
@@ -33,18 +52,9 @@ impl Delinker {
                                 limited: true,
                                 buffer: DataBuffer::default(),
                             },
-                            position.offset(Direction::Up, i as i64),
-                            GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 1.0)),
+                            position.offset(orientation.layout_direction(), i as i64),
                         ));
                     }
-                    spawner.spawn((
-                        DataSink {
-                            direction: source_dir.opposite(),
-                            buffer: DataBuffer::default(),
-                        },
-                        position,
-                        Text2d::default(),
-                    ));
                 },
             )),
         )
