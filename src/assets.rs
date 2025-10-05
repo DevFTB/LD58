@@ -5,10 +5,7 @@ use bevy::prelude::*;
 pub struct GameAssets {
     pub icons_texture: Handle<Image>,
     pub icons_layout: Handle<TextureAtlasLayout>,
-    pub corporate_icon_index: usize,
-    pub government_icon_index: usize,
-    pub academia_icon_index: usize,
-    pub criminal_icon_index: usize,
+    pub transparent_icons_texture: Handle<Image>,
 }
 
 pub struct AssetPlugin;
@@ -25,6 +22,7 @@ pub fn load_assets(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let texture_handle = asset_server.load("factions/factions.png");
+    let transparent_texture_handle = asset_server.load("factions/factions_transparent.png");
 
     let layout = TextureAtlasLayout::from_grid(
         UVec2::new(16, 16), // The size of each sprite
@@ -39,10 +37,7 @@ pub fn load_assets(
     let game_assets = GameAssets {
         icons_texture: texture_handle,
         icons_layout: layout_handle,
-        corporate_icon_index: 1,
-        government_icon_index: 2,
-        academia_icon_index: 3,
-        criminal_icon_index: 0,
+        transparent_icons_texture: transparent_texture_handle,
     };
     commands.insert_resource(game_assets);
 }

@@ -119,14 +119,20 @@ pub fn add_newsfeed_item_system(
             ))
             .id();
 
-        // Add faction icon (colored box for now - texture atlas for UI is complex in this Bevy version)
+        // Add faction icon with fixed size and maintain aspect ratio
         let icon = commands
             .spawn((
                 ImageNode::from_atlas_image(
-                    game_assets.icons_texture.clone(),
+                    game_assets.transparent_icons_texture.clone(),
                     TextureAtlas { layout: game_assets.icons_layout.clone(), index: event.faction as usize },
                 ),
-                BackgroundColor(faction_color),
+                Node {
+                    width: Val::Px(32.0),  // Set desired size
+                    height: Val::Px(32.0),
+                    // Auto mode with fixed dimensions will maintain aspect ratio by default
+                    ..default()
+                },
+                BackgroundColor(faction_color)
             ))
             .id();
 

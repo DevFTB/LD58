@@ -12,6 +12,7 @@ pub const RIGHT_BAR_WIDTH_PCT: f32 = 20.0;
 
 /// Marker component for UI elements that should block world clicks
 #[derive(Component)]
+#[require(Interaction)]
 pub struct BlocksWorldClicks;
 
 impl Plugin for UIPlugin {
