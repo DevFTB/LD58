@@ -214,16 +214,29 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, mut rng: Sing
 
     let basic_source_amount = (unlocked_cells.length() as i32 / 1000) * BASIC_SOURCE_DENSITY;
     // spawn basic sources
-    // TODO: make sure they don't span on top of starting sinks
     for cell_vec in unlocked_cells.choose_multiple(&mut rng, basic_source_amount.try_into().unwrap())
     {
-        spawn_source(
-            *cell_vec,
-            get_basic_source_throughput(*cell_vec),
-            get_basic_source_dataset(&mut rng),
-            Option::None,
-            &mut commands
-        );
+        // make sure they don't spawn on top of starting sinks: there might be a better way...
+        // todo: refactor if necessary
+        let mut sink_locs = HashSet::<IVec2>::new();
+
+        for (vec, _) in INITIAL_FACTION_SINKS {
+            for x in vec.x-1..=vec.x+1 {
+                for y in vec.y-1..=vec.y+1 {
+                    sink_locs.insert(IVec2::new(x, y));
+                }
+            }
+        }
+
+        if !sink_locs.contains(cell_vec) {
+            spawn_source(
+                *cell_vec,
+                get_basic_source_throughput(*cell_vec),
+                get_basic_source_dataset(&mut rng),
+                Option::None,
+                &mut commands
+            );
+        }
     }
 
 
