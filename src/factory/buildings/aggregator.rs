@@ -73,7 +73,7 @@ pub fn do_aggregation(
             .map(|ds| ds.clone().with_attribute(DataAttribute::Aggregated));
 
         if aggregated_shape.is_some() {
-            source.buffer.set_shape(&aggregated_shape);
+            source.buffer.set_shape(aggregated_shape.as_ref());
             pass_data_internal(&mut source, &mut sink, agg.throughput * time.delta_secs());
         }
     }

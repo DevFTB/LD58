@@ -6,6 +6,8 @@ use bevy::{
     ecs::{component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
+use core::fmt;
+use std::fmt::Write;
 
 // The fundamental types of data
 #[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -16,6 +18,17 @@ pub enum BasicDataType {
     Telemetry,   // D
 }
 
+impl BasicDataType {
+    pub(crate) fn to_shorthand(&self) -> &str {
+        match self {
+            BasicDataType::Biometric => "A",
+            BasicDataType::Economic => "B",
+            BasicDataType::Behavioural => "C",
+            BasicDataType::Telemetry => "D",
+        }
+    }
+}
+
 // Attributes that modify a data stream
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum DataAttribute {
@@ -23,6 +36,17 @@ pub enum DataAttribute {
     DeIdentified,
     Cleaned,
     Illegal,
+}
+
+impl DataAttribute {
+    pub(crate) fn to_shorthand(&self) -> &str {
+        match self {
+            DataAttribute::Aggregated => "+",
+            DataAttribute::DeIdentified => "-",
+            DataAttribute::Cleaned => "*",
+            DataAttribute::Illegal => "$",
+        }
+    }
 }
 
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
@@ -55,19 +79,60 @@ pub struct DataSource {
     pub(crate) limited: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct DataBuffer {
     pub(crate) shape: Option<Dataset>,
     pub(crate) value: f32,
 }
-
+impl fmt::Display for DataBuffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let type_string = self.shape.as_ref().map_or(String::from("None"), |shape| {
+            shape
+                .contents
+                .iter()
+                .flat_map(|(k, v)| {
+                    [
+                        k.to_shorthand().to_string(),
+                        v.iter()
+                            .map(|attr| attr.to_shorthand())
+                            .collect::<Vec<_>>()
+                            .join("")
+                            .to_string(),
+                    ]
+                })
+                .collect::<Vec<_>>()
+                .join("")
+                .to_string()
+        });
+        write!(f, "{}: {}", type_string, self.value.round())
+    }
+}
 impl DataBuffer {
-    pub(crate) fn set_shape(&mut self, p0: &Option<Dataset>) {
-        if self.shape != *p0 {
+    pub(crate) fn set_shape(&mut self, p0: Option<&Dataset>) {
+        let are_different = if let (Some(s1), Some(s2)) = (self.shape.as_ref(), p0) {
+            // Case 1: Both are Some. Compare their values by dereferencing.
+            *s1 != *s2
+        } else {
+            // Case 2: One is Some and the other is None.
+            // `is_some()` will be different (true vs false), so they are not equal.
+            // If both are None, `is_some()` is the same (false vs false), so they are equal.
+            self.shape.is_some() != p0.is_some()
+        };
+
+        if are_different {
             println!("{:?} != {:?}", self.shape, &p0);
-            self.shape = p0.clone();
+            self.shape = p0.cloned();
             self.value = 0.;
         }
+    }
+
+    pub(crate) fn add(&mut self, dataset: &Dataset, amount: f32) {
+        self.set_shape(Some(dataset));
+
+        self.value += amount;
+    }
+    pub(crate) fn remove(&mut self, amount: f32) {
+        self.value = (self.value - amount).min(0.);
     }
 }
 
@@ -94,7 +159,7 @@ pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
             //     entity, sink.buffer.shape, sink.buffer.value
             //
             // );
-            text.0 = sink.buffer.value.to_string();
+            text.0 = format!("{}", sink.buffer);
         }
     }
 }
@@ -110,7 +175,7 @@ pub fn pass_data_system(
     }
 }
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
-    sink.buffer.set_shape(&source.buffer.shape);
+    sink.buffer.set_shape(source.buffer.shape.as_ref());
     let packet = if source.limited {
         source.buffer.value.min(source.throughput * secs)
     } else {
