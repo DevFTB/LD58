@@ -13,9 +13,10 @@ use rand::Rng;
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
 use crate::factions::{Faction, ReputationLevel, Locked};
+use crate::factory::buildings::buildings::Building;
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
-use crate::grid::{Direction, GridSprite};
+use crate::grid::{Direction, GridSprite, Orientation};
 use bevy_prng::WyRand;
 use bevy_rand::prelude::GlobalRng;
 use rand::prelude::IndexedRandom;
@@ -403,23 +404,22 @@ fn spawn_source(
     reputation: Option<ReputationLevel>,
     commands: &mut Commands,
 ) {
-    let source = SourceBuilding::get_bundle(
-        vec.into(),
-        Direction::ALL.to_vec(),
-        dataset.clone(),
+    let entity = SourceBuilding {
+        shape: dataset.clone(),
+        size: I64Vec2 { x: 1, y: 1 },
+        directions: Direction::ALL.to_vec(),
         throughput,
-        false,
-    );
+        limited: false,
+    }
+    .spawn(commands, GridPosition(vec), Orientation::default());
 
-    let mut entity = commands.spawn((
-        source,
-        ZIndex(3),
-        Text2d::new(format!("{}: {throughput}", dataset)),
-    ));
+    commands
+        .entity(entity)
+        .insert((ZIndex(3), Text2d::new(format!("{}: {throughput}", dataset))));
 
     match (faction, reputation) {
         (Some(actual_faction), Some(actual_reputation)) =>
-            {entity.insert((actual_faction, actual_reputation, Locked));},
+            {commands.entity(entity).insert((actual_faction, actual_reputation, Locked));},
         (Some(_), None) => {panic!("faction without reputation in source spawn");},
         (None, Some(_)) => {panic!("reputation without faction in source spawn");},
         _ => { /* do nothing */ }
@@ -460,10 +460,19 @@ fn spawn_faction_sink(
         cluster_hash_set_val.retain(|e| !remove_set.contains(e));
     }
 
-
     // TODO: sink tiles can spawn outside locked area, ensure they are locked, either after or before
-    let sink = SinkBuilding::get_sized_bundle(position.into(), 2, None);
-    commands.spawn((sink, faction, reputation, Locked));
+    let sink_building = SinkBuilding {
+        size: I64Vec2 { x: 2, y: 2 },
+    }
+    .spawn(
+        commands,
+        GridPosition(position),
+        Orientation::default(),
+    );
+
+    commands
+        .entity(sink_building)
+        .spawn((sink, faction, reputation, Locked));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {

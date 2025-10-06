@@ -1,53 +1,70 @@
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource, Dataset};
-use crate::grid::{Direction, GridPosition, GridSprite};
+use crate::grid::{GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::platform::collections::HashMap;
-use bevy::prelude::{Bundle, Component, Query, Res, SpawnWith, Time};
+use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Delinker {
-    throughput: f32,
+    pub(crate) throughput: f32,
+    pub(crate) source_count: i64,
 }
 
-impl Delinker {
-    pub fn get_bundle(
+impl Building for Delinker {
+    fn spawn_naked(
+        &self,
+        commands: &mut Commands,
         position: GridPosition,
-        throughput: f32,
-        source_dir: Direction,
-        source_count: i8,
-    ) -> impl Bundle {
-        (
-            Delinker { throughput },
-            position,
-            Tiles::spawn(SpawnWith(
-                move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
-                    for i in 0..source_count {
+        orientation: Orientation,
+    ) -> Entity {
+        let source_count = self.source_count;
+        let throughput = self.throughput;
+        commands
+            .spawn((
+                position,
+                Tiles::spawn(SpawnWith(
+                    move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
                         spawner.spawn((
-                            DataSource {
-                                direction: source_dir.clone(),
-                                throughput,
-                                limited: true,
+                            DataSink {
+                                direction: orientation.direction.opposite(),
                                 buffer: DataBuffer::default(),
                             },
-                            position.offset(Direction::Up, i as i64),
-                            GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 1.0)),
+                            position,
+                            GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
+                            Text2d::default(),
                         ));
-                    }
-                    spawner.spawn((
-                        DataSink {
-                            direction: source_dir.opposite(),
-                            buffer: DataBuffer::default(),
-                        },
-                        position,
-                        Text2d::default(),
-                    ));
-                },
-            )),
-        )
+                        for i in 0..source_count {
+                            spawner.spawn((
+                                GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
+                                DataSource {
+                                    direction: orientation.direction,
+                                    throughput,
+                                    limited: true,
+                                    buffer: DataBuffer::default(),
+                                },
+                                position.offset(orientation.layout_direction(), i as i64),
+                            ));
+                        }
+                    },
+                )),
+                self.clone(),
+            ))
+            .id()
+    }
+
+    fn data(&self) -> BuildingData {
+        BuildingData {
+            sprite: Some(SpriteResource::Atlas(self.source_count as usize + 7)),
+            grid_width: self.source_count,
+            grid_height: 1,
+            cost: 60,
+            name: format!("Delinker {}x1", self.source_count),
+        }
     }
 }
 
