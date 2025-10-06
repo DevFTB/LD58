@@ -16,6 +16,11 @@ pub const RIGHT_BAR_WIDTH_PCT: f32 = 20.0;
 #[require(Interaction)]
 pub struct BlocksWorldClicks;
 
+/// Marker component for UI elements that should block world clicks
+#[derive(Component)]
+#[require(Interaction)]
+pub struct BlocksWorldScroll;
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.insert_resource(shop::SelectedBuildingType(None))
@@ -30,7 +35,9 @@ impl Plugin for UIPlugin {
             .add_systems(Update, newsfeed::add_newsfeed_item_system)
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
             .add_systems(Update, newsfeed::generate_news)
-            .add_systems(Update, contracts::update_contracts_sidebar_ui);
+            .add_systems(Update, contracts::update_contracts_sidebar_ui)        
+            .add_systems(Update, contracts::send_scroll_events)
+            .add_observer(contracts::on_scroll_handler);
     }
 }
 

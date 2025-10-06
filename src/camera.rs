@@ -13,7 +13,10 @@ use bevy::{
         mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseButton},
     },
     transform::components::Transform,
+    prelude::*
 };
+
+use crate::ui::BlocksWorldScroll;
 
 #[derive(Debug, Resource)]
 struct CameraSettings {
@@ -47,7 +50,16 @@ fn zoom(
     camera: Single<&mut Projection, With<Camera>>,
     camera_settings: Res<CameraSettings>,
     mouse_wheel_input: Res<AccumulatedMouseScroll>,
+    scroll_blocker_query: Query<&Interaction, With<BlocksWorldScroll>>,
 ) {
+    // Check if cursor is over any BlocksWorldScroll UI panel
+    for interaction in scroll_blocker_query.iter() {
+        if *interaction == Interaction::Hovered || *interaction == Interaction::Pressed {
+            // Cursor is over a UI panel, don't scroll the camera
+            return;
+        }
+    }
+
     if let Projection::Orthographic(ref mut orthographic) = *camera.into_inner() {
         // We want scrolling up to zoom in, decreasing the scale, so we negate the delta.
         let delta_zoom = -mouse_wheel_input.delta.y * camera_settings.orthographic_zoom_speed;
