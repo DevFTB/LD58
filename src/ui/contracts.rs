@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use crate::{contracts::{Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus}, ui::BlocksWorldScroll};
+use crate::{
+    contracts::{Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus, AssociatedWithSink}, 
+    ui::BlocksWorldScroll
+};
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     picking::hover::HoverMap,
@@ -10,6 +13,9 @@ pub struct ContractAcceptButton;
 
 #[derive(Component)]
 pub struct ContractRejectButton;
+
+#[derive(Component)]
+pub struct ViewSinkButton;
 
 #[derive(Component)]
 pub struct ContractEntityLink(Entity);
@@ -136,6 +142,7 @@ pub fn spawn_contracts_sidebar_ui(mut commands: Commands) {
     ));
 }
 
+// TODO: show dataset for contract
 pub fn update_contracts_sidebar_ui(
     mut commands: Commands,
     sidebar_query: Query<Entity, With<ContractsSidebarRoot>>,
@@ -205,6 +212,27 @@ pub fn update_contracts_sidebar_ui(
                     Node { ..default() },
                 ));
                 if let ContractStatus::Active = status {
+                    // View Sink button at the top
+                    parent.spawn((
+                        Node {
+                            margin: UiRect::bottom(Val::Px(8.0)),
+                            padding: UiRect::all(Val::Px(8.0)),
+                            width: Val::Px(80.0),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
+                        ViewSinkButton,
+                        ContractEntityLink(contract_entity),
+                        Interaction::None,
+                    )).with_children(|button| {
+                        button.spawn((
+                            Text::new("View Sink"),
+                            TextFont { font_size: 14.0, ..default() },
+                            TextColor(Color::WHITE),
+                            Node::default()
+                        ));
+                    });
+
                     parent.spawn((
                         Text::new(format!("Fulfillment: {:?}", fulfillment.status)),
                         TextFont { font_size: 12.0, ..default() },
@@ -314,10 +342,30 @@ pub fn update_contracts_sidebar_ui(
                             ));
                         });
 
+                        /// View Sink button
+                        buttons.spawn((
+                            Node {
+                                padding: UiRect::all(Val::Px(8.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
+                            ViewSinkButton,
+                            ContractEntityLink(contract_entity),
+                            Interaction::None,
+                        )).with_children(|button| {
+                            button.spawn((
+                                Text::new("View Sink"),
+                                TextFont { font_size: 14.0, ..default() },
+                                TextColor(Color::WHITE),
+                                Node::default()
+                            ));
+                        });
+
                         // Reject button
                         buttons.spawn((
                             Node {
                                 padding: UiRect::all(Val::Px(8.0)),
+                                margin: UiRect::right(Val::Px(8.0)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.6, 0.2, 0.2)),
@@ -327,7 +375,7 @@ pub fn update_contracts_sidebar_ui(
                         )).with_children(|button| {
                             button.spawn((
                                 Text::new("N"),
-                                TextFont { font_size: 16.0, ..default() },
+                                TextFont { font_size: 14.0, ..default() },
                                 TextColor(Color::WHITE),
                                 Node::default()
                             ));
@@ -345,6 +393,10 @@ pub fn handle_contract_buttons(
     mut contract_query: Query<&mut ContractStatus>,
     accept_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ContractAcceptButton>)>,
     reject_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ContractRejectButton>)>,
+    view_sink_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ViewSinkButton>)>,
+    associated_sink_query: Query<&AssociatedWithSink>,
+    mut camera_query: Query<&mut Transform, With<Camera>>,
+    sink_query: Query<&GlobalTransform>,
 ) {
     // Handle accept button clicks
     for (interaction, link) in accept_query.iter() {
@@ -360,6 +412,22 @@ pub fn handle_contract_buttons(
         if *interaction == Interaction::Pressed {
             if let Ok(mut status) = contract_query.get_mut(link.0) {
                 *status = ContractStatus::Rejected;
+            }
+        }
+    }
+
+    // Handle view sink button clicks
+    for (interaction, link) in view_sink_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(associated_sink) = associated_sink_query.get(link.0) {
+                if let Ok(sink_transform) = sink_query.get(associated_sink.0) {
+                    // Move camera to sink position
+                    if let Ok(mut camera_transform) = camera_query.single_mut() {
+                        let sink_pos = sink_transform.translation();
+                        camera_transform.translation.x = sink_pos.x;
+                        camera_transform.translation.z = sink_pos.z;
+                    }
+                }
             }
         }
     }
