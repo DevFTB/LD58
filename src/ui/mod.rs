@@ -1,4 +1,3 @@
-use crate::ui::tooltip::TooltipPlugin;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod newsfeed;
@@ -58,7 +57,7 @@ impl Plugin for UIPlugin {
                 ),
             )
             .add_systems(Update, interactive_event::test_trigger_random_event);
-        app.add_plugins(TooltipPlugin);
+        // app.add_plugins(TooltipPlugin);
     }
 }
 

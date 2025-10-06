@@ -4,19 +4,20 @@ use crate::factory::buildings::combiner::do_combining;
 use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
+use crate::factory::buildings::Undeletable;
 use crate::factory::logical::{
     calculate_throughput, debug_logical_links, pass_data_system, reset_delta,
 };
 use crate::factory::physical::{
     assemble_direct_logical_links, assemble_logical_links, detect_building_placement, detect_link_placement,
-    on_physical_link_removed, resolve_connections, validate_placed_entities,
-    EntityPlaced, ValidateConnections,
+    on_data_sink_removed, on_data_source_removed, on_physical_link_removed, resolve_connections,
+    validate_placed_entities, EntityPlaced, ValidateConnections,
 };
 use crate::grid::{GridPosition, Orientation};
 use bevy::ecs::relationship::Relationship;
 use bevy::time::common_conditions::on_timer;
 use bevy::{
-    app::{Plugin, Update},
+    app::{Plugin, PostUpdate, Update},
     ecs::schedule::IntoScheduleConfigs,
     math::I64Vec2,
     prelude::*,
@@ -29,6 +30,10 @@ pub mod buildings;
 pub mod logical;
 pub mod physical;
 pub struct FactoryPlugin;
+
+/// Component marking an entity for removal in PostUpdate
+#[derive(Component)]
+pub struct MarkedForRemoval;
 
 /// Event for constructing a building
 #[derive(Event, Message)]
@@ -54,6 +59,8 @@ impl Plugin for FactoryPlugin {
         app.add_message::<ValidateConnections>();
 
         app.add_observer(on_physical_link_removed);
+        app.add_observer(on_data_source_removed);
+        app.add_observer(on_data_sink_removed);
         app.add_systems(
             Update,
             (
@@ -82,9 +89,12 @@ impl Plugin for FactoryPlugin {
         );
         app.add_systems(
             PostUpdate,
-            (calculate_throughput, reset_delta)
-                .chain()
-                .run_if(on_timer(Duration::from_secs(1))),
+            (
+                (calculate_throughput, reset_delta)
+                    .chain()
+                    .run_if(on_timer(Duration::from_secs(1))),
+                process_entity_removal,
+            ),
         );
         app.add_systems(
             Update,
@@ -107,12 +117,12 @@ pub fn handle_construction_event(
     }
 }
 
-/// Handles building removal requests by despawning the parent building and all its tiles
+/// Handles building removal requests by marking entities for removal
 pub fn handle_building_removal(
     mut events: MessageReader<RemoveBuildingRequest>,
     mut commands: Commands,
-    tiles_query: Query<&buildings::Tile>,
-    parent_tiles_query: Query<&buildings::Tiles>,
+    tiles_query: Query<&buildings::Tile, Without<Undeletable>>,
+    parent_tiles_query: Query<&buildings::Tiles, Without<Undeletable>>,
 ) {
     for event in events.read() {
         // Get the parent building from the clicked tile
@@ -121,14 +131,20 @@ pub fn handle_building_removal(
 
             // Get all tiles from the parent
             if let Ok(all_tiles) = parent_tiles_query.get(parent) {
-                // Despawn all tiles
-                for tile_entity in all_tiles.iter() {
-                    commands.entity(tile_entity).despawn();
-                }
-
-                // Despawn the parent building
-                commands.entity(parent).despawn();
+                // Mark the parent building for removal
+                commands.entity(parent).insert(MarkedForRemoval);
             }
+        }
+    }
+}
+
+pub fn process_entity_removal(
+    mut commands: Commands,
+    marked_entities: Query<Entity, With<MarkedForRemoval>>,
+) {
+    for entity in marked_entities.iter() {
+        if let Ok(mut entity_commands) = commands.get_entity(entity) {
+            entity_commands.despawn();
         }
     }
 }

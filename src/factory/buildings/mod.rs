@@ -24,3 +24,6 @@ pub struct TileThroughputData {
     pub(crate) amount_in: f32,
     pub(crate) amount_out: f32,
 }
+
+#[derive(Component)]
+pub struct Undeletable;
