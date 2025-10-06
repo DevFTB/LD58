@@ -17,7 +17,17 @@ pub struct ContractEntityLink(Entity);
 #[derive(Component)]
 pub struct ContractsSidebarRoot;
 
-
+fn get_contract_sort_priority(status: &ContractStatus, fulfillment: &ContractFulfillment) -> i32 {
+    match status {
+        ContractStatus::Active => match fulfillment.status {
+            ContractFulfillmentStatus::Failing => 0,    // First
+            ContractFulfillmentStatus::Meeting => 2,    // Third
+            ContractFulfillmentStatus::Exceeding => 3,  // Fourth
+        },
+        ContractStatus::Pending => 1,                  // Second
+        _ => 4,                                        // Last
+    }
+}
 
 const LINE_HEIGHT: f32 = 21.;
 
@@ -141,8 +151,14 @@ pub fn update_contracts_sidebar_ui(
         }
     }
 
-    // Add a card for each contract (pending or active)
-    for (contract_entity, _contract, status, desc, fulfillment) in contract_query.iter() {
+    // Collect and sort contracts by priority
+    let mut contracts: Vec<_> = contract_query.iter()
+        .filter(|(_, _, status, _, _)| matches!(status, ContractStatus::Pending | ContractStatus::Active))
+        .collect();
+    contracts.sort_by_key(|(_, _, status, _, fulfillment)| get_contract_sort_priority(status, fulfillment));
+
+    // Add a card for each sorted contract
+    for (contract_entity, _contract, status, desc, fulfillment) in contracts {
         if matches!(status, ContractStatus::Pending | ContractStatus::Active) {
             // Card background color
             let card_color = match status {
@@ -291,7 +307,7 @@ pub fn update_contracts_sidebar_ui(
                             Interaction::None,
                         )).with_children(|button| {
                             button.spawn((
-                                Text::new("✓"),
+                                Text::new("Y"),
                                 TextFont { font_size: 16.0, ..default() },
                                 TextColor(Color::WHITE),
                                 Node::default()
@@ -310,7 +326,7 @@ pub fn update_contracts_sidebar_ui(
                             Interaction::None,
                         )).with_children(|button| {
                             button.spawn((
-                                Text::new("✗"),
+                                Text::new("N"),
                                 TextFont { font_size: 16.0, ..default() },
                                 TextColor(Color::WHITE),
                                 Node::default()

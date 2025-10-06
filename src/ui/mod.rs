@@ -36,6 +36,7 @@ impl Plugin for UIPlugin {
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
             .add_systems(Update, newsfeed::generate_news)
             .add_systems(Update, contracts::update_contracts_sidebar_ui)        
+            .add_systems(Update, contracts::handle_contract_buttons)
             .add_systems(Update, contracts::send_scroll_events)
             .add_observer(contracts::on_scroll_handler);
     }
