@@ -1,0 +1,400 @@
+(
+    // Faction datasets for different reputation levels
+    // These datasets determine what types of data faction sources will produce
+    faction_datasets: [
+        // === GOVERNMENT FACTION ===
+
+        (
+            faction: Government,
+            reputation: Friendly,
+            datasets: [
+                // Basic telemetry (core identity)
+                (
+                    contents: {
+                        Telemetry: [],
+                    }
+                ),
+                // Basic economic (core identity)
+                (
+                    contents: {
+                        Economic: [],
+                    }
+                ),
+                // Basic combinations focusing on core types
+                (
+                    contents: {
+                        Telemetry: [],
+                        Economic: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Telemetry: [],
+                        Biometric: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Biometric: [],
+                    }
+                ),
+                // Single processed dataset
+                (
+                    contents: {
+                        Telemetry: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Government,
+            reputation: Trusted,
+            datasets: [
+                // De-identified telemetry
+                (
+                    contents: {
+                        Telemetry: [DeIdentified],
+                    }
+                ),
+                // Basic combined datasets
+                (
+                    contents: {
+                        Telemetry: [],
+                        Economic: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Biometric: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Biometric: [],
+                    }
+                ),
+                // Single aggregated combination
+                (
+                    contents: {
+                        Telemetry: [Aggregated],
+                        Economic: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Government,
+            reputation: Exclusive,
+            datasets: [
+                // High-level combined data
+                (
+                    contents: {
+                        Telemetry: [DeIdentified],
+                        Economic: [Aggregated],
+                        Biometric: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+
+        // === CORPORATE FACTION ===
+
+        (
+            faction: Corporate,
+            reputation: Friendly,
+            datasets: [
+                // Basic biometric (core identity)
+                (
+                    contents: {
+                        Biometric: [],
+                    }
+                ),
+                // Basic telemetry (core identity)
+                (
+                    contents: {
+                        Telemetry: [],
+                    }
+                ),
+                // Basic combinations focusing on core types
+                (
+                    contents: {
+                        Biometric: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Biometric: [],
+                        Economic: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Telemetry: [],
+                        Behavioural: [],
+                    }
+                ),
+                // Single processed dataset
+                (
+                    contents: {
+                        Biometric: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Corporate,
+            reputation: Trusted,
+            datasets: [
+                // De-identified biometric
+                (
+                    contents: {
+                        Biometric: [DeIdentified],
+                    }
+                ),
+                // De-identified telemetry
+                (
+                    contents: {
+                        Telemetry: [DeIdentified],
+                    }
+                ),
+                // Basic combined datasets
+                (
+                    contents: {
+                        Biometric: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Behavioural: [],
+                    }
+                ),
+                // Single aggregated combination
+                (
+                    contents: {
+                        Biometric: [Aggregated],
+                        Economic: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Corporate,
+            reputation: Exclusive,
+            datasets: [
+                // High-level combined data
+                (
+                    contents: {
+                        Biometric: [DeIdentified],
+                        Telemetry: [DeIdentified],
+                        Economic: [Aggregated],
+                        Behavioural: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+
+        // === CRIMINAL FACTION ===
+
+        (
+            faction: Criminal,
+            reputation: Friendly,
+            datasets: [
+                // Basic biometric (core identity)
+                (
+                    contents: {
+                        Biometric: [],
+                    }
+                ),
+                // Basic behavioural (core identity)
+                (
+                    contents: {
+                        Behavioural: [],
+                    }
+                ),
+                // Basic combinations focusing on core types
+                (
+                    contents: {
+                        Biometric: [],
+                        Behavioural: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Biometric: [],
+                        Economic: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Behavioural: [],
+                        Telemetry: [],
+                    }
+                ),
+                // Single processed dataset
+                (
+                    contents: {
+                        Behavioural: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Criminal,
+            reputation: Trusted,
+            datasets: [
+                // De-identified biometric
+                (
+                    contents: {
+                        Biometric: [DeIdentified],
+                    }
+                ),
+                // Basic combined datasets
+                (
+                    contents: {
+                        Biometric: [],
+                        Behavioural: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Biometric: [],
+                        Economic: [],
+                    }
+                ),
+                // Single aggregated combination
+                (
+                    contents: {
+                        Behavioural: [Aggregated],
+                        Telemetry: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Criminal,
+            reputation: Exclusive,
+            datasets: [
+                // High-level combined data
+                (
+                    contents: {
+                        Biometric: [DeIdentified],
+                        Behavioural: [DeIdentified],
+                        Economic: [Aggregated],
+                        Telemetry: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+
+        // === ACADEMIA FACTION ===
+
+        (
+            faction: Academia,
+            reputation: Friendly,
+            datasets: [
+                // Basic economic (core identity)
+                (
+                    contents: {
+                        Economic: [],
+                    }
+                ),
+                // Basic research combinations with economic focus
+                (
+                    contents: {
+                        Economic: [],
+                        Biometric: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Behavioural: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Biometric: [],
+                        Behavioural: [],
+                    }
+                ),
+                // Single processed dataset
+                (
+                    contents: {
+                        Economic: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Academia,
+            reputation: Trusted,
+            datasets: [
+                // De-identified economic data
+                (
+                    contents: {
+                        Economic: [DeIdentified],
+                    }
+                ),
+                // Basic research combinations
+                (
+                    contents: {
+                        Economic: [],
+                        Biometric: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Behavioural: [],
+                        Telemetry: [],
+                    }
+                ),
+                (
+                    contents: {
+                        Economic: [],
+                        Behavioural: [],
+                    }
+                ),
+                // Single aggregated combination
+                (
+                    contents: {
+                        Biometric: [Aggregated],
+                        Telemetry: [Aggregated],
+                    }
+                ),
+            ]
+        ),
+        (
+            faction: Academia,
+            reputation: Exclusive,
+            datasets: [
+                // Ultimate research data - all types combined
+                (
+                    contents: {
+                        Economic: [DeIdentified],
+                        Biometric: [Aggregated],
+                        Behavioural: [Aggregated],
+                        Telemetry: [DeIdentified],
+                    }
+                ),
+            ]
+        ),
+    ]
+)

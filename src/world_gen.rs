@@ -15,6 +15,7 @@ use rand::Rng;
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
 use crate::factions::{Faction, Locked, ReputationLevel};
+use serde::Deserialize;
 use crate::factory::buildings::buildings::Building;
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
@@ -64,12 +65,38 @@ const BASIC_SOURCE_DENSITY: i32 = 10;
 const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.30;
+
+// --- Faction Dataset Definitions ---
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct FactionDatasetDefinition {
+    pub faction: Faction,
+    pub reputation: ReputationLevel,
+    pub datasets: Vec<Dataset>,
+}
+
+// A resource to hold all faction datasets loaded from the RON file
+#[derive(Resource, Debug, Default)]
+pub struct FactionDatasetLibrary {
+    pub datasets: HashMap<(Faction, ReputationLevel), Vec<Dataset>>,
+}
+
+impl FactionDatasetLibrary {
+    pub fn get_datasets(&self, faction: Faction, reputation: ReputationLevel) -> Option<&Vec<Dataset>> {
+        self.datasets.get(&(faction, reputation))
+    }
+
+    pub fn get_random_dataset(&self, faction: Faction, reputation: ReputationLevel, rng: &mut impl rand::Rng) -> Option<Dataset> {
+        self.get_datasets(faction, reputation)?.choose(rng).cloned()
+    }
+}
 // check to stop broken clusters from spawning because of start area cutting through them
 const MIN_CLUSTER_SIZE: i32 = 32;
 
 impl Plugin for WorldGenPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup)
+        app.add_systems(PreStartup, load_faction_datasets_from_ron)
+            .add_systems(Startup, startup)
             .add_systems(Update, cleanup_unlocked_markers);
     }
 }
@@ -78,6 +105,7 @@ fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     game_assets: Res<GameAssets>,
+    faction_datasets: Res<FactionDatasetLibrary>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
     let _startup_span = info_span!("startup_span", name = "startup_span").entered();
@@ -330,6 +358,7 @@ fn startup(
                 *reputation,
                 *faction,
                 available_spawns,
+                &faction_datasets,
                 &mut rng,
                 &mut commands,
             );
@@ -345,10 +374,11 @@ fn spawn_cluster_sources(
     reputation: ReputationLevel,
     faction: Faction,
     available_spawns: &HashSet<I64Vec2>,
+    dataset_library: &FactionDatasetLibrary,
     rng: &mut WyRand,
     commands: &mut Commands,
 ) {
-    let dataset = get_faction_source_dataset(faction, reputation, rng);
+    let dataset = get_faction_source_dataset(faction, reputation, dataset_library, rng);
     let throughput = get_faction_source_throughput(reputation);
 
     for cell_vec in available_spawns
@@ -418,10 +448,18 @@ fn get_faction_source_throughput(reputation: ReputationLevel) -> f32 {
 fn get_faction_source_dataset(
     faction: Faction,
     reputation: ReputationLevel,
+    dataset_library: &FactionDatasetLibrary,
     rng: &mut WyRand,
 ) -> Dataset {
+    // Try to get a dataset from the library first
+    if let Some(dataset) = dataset_library.get_random_dataset(faction, reputation, rng) {
+        return dataset;
+    }
+    
+    // Fallback to default dataset if none found in library
+    warn!("No faction dataset found for {:?} at {:?} reputation, using fallback", faction, reputation);
     Dataset {
-        contents: HashMap::from([(BasicDataType::Biometric, HashSet::from([DataAttribute::Aggregated, DataAttribute::DeIdentified])), (BasicDataType::Economic, HashSet::<DataAttribute>::new()), (BasicDataType::Behavioural, HashSet::<DataAttribute>::new()) ]),
+        contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
     }
 }
 
@@ -566,4 +604,31 @@ fn cleanup_unlocked_markers(
             commands.entity(entity).despawn();
         }
     }
+}
+
+/// System to load faction datasets from RON file
+fn load_faction_datasets_from_ron(mut commands: Commands) {
+    // Read the file from the assets folder.
+    let ron_str = std::fs::read_to_string("assets/config/faction_datasets.ron")
+        .expect("Failed to read faction_datasets.ron");
+
+    // Parse the RON string into a Vec first, then collect into a HashMap
+    #[derive(Debug, serde::Deserialize)]
+    struct RonFactionDatasetsList {
+        faction_datasets: Vec<FactionDatasetDefinition>,
+    }
+    
+    let datasets_list: RonFactionDatasetsList = ron::from_str(&ron_str)
+        .expect("Failed to parse faction datasets from RON");
+        
+    let mut datasets = HashMap::new();
+    for definition in datasets_list.faction_datasets {
+        datasets.insert((definition.faction, definition.reputation), definition.datasets);
+    }
+    
+    let faction_dataset_library = FactionDatasetLibrary { datasets };
+
+    // Insert the fully loaded data as a Bevy Resource.
+    commands.insert_resource(faction_dataset_library);
+    info!("Faction datasets loaded and inserted as a Resource.");
 }
