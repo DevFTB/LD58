@@ -2,8 +2,14 @@ use bevy::{prelude::*};
 use bevy::ecs::relationship::{RelationshipTarget};
 use serde::Deserialize;
 use crate::factory::logical::{Dataset};
-use crate::factions::Faction;
+use crate::factions::{Faction, ReputationLevel, Unlocked};
 use bevy::platform::collections::HashMap;
+use rand::seq::SliceRandom;
+use bevy_prng::WyRand;
+use bevy_rand::prelude::GlobalRng;
+use bevy::time::common_conditions::on_timer;
+use crate::factory::buildings::sink::{self, SinkBuilding};
+use rand::prelude::IndexedRandom;
 
 // Add the Deserialize trait to your existing components that are in the RON file
 #[derive(Component, Deserialize, Debug)]
@@ -37,99 +43,33 @@ pub struct ContractDescription {
 // Represents a single contract definition from the RON file
 #[derive(Debug, Deserialize, Clone)]
 pub struct ContractDefinition {
+    pub id: u32,
     pub name: String,
     pub description: String,
     pub faction: Faction,
-    pub reputation: i32,
+    pub reputation: ReputationLevel,
     pub base_threshold: f64,
     pub base_money: f64,
     pub dataset: Dataset,
 }
 
 // A resource to hold all contracts loaded from the RON file
-#[derive(Resource, Debug, Deserialize, Default)]
+#[derive(Resource, Debug, Default)]
 pub struct ContractLibrary {
-    pub contracts: Vec<ContractDefinition>,
+    pub contracts: HashMap<u32, ContractDefinition>,
 }
 
-// --- Plugin and Systems ---
-
-pub struct ContractsPlugin;
-
-impl Plugin for ContractsPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_contracts_from_ron)
-            .add_systems(Startup, test_find_and_generate_contract);
+impl ContractLibrary {
+    pub fn all_contracts(&self) -> Vec<&ContractDefinition> {
+        self.contracts.values().collect()
     }
 }
 
-// Startup system to load the contracts.ron file
-fn load_contracts_from_ron(mut commands: Commands) {
-    // Read the file from the assets folder.
-    let ron_str = std::fs::read_to_string("assets/config/contracts.ron")
-        .expect("Failed to read contracts.ron");
-
-    // Parse the RON string into our ContractLibrary struct.
-    let contract_library: ContractLibrary = ron::from_str(&ron_str)
-        .expect("Failed to parse contracts from RON");
-
-    // Insert the fully loaded data as a Bevy Resource.
-    commands.insert_resource(contract_library);
-    info!("Contracts loaded and inserted as a Resource.");
-}
-
-/// A test system to verify contract generation logic at startup.
-fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: Commands) {
-    let faction_corporate = Faction::Academia;
-    let reputation = 1;
-
-    if let Some(contract_bundle) =
-        find_and_generate_contract(faction_corporate, reputation, &library)
-    {
-        info!(
-            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
-        );
-        commands.spawn(contract_bundle);
-    } else {
-        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
-    }
-}
-
-// --- Contract Generation Logic ---
-
-/// Finds a suitable contract from the library for a given sink.
-pub fn find_and_generate_contract(
-    sink_faction: Faction,
-    sink_reputation: i32,
-    library: &ContractLibrary,
-) -> Option<ContractBundle> {
-    // Find an available contract that matches the sink's faction and reputation
-    let suitable_contract = library.contracts.iter().find(|c| {
-        c.faction == sink_faction && sink_reputation >= c.reputation
-    })?;
-
-    // Use the found contract definition to create a ContractBundle
-    Some(ContractBundle {
-        contract: Contract,
-        status: ContractStatus::Pending,
-        dataset: suitable_contract.dataset.clone(),
-        base_threshold: ContractBaseThreshold(suitable_contract.base_threshold),
-        base_money: ContractBaseMoney(suitable_contract.base_money),
-        faction: suitable_contract.faction.clone(),
-        timeout: ContractTimeout(120.0), // Default timeout
-        description: ContractDescription {
-            name: suitable_contract.name.clone(),
-            description: suitable_contract.description.clone(),
-        },
-    })
-}
-
-// --- Existing Relationship Structs ---
 #[derive(Component)]
 #[relationship(relationship_target = SinkContracts)]
 pub struct AssociatedWithSink(pub Entity);
 
-#[derive(Component)]
+#[derive(Component, Debug, Default)]
 #[relationship_target(relationship = AssociatedWithSink)]
 pub struct SinkContracts(Vec<Entity>);
 
@@ -149,4 +89,118 @@ pub struct ContractBundle {
     pub faction: Faction,
     pub timeout: ContractTimeout,
     pub description: ContractDescription,
+}
+
+const MAX_CONTRACTS_PER_SINK: usize = 4;
+
+// --- Plugin and Systems ---
+
+pub struct ContractsPlugin;
+
+impl Plugin for ContractsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(PreStartup, load_contracts_from_ron)
+            .add_systems(Startup, test_find_and_generate_contract);
+
+        // System to generate a new pending random contract every 2 minutes
+        app.add_systems(
+            Update,
+            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(120))),
+        );
+    }
+}
+/// System to generate a new pending random contract every 2 minutes and link it to a random SinkBuilding
+fn generate_random_pending_contract_system(
+    mut commands: Commands,
+    contract_library: Res<ContractLibrary>,
+    sinks: Query<(Entity, &Faction, &ReputationLevel, &SinkContracts), (With<Unlocked>, With<SinkBuilding>)>,
+    mut rng: Single<&mut WyRand, With<GlobalRng>>
+) {
+    // Only consider sinks that are not full
+    let sink_entities: Vec<_> = sinks
+        .iter()
+        .filter(|(_, _, _, sink_contracts)| sink_contracts.contracts().len() < MAX_CONTRACTS_PER_SINK)
+        .collect();
+
+    if let Some((sink_entity, faction, reputation, _)) = sink_entities.choose(&mut rng) {
+        // Pick a random contract definition
+        if let Some(contract_bundle) = find_and_generate_contract(**faction, **reputation, &contract_library) {
+            let contract_entity = commands.spawn(contract_bundle).id();
+            commands.entity(contract_entity).insert(AssociatedWithSink(*sink_entity));
+            info!("Generated new pending contract {:?} for sink {:?}", contract_entity, sink_entity);
+        } else {
+            info!("No suitable contract found for sink {:?} with faction {:?} and reputation {:?}", sink_entity, faction, reputation);
+        }
+    } else {
+        info!("No unlocked and free SinkBuilding found to assign a new contract.");
+    }
+}
+
+// Startup system to load the contracts.ron file
+fn load_contracts_from_ron(mut commands: Commands) {
+    // Read the file from the assets folder.
+    let ron_str = std::fs::read_to_string("assets/config/contracts.ron")
+        .expect("Failed to read contracts.ron");
+
+    // Parse the RON string into a Vec first, then collect into a HashMap by id
+    #[derive(Debug, serde::Deserialize)]
+    struct RonContractsList {
+        contracts: Vec<ContractDefinition>,
+    }
+    let contracts_list: RonContractsList = ron::from_str(&ron_str)
+        .expect("Failed to parse contracts from RON");
+    let contracts = contracts_list.contracts.into_iter().map(|c| {
+        (c.id, c)
+    }).collect();
+    let contract_library = ContractLibrary { contracts };
+
+    // Insert the fully loaded data as a Bevy Resource.
+    commands.insert_resource(contract_library);
+    info!("Contracts loaded and inserted as a Resource.");
+}
+
+/// A test system to verify contract generation logic at startup.
+fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: Commands) {
+    let faction_corporate = Faction::Academia;
+    let reputation = ReputationLevel::Neutral;
+
+    if let Some(contract_bundle) =
+        find_and_generate_contract(faction_corporate, reputation, &library)
+    {
+        info!(
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
+        );
+        commands.spawn(contract_bundle);
+    } else {
+        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
+    }
+}
+
+// --- Contract Generation Logic ---
+
+/// Finds a suitable contract from the library for a given sink.
+pub fn find_and_generate_contract(
+    sink_faction: Faction,
+    sink_reputation: ReputationLevel,
+    library: &ContractLibrary,
+) -> Option<ContractBundle> {
+    // Find an available contract that matches the sink's faction and reputation
+    let suitable_contract = library.all_contracts().into_iter().find(|c| {
+        c.faction == sink_faction && sink_reputation >= c.reputation
+    })?;
+
+    // Use the found contract definition to create a ContractBundle
+    Some(ContractBundle {
+        contract: Contract,
+        status: ContractStatus::Pending,
+        dataset: suitable_contract.dataset.clone(),
+        base_threshold: ContractBaseThreshold(suitable_contract.base_threshold),
+        base_money: ContractBaseMoney(suitable_contract.base_money),
+        faction: suitable_contract.faction.clone(),
+        timeout: ContractTimeout(120.0), // Default timeout
+        description: ContractDescription {
+            name: suitable_contract.name.clone(),
+            description: suitable_contract.description.clone(),
+        },
+    })
 }

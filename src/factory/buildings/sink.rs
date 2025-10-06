@@ -1,3 +1,4 @@
+use crate::contracts::SinkContracts;
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, Dataset};
 use crate::grid::{Direction, GridPosition, GridSprite};
@@ -9,6 +10,7 @@ use bevy::prelude::{SpawnRelated, SpawnWith};
 use std::ops::Add;
 
 #[derive(Component)]
+#[require(SinkContracts)]
 pub struct SinkBuilding;
 
 impl SinkBuilding {
@@ -61,7 +63,7 @@ impl SinkBuilding {
                     .iter()
                     .for_each(|((x, y), placement)| match placement {
                         TilePlacement::Inner => {
-                            println!("Spawning inner {x},{y}");
+                            // println!("Spawning inner {x},{y}");
                             spawner.spawn((
                                 GridPosition((*base_position).add(I64Vec2::new(*x, *y))),
                                 GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
@@ -86,7 +88,7 @@ impl SinkBuilding {
                         }
                         TilePlacement::Corner(h, v) => {
                             let pos = GridPosition((*base_position).add(I64Vec2::new(*x, *y)));
-                            println!("Corner {:?} {:?} {:?}", pos, *h, *v);
+                            // println!("Corner {:?} {:?} {:?}", pos, *h, *v);
                             spawner.spawn((
                                 DataSink {
                                     direction: *h,

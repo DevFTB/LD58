@@ -158,8 +158,8 @@ fn startup(
         }
     }
 
-    println!("cluster map: {:?}", cluster_map);
-    println!("center map: {:?}", center_map);
+    // println!("cluster map: {:?}", cluster_map);
+    // println!("center map: {:?}", center_map);
 
     // Debug visualization disabled for performance - was spawning 100,000+ entities
     // Uncomment only for debugging world generation

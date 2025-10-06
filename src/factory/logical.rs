@@ -157,7 +157,7 @@ pub struct LogicalLink {
 pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     for link in query {
         if link.is_added() {
-            println!("Added LogicalLink {:?}", link);
+            // println!("Added LogicalLink {:?}", link);
         }
     }
 }
