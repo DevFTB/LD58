@@ -136,7 +136,6 @@ fn startup(
                 }
             }
 
-            // println!("cluster nodes: {:?}", cluster_nodes);
             // if condition stops tiny clusters formed by start area breaking them up
             if cluster_nodes.length() >= MIN_CLUSTER_SIZE.try_into().unwrap() {
                 // found all nodes for current cluster: log cluster id for all nodes and center

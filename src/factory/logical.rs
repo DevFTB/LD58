@@ -1,6 +1,6 @@
+use crate::factory::buildings::{TileThroughputData, Tiles};
 use crate::grid::Direction;
 use bevy::prelude::{DetectChanges, Query, Ref, Res};
-use bevy::sprite::Text2d;
 use bevy::time::Time;
 use bevy::{
     ecs::{component::Component, entity::Entity},
@@ -108,7 +108,17 @@ pub struct DataSource {
 pub struct DataBuffer {
     pub(crate) shape: Option<Dataset>,
     pub(crate) value: f32,
+    last_in: f32,
+    last_out: f32,
 }
+
+impl DataBuffer {
+    pub(crate) fn reset_delta(&mut self) {
+        self.last_in = 0.;
+        self.last_out = 0.;
+    }
+}
+
 impl fmt::Display for DataBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_string = self
@@ -119,6 +129,21 @@ impl fmt::Display for DataBuffer {
     }
 }
 impl DataBuffer {
+    pub(crate) fn new(shape: Option<Dataset>, value: f32) -> Self {
+        DataBuffer {
+            shape,
+            value,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn with_shape(shape: Option<Dataset>) -> Self {
+        DataBuffer {
+            shape,
+            ..Self::default()
+        }
+    }
+
     pub(crate) fn set_shape(&mut self, p0: Option<&Dataset>) {
         let are_different = if let (Some(s1), Some(s2)) = (self.shape.as_ref(), p0) {
             // Case 1: Both are Some. Compare their values by dereferencing.
@@ -141,9 +166,13 @@ impl DataBuffer {
         self.set_shape(Some(dataset));
 
         self.value += amount;
+        self.last_in += amount;
     }
     pub(crate) fn remove(&mut self, amount: f32) {
-        self.value = (self.value - amount).max(0.);
+        let diff = amount.min(self.value);
+
+        self.value -= diff;
+        self.last_out += diff;
     }
 }
 
@@ -162,11 +191,32 @@ pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     }
 }
 
-pub fn visualise_sinks(query: Query<(Ref<DataSink>, &mut Text2d)>) {
-    for (sink, mut text) in query {
-        if sink.is_changed() {
-            text.0 = format!("{}", sink.buffer);
-        }
+pub fn calculate_throughput(
+    parents: Query<(&Tiles, &mut TileThroughputData)>,
+    sinks: Query<&DataSink>,
+    sources: Query<&DataSource>,
+) {
+    for (children, mut data) in parents {
+        let amount_in = children
+            .iter()
+            .filter_map(|e| sinks.get(*e).ok())
+            .fold(0., |acc, e| acc + e.buffer.last_out);
+        let amount_out = children
+            .iter()
+            .filter_map(|e| sources.get(*e).ok())
+            .fold(0., |acc, e| acc + e.buffer.last_out);
+
+        data.amount_in = amount_in;
+        data.amount_out = amount_out;
+    }
+}
+
+pub fn reset_delta(sinks: Query<&mut DataSink>, sources: Query<&mut DataSource>) {
+    for mut sink in sinks {
+        sink.buffer.reset_delta();
+    }
+    for mut source in sources {
+        source.buffer.reset_delta();
     }
 }
 
@@ -182,17 +232,23 @@ pub fn pass_data_system(
 }
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
     sink.buffer.set_shape(source.buffer.shape.as_ref());
-    let packet = if source.limited {
-        source.buffer.value.clamp(0., source.throughput * secs)
-    } else {
-        source.throughput * secs
-    };
 
-    source.buffer.value = (source.buffer.value - packet).max(0.);
-    sink.buffer.value += packet;
+    if let Some(ref shape) = source.buffer.shape {
+        let packet = if source.limited {
+            source.buffer.value.clamp(0., source.throughput * secs)
+        } else {
+            source.throughput * secs
+        };
+
+        sink.buffer.add(&shape, packet);
+        source.buffer.remove(packet);
+    }
 }
 pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, amount: f32) {
     let amount = amount.min(sink.buffer.value);
-    source.buffer.value += amount;
-    sink.buffer.value -= amount;
+
+    if let Some(ref shape) = sink.buffer.shape {
+        source.buffer.add(&shape, amount);
+        sink.buffer.remove(amount);
+    }
 }

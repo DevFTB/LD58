@@ -1,20 +1,20 @@
 use bevy::prelude::*;
 use crate::factions::{Faction, ReputationLevel};
+use crate::player::Player;
 use std::collections::HashMap;
 use serde::Deserialize;
 
-pub mod event_data;
+pub mod newsfeed_events;
+// pub mod interactive_events; // Old version - replaced by interactive_events2
+pub mod interactive_events;
+pub mod event_triggers;
 
+pub use newsfeed_events::{NewsItem, AddNewsfeedItemEvent};
+pub use interactive_events::*;
+pub use event_triggers::*;
 
 #[derive(Resource, Deserialize, Debug)]
 pub struct NewsLibrary(pub HashMap<Faction, HashMap<ReputationLevel, Vec<NewsItem>>>);
-
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct NewsItem {
-    pub id: u32,
-    pub text: String,
-}
 
 // A startup system to read the file and insert it as a resource.
 fn load_news_events_from_ron(mut commands: Commands) {
@@ -31,53 +31,27 @@ fn load_news_events_from_ron(mut commands: Commands) {
     info!("News events loaded and inserted as a Resource.");
 }
 
-/// Types of consequences for event choices.
-#[derive(Debug, Clone)]
-pub enum ConsequenceType {
-    Money(i32), // Positive for gain, negative for loss
-    Reputation(Faction, i32), // Faction and amount (positive increase, negative decrease)
-    // Add more as needed
-}
+// A startup system to read interactive events from RON file.
+fn load_interactive_events_from_ron(mut commands: Commands) {
+    // Read the file from the assets folder.
+    let ron_str = std::fs::read_to_string("assets/text/interactive_events.ron")
+        .expect("Failed to read interactive_events.ron");
 
-/// Represents a choice in an interactive event.
-#[derive(Debug, Clone)]
-pub struct EventChoice {
-    pub description: String,
-    pub consequences: Vec<EventConsequence>,
-}
+    // Parse the RON events as a Vec
+    #[derive(Deserialize)]
+    struct EventsFile {
+        events: Vec<InteractiveEventItem>,
+    }
+    
+    let events_file: EventsFile = ron::from_str(&ron_str)
+        .expect("Failed to parse interactive events from RON");
 
-/// Represents a consequence of a choice.
-#[derive(Debug, Clone)]
-pub struct EventConsequence {
-    pub consequence_type: ConsequenceType,
-}
+    // Create library with pre-built indices
+    let event_library = InteractiveEventLibrary::new(events_file.events);
 
-/// Data for an interactive event.
-#[derive(Debug, Clone)]
-pub struct InteractiveEventData {
-    pub title: String,
-    pub description: String,
-    pub faction: Faction,
-    pub choices: Vec<EventChoice>,
-}
-
-/// Bevy event to show an interactive event popup.
-#[derive(Event, Message)]
-pub struct ShowInteractiveEvent {
-    pub event_data: InteractiveEventData,
-}
-
-/// Bevy event sent when player makes a choice in interactive event.
-#[derive(Event, Message)]
-pub struct PlayerChoiceEvent {
-    pub choice_data: EventChoice,
-}
-
-/// Bevy event to add an item to the newsfeed.
-#[derive(Event, Message)]
-pub struct AddNewsfeedItemEvent {
-    pub faction: Faction, // Optional, for faction-specific items
-    pub headline: String,
+    // Insert the fully loaded data as a Bevy Resource.
+    commands.insert_resource(event_library);
+    info!("Interactive events loaded and inserted as a Resource.");
 }
 
 /// Plugin for events system.
@@ -86,8 +60,19 @@ pub struct EventsPlugin;
 impl Plugin for EventsPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ShowInteractiveEvent>()
+            .add_message::<TriggerInteractiveEvent>()
             .add_message::<PlayerChoiceEvent>()
             .add_message::<AddNewsfeedItemEvent>()
-            .add_systems(PreStartup, load_news_events_from_ron);
+            .init_resource::<EventState>()
+            .init_resource::<Player>()
+            .init_resource::<RandomEventTimer>()
+            .add_systems(PreStartup, (load_news_events_from_ron, load_interactive_events_from_ron))
+            .add_systems(Update, (
+                handle_manual_event_triggers,
+                random_event_trigger_system,
+                forced_event_checker_system,
+                handle_player_choice_system,
+                bankruptcy_update_system,
+            ));
     }
 }

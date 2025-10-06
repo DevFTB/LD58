@@ -5,20 +5,23 @@ use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
 use crate::factory::logical::{
-    debug_logical_links, pass_data_system, visualise_sinks, DataSink, DataSource,
+    DataSink, DataSource, calculate_throughput, debug_logical_links, pass_data_system, reset_delta,
 };
 use crate::factory::physical::{
-    connect_direct, connect_links, connect_physical_links_to_data, establish_logical_links,
-    on_physical_link_removed,
+    EntityPlaced, ValidateConnections, assemble_direct_logical_links, assemble_logical_links,
+    detect_building_placement, detect_link_placement, on_physical_link_removed,
+    resolve_connections, validate_placed_entities,
 };
 use crate::grid::{GridPosition, Orientation};
+use bevy::time::common_conditions::on_timer;
 use bevy::{
-    app::{Plugin, PostUpdate, Update},
+    app::{Plugin, Update},
     ecs::schedule::IntoScheduleConfigs,
     math::I64Vec2,
     prelude::*,
 };
 use std::sync::Arc;
+use std::time::Duration;
 
 pub mod buildings;
 pub mod logical;
@@ -36,6 +39,11 @@ pub struct ConstructBuildingEvent {
 impl Plugin for FactoryPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_message::<ConstructBuildingEvent>();
+
+        // Register new messages for the message-based physical connection system
+        app.add_message::<EntityPlaced>();
+        app.add_message::<ValidateConnections>();
+
         app.add_observer(on_physical_link_removed);
         app.add_systems(
             Update,
@@ -49,24 +57,25 @@ impl Plugin for FactoryPlugin {
                 ),
                 handle_construction_event,
                 pass_data_system,
-                visualise_sinks,
+                (
+                    // New event-based connection system
+                    detect_link_placement,
+                    detect_building_placement,
+                    validate_placed_entities,
+                    resolve_connections,
+                    assemble_direct_logical_links,
+                    assemble_logical_links,
+                    debug_logical_links,
+                )
+                    .chain(),
             )
                 .chain(),
         );
         app.add_systems(
             PostUpdate,
-            (
-                connect_physical_links_to_data,
-                connect_links,
-                establish_logical_links,
-                connect_direct.run_if(
-                    |q1: Query<(), Added<DataSource>>, q2: Query<(), Added<DataSink>>| {
-                        !q1.is_empty() || !q2.is_empty()
-                    },
-                ),
-                debug_logical_links,
-            )
-                .chain(),
+            (calculate_throughput, reset_delta)
+                .chain()
+                .run_if(on_timer(Duration::from_secs(1))),
         );
     }
 }

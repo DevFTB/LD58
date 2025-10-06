@@ -13,7 +13,7 @@ use bevy::{
         resource::Resource,
         system::{Commands, Query, Res, ResMut},
     },
-    math::{primitives::Rectangle, Vec2, Vec3, Vec4},
+    math::{Vec2, Vec3, Vec4, primitives::Rectangle},
     mesh::{Mesh, Mesh2d},
     platform::collections::HashMap,
     prelude::Deref,
@@ -31,7 +31,7 @@ pub struct GridPlugin;
 
 // World map resource to track which grid positions are occupied by which entities
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct WorldMap(pub HashMap<GridPosition, Entity>);
+pub struct WorldMap(pub HashMap<GridPosition, Vec<Entity>>);
 
 // Function to check if a set of grid positions is free
 #[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default)]
@@ -41,7 +41,7 @@ pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 #[derive(Debug)]
 pub struct GridPosition(pub I64Vec2);
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
 pub enum Direction {
     Right,
     Down,
@@ -429,7 +429,10 @@ fn grid_position_added(mut world: DeferredWorld, context: HookContext) {
     let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
     let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
 
-    world_map.insert(grid_position, entity);
+    world_map
+        .entry(grid_position)
+        .or_insert_with(Vec::new)
+        .push(entity);
 }
 
 fn grid_position_removed(mut world: DeferredWorld, context: HookContext) {
@@ -438,7 +441,13 @@ fn grid_position_removed(mut world: DeferredWorld, context: HookContext) {
     let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
     let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
 
-    world_map.remove(&grid_position);
+    if let Some(entities) = world_map.get_mut(&grid_position) {
+        entities.retain(|&e| e != entity);
+        // Remove the entry if no entities remain at this position
+        if entities.is_empty() {
+            world_map.remove(&grid_position);
+        }
+    }
 }
 
 fn setup_grid(
@@ -542,9 +551,9 @@ fn spawn_grid_atlas_sprite_system(
         commands.entity(entity).insert((
             Sprite {
                 custom_size: Some(Vec2::new(sprite_width, sprite_height)),
-                image: game_assets.buildings_texture.clone(),
+                image: game_assets.machines_texture.clone(),
                 texture_atlas: Some(TextureAtlas {
-                    layout: game_assets.buildings_layout.clone(),
+                    layout: game_assets.machines_layout.clone(),
                     index: atlas_sprite.atlas_index,
                 }),
                 flip_x: atlas_sprite.orientation.flipped, // Always apply flip_x when flipped

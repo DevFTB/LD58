@@ -7,7 +7,6 @@ use bevy::ecs::relationship::RelatedSpawner;
 use bevy::math::I64Vec2;
 use bevy::prelude::{Commands, Component, Entity};
 use bevy::prelude::{SpawnRelated, SpawnWith};
-use bevy::sprite::Text2d;
 use std::ops::Add;
 
 #[derive(Component, Clone)]
@@ -65,22 +64,15 @@ impl Building for SinkBuilding {
             (
                 DataSink {
                     direction: *dir,
-                    buffer: DataBuffer {
-                        shape: None,
-                        value: 0.,
-                    },
+                    buffer: DataBuffer::default(),
                 },
                 *pos,
                 GridAtlasSprite {
                     grid_height: 1,
                     grid_width: 1,
                     atlas_index: 1,
-                    orientation: Orientation {
-                        direction: Direction::Up,
-                        flipped: false,
-                    },
+                    orientation,
                 },
-                Text2d(String::default()),
             )
         })
         .collect::<Vec<_>>();

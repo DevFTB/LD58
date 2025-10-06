@@ -10,6 +10,7 @@ dependencies = [
  "bevy_dylib",
  "bevy_prng",
  "bevy_rand",
+ "itertools 0.14.0",
  "noisy_bevy",
  "rand",
  "ron 0.11.0",

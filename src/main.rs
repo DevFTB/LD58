@@ -3,6 +3,8 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
+use crate::ui::tooltip::inherit_translation;
+use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
@@ -11,7 +13,6 @@ use crate::{
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
     ui::UIPlugin,
-    world_gen::WorldGenPlugin,
     contracts::ContractsPlugin,
 };
 use bevy::prelude::*;
@@ -23,7 +24,7 @@ mod events;
 mod factions;
 mod factory;
 mod grid;
-// mod test; // TODO: Update test functions with new bundle signatures
+mod player;
 mod test;
 mod ui;
 mod world_gen;
@@ -33,7 +34,7 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(AssetPlugin)
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(EventsPlugin)
         .add_plugins(ContractsPlugin)
@@ -45,11 +46,12 @@ fn main() {
         .add_plugins(FactionsPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, remove_physical_link_on_right_click)
+        .add_systems(PostUpdate, inherit_translation)
         .run();
 }
 
 fn startup(mut commands: Commands) {
-    test::spawn_splitter_test(&mut commands);
+    //test::spawn_splitter_test(&mut commands);
     //test::spawn_delinker_test(&mut commands);
     //test::spawn_combiner_test(&mut commands);
     //test::spawn_trunking_test(&mut commands);

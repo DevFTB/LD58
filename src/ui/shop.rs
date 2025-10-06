@@ -102,9 +102,9 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                 let data = building.building_type.data();
                 let mut image_node = match &data.sprite {
                     Some(SpriteResource::Atlas(index)) => ImageNode::from_atlas_image(
-                        assets.buildings_texture.clone(),
+                        assets.machines_texture.clone(),
                         TextureAtlas {
-                            layout: assets.buildings_layout.clone(),
+                            layout: assets.machines_layout.clone(),
                             index: *index,
                         },
                     ),
@@ -182,10 +182,10 @@ pub fn handle_building_click(
             // Create sprite based on SpriteResource type
             let sprite = match &data.sprite {
                 Some(SpriteResource::Atlas(index)) => Sprite {
-                    image: assets.buildings_texture.clone(),
+                    image: assets.machines_texture.clone(),
                     custom_size: Some(sprite_size),
                     texture_atlas: Some(TextureAtlas {
-                        layout: assets.buildings_layout.clone(),
+                        layout: assets.machines_layout.clone(),
                         index: *index,
                     }),
                     ..default()
