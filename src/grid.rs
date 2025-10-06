@@ -13,7 +13,7 @@ use bevy::{
         resource::Resource,
         system::{Commands, Query, Res, ResMut},
     },
-    math::{primitives::Rectangle, Vec2, Vec3, Vec4},
+    math::{Vec2, Vec3, Vec4, primitives::Rectangle},
     mesh::{Mesh, Mesh2d},
     platform::collections::HashMap,
     prelude::Deref,
@@ -31,7 +31,7 @@ pub struct GridPlugin;
 
 // World map resource to track which grid positions are occupied by which entities
 #[derive(Resource, Default, Deref, DerefMut)]
-pub struct WorldMap(pub HashMap<GridPosition, Entity>);
+pub struct WorldMap(pub HashMap<GridPosition, Vec<Entity>>);
 
 // Function to check if a set of grid positions is free
 #[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default)]
@@ -429,7 +429,10 @@ fn grid_position_added(mut world: DeferredWorld, context: HookContext) {
     let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
     let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
 
-    world_map.insert(grid_position, entity);
+    world_map
+        .entry(grid_position)
+        .or_insert_with(Vec::new)
+        .push(entity);
 }
 
 fn grid_position_removed(mut world: DeferredWorld, context: HookContext) {
@@ -438,7 +441,13 @@ fn grid_position_removed(mut world: DeferredWorld, context: HookContext) {
     let grid_position = world.get::<GridPosition>(entity).unwrap().clone();
     let mut world_map = world.get_resource_mut::<WorldMap>().unwrap();
 
-    world_map.remove(&grid_position);
+    if let Some(entities) = world_map.get_mut(&grid_position) {
+        entities.retain(|&e| e != entity);
+        // Remove the entry if no entities remain at this position
+        if entities.is_empty() {
+            world_map.remove(&grid_position);
+        }
+    }
 }
 
 fn setup_grid(
