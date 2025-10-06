@@ -1,10 +1,12 @@
-use bevy::{camera, prelude::*};
+use bevy::prelude::*;
 use crate::{
     contracts::{AssociatedWithSink, Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus},
     grid::GridPosition,
     grid::Grid,
     ui::BlocksWorldScroll,
     factory::buildings::sink::SinkBuilding,
+    ui::interactive_event::ScalableText,
+    assets::GameAssets,
 };
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
@@ -130,9 +132,10 @@ pub fn spawn_contracts_sidebar_ui(mut commands: Commands) {
             position_type: PositionType::Absolute,
             right: Val::Px(0.0),
             left: Val::Auto,
-            top: Val::Px(0.0),
-            width: Val::Px(340.0),
-            height: Val::Percent(100.0),
+            top: Val::Px(45.0), // Start below the newsfeed (which is 64px tall)
+            bottom: Val::Percent(12.0), // Stop above the bottom bar (12% height)
+            width: Val::Vw(15.0),
+            min_width: Val::Px(250.0),
             flex_direction: FlexDirection::Column,
             align_items: AlignItems::FlexStart,
             justify_content: JustifyContent::FlexStart,
@@ -152,6 +155,7 @@ pub fn update_contracts_sidebar_ui(
     sidebar_query: Query<Entity, With<ContractsSidebarRoot>>,
     contract_query: Query<(Entity, &Contract, &ContractStatus, &ContractDescription, &ContractFulfillment)>,
     children_query: Query<&Children>,
+    game_assets: Res<GameAssets>,
 ) {
     let Ok(sidebar) = sidebar_query.single() else { return; };
 
@@ -193,8 +197,8 @@ pub fn update_contracts_sidebar_ui(
             };
             let card = commands.spawn((
                 Node {
-                    margin: UiRect::new(Val::Px(4.), Val::Px(4.), Val::Px(2.), Val::Px(2.)),
-                    padding: UiRect::all(Val::Px(16.0)),
+                    margin: UiRect::new(Val::Vw(0.3), Val::Vw(0.3), Val::Vw(0.15), Val::Vw(0.15)),
+                    padding: UiRect::all(Val::Vw(1.2)),
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::FlexStart,
                     width: Val::Percent(100.0), // take full width of sidebar
@@ -212,7 +216,7 @@ pub fn update_contracts_sidebar_ui(
                             justify_content: JustifyContent::SpaceBetween,
                             align_items: AlignItems::Center,
                             width: Val::Percent(100.0),
-                            margin: UiRect::bottom(Val::Px(8.0)),
+                            margin: UiRect::bottom(Val::Vw(0.6)),
                             ..default()
                         },
                         BackgroundColor(Color::NONE),
@@ -220,7 +224,8 @@ pub fn update_contracts_sidebar_ui(
                         // Contract name on the left
                         header.spawn((
                             Text::new(&desc.name),
-                            TextFont { font_size: 20.0, ..default() },
+                            game_assets.text_font(20.0),
+                            ScalableText::from_vw(1.2),
                             TextColor(Color::WHITE),
                             Node { ..default() },
                         ));
@@ -228,7 +233,7 @@ pub fn update_contracts_sidebar_ui(
                         // View Sink button on the right
                         header.spawn((
                             Node {
-                                padding: UiRect::all(Val::Px(6.0)),
+                                padding: UiRect::all(Val::Vw(0.45)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
@@ -238,7 +243,8 @@ pub fn update_contracts_sidebar_ui(
                         )).with_children(|button| {
                             button.spawn((
                                 Text::new("View Sink"),
-                                TextFont { font_size: 12.0, ..default() },
+                                game_assets.text_font(12.0),
+                                ScalableText::from_vw(0.7),
                                 TextColor(Color::WHITE),
                                 Node::default()
                             ));
@@ -247,21 +253,24 @@ pub fn update_contracts_sidebar_ui(
                 } else {
                     parent.spawn((
                         Text::new(&desc.name),
-                        TextFont { font_size: 20.0, ..default() },
+                        game_assets.text_font(20.0),
+                        ScalableText::from_vw(1.2),
                         TextColor(Color::WHITE),
                         Node { ..default() },
                     ));
                 }
                 parent.spawn((
                     Text::new(format!("Status: {:?}", status)),
-                    TextFont { font_size: 12.0, ..default() },
+                    game_assets.text_font(12.0),
+                    ScalableText::from_vw(0.7),
                     TextColor(status_text_color),
                     Node { ..default() },
                 ));
                 if let ContractStatus::Active = status {
                     parent.spawn((
                         Text::new(format!("Fulfillment: {:?}", fulfillment.status)),
-                        TextFont { font_size: 12.0, ..default() },
+                        game_assets.text_font(12.0),
+                        ScalableText::from_vw(0.7),
                         TextColor(status_text_color),
                         Node { ..default() },
                     ));
@@ -283,7 +292,8 @@ pub fn update_contracts_sidebar_ui(
                             "Income: {:.2} | Throughput: {:.2}",
                             fulfillment.get_income(), fulfillment.throughput
                         )),
-                        TextFont { font_size: 12.0, ..default() },
+                        game_assets.text_font(12.0),
+                        ScalableText::from_vw(0.7),
                         TextColor(Color::WHITE),
                         Node { ..default() },
                     ));
@@ -292,8 +302,8 @@ pub fn update_contracts_sidebar_ui(
                     let progress = (fulfillment.throughput / (fulfillment.base_threshold * 2.0)).min(1.0).max(0.0);
                     parent.spawn((
                         Node {
-                            width: Val::Px(180.0),
-                            height: Val::Px(12.0),
+                            width: Val::Vw(13.5),
+                            height: Val::Vh(1.5),
                             position_type: PositionType::Relative,
                             ..default()
                         },
@@ -303,8 +313,8 @@ pub fn update_contracts_sidebar_ui(
                         // Progress fill
                         bar.spawn((
                             Node {
-                                width: Val::Px(180.0 * progress as f32),
-                                height: Val::Px(12.0),
+                                width: Val::Vw(13.5 * progress as f32),
+                                height: Val::Vh(1.5),
                                 position_type: PositionType::Absolute,
                                 left: Val::Px(0.0),
                                 ..default()
@@ -316,9 +326,9 @@ pub fn update_contracts_sidebar_ui(
                         bar.spawn((
                             Node {
                                 width: Val::Px(1.0),
-                                height: Val::Px(12.0),
+                                height: Val::Vh(1.5),
                                 position_type: PositionType::Absolute,
-                                left: Val::Px(90.0), // 50% of 180px
+                                left: Val::Vw(6.75), // 50% of 13.5vw
                                 ..default()
                             },
                             BackgroundColor(Color::srgba(1., 1., 1., 0.4)), // Semi-transparent white
@@ -331,7 +341,8 @@ pub fn update_contracts_sidebar_ui(
                             "Base income: {:.2} | Required: {:.2}",
                             fulfillment.base_money, fulfillment.base_threshold
                         )),
-                        TextFont { font_size: 12.0, ..default() },
+                        game_assets.text_font(12.0),
+                        ScalableText::from_vw(0.7),
                         TextColor(Color::WHITE),
                         Node { ..default() },
                     ));
@@ -339,7 +350,7 @@ pub fn update_contracts_sidebar_ui(
                     // Add accept/reject buttons
                     parent.spawn((
                         Node {
-                            margin: UiRect::top(Val::Px(8.0)),
+                            margin: UiRect::top(Val::Vw(0.6)),
                             display: Display::Flex,
                             flex_direction: FlexDirection::Row,
                             justify_content: JustifyContent::SpaceBetween,
@@ -351,8 +362,8 @@ pub fn update_contracts_sidebar_ui(
                         // Accept button
                         buttons.spawn((
                             Node {
-                                padding: UiRect::all(Val::Px(8.0)),
-                                margin: UiRect::right(Val::Px(8.0)),
+                                padding: UiRect::all(Val::Vw(0.6)),
+                                margin: UiRect::right(Val::Vw(0.6)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.2, 0.6, 0.2)),
@@ -362,7 +373,8 @@ pub fn update_contracts_sidebar_ui(
                         )).with_children(|button| {
                             button.spawn((
                                 Text::new("Y"),
-                                TextFont { font_size: 16.0, ..default() },
+                                game_assets.text_font(16.0),
+                                ScalableText::from_vw(1.0),
                                 TextColor(Color::WHITE),
                                 Node::default()
                             ));
@@ -371,7 +383,7 @@ pub fn update_contracts_sidebar_ui(
                         /// View Sink button
                         buttons.spawn((
                             Node {
-                                padding: UiRect::all(Val::Px(8.0)),
+                                padding: UiRect::all(Val::Vw(0.6)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
@@ -381,7 +393,8 @@ pub fn update_contracts_sidebar_ui(
                         )).with_children(|button| {
                             button.spawn((
                                 Text::new("View Sink"),
-                                TextFont { font_size: 14.0, ..default() },
+                                game_assets.text_font(14.0),
+                                ScalableText::from_vw(0.85),
                                 TextColor(Color::WHITE),
                                 Node::default()
                             ));
@@ -390,8 +403,8 @@ pub fn update_contracts_sidebar_ui(
                         // Reject button
                         buttons.spawn((
                             Node {
-                                padding: UiRect::all(Val::Px(8.0)),
-                                margin: UiRect::right(Val::Px(8.0)),
+                                padding: UiRect::all(Val::Vw(0.6)),
+                                margin: UiRect::right(Val::Vw(0.6)),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.6, 0.2, 0.2)),
@@ -401,7 +414,8 @@ pub fn update_contracts_sidebar_ui(
                         )).with_children(|button| {
                             button.spawn((
                                 Text::new("N"),
-                                TextFont { font_size: 14.0, ..default() },
+                                game_assets.text_font(14.0),
+                                ScalableText::from_vw(0.85),
                                 TextColor(Color::WHITE),
                                 Node::default()
                             ));

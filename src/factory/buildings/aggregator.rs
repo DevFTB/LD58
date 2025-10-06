@@ -3,6 +3,7 @@ use crate::factory::buildings::Tiles;
 use crate::factory::logical::{
     pass_data_internal, DataAttribute, DataBuffer, DataSink, DataSource,
 };
+use crate::assets::{MachineType, MachineVariant};
 use crate::grid::{GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::related;
@@ -54,7 +55,7 @@ impl Building for Aggregator {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(1)),
+            sprite: Some(SpriteResource::Machine(MachineType::Aggregator, MachineVariant::Single)),
             grid_width: 1,
             grid_height: 1,
             cost: 75,

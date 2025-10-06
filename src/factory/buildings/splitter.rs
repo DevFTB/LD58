@@ -2,6 +2,7 @@ use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResourc
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{pass_data_internal, DataBuffer, DataSink, DataSource};
 use crate::grid::{GridPosition, GridSprite, Orientation};
+use crate::assets::{MachineType, MachineVariant};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
@@ -30,7 +31,7 @@ impl Building for Splitter {
                     move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
                         for i in 0..source_count {
                             spawner.spawn((
-                                GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
+                                // GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
                                 DataSource {
                                     direction: orientation.effective_direction(),
                                     throughput,
@@ -46,8 +47,8 @@ impl Building for Splitter {
                                 buffer: DataBuffer::default(),
                             },
                             position,
-                            GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
-                            Text2d::default(),
+                            // GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
+                            // Text2d::default(),
                         ));
                     },
                 )),
@@ -57,8 +58,15 @@ impl Building for Splitter {
     }
 
     fn data(&self) -> BuildingData {
+        let variant = match self.source_count {
+            2 => MachineVariant::Size2,
+            3 => MachineVariant::Size3,
+            4 => MachineVariant::Size4,
+            _ => MachineVariant::Size2,
+        };
+        
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(self.source_count as usize + 1)),
+            sprite: Some(SpriteResource::Machine(MachineType::Splitter, variant)),
             grid_width: self.source_count,
             grid_height: 1,
             cost: 60,

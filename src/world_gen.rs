@@ -21,7 +21,6 @@ use crate::grid::{Direction, GridSprite, Orientation};
 use bevy_prng::WyRand;
 use bevy_rand::prelude::GlobalRng;
 use rand::prelude::IndexedRandom;
-
 pub struct WorldGenPlugin;
 
 #[derive(Component, Default)]
@@ -161,23 +160,6 @@ fn startup(
     // println!("cluster map: {:?}", cluster_map);
     // println!("center map: {:?}", center_map);
 
-    // Debug visualization disabled for performance - was spawning 100,000+ entities
-    // Uncomment only for debugging world generation
-
-    for cell_vec in locked_cells {
-        commands.spawn((
-            Locked,
-            GridPosition(cell_vec),
-            GridSprite(Color::linear_rgba(0., 0.5, 1., 0.8)),
-        ));
-    }
-
-    for (cell_vec, cluster_id) in &cluster_map {
-        commands.spawn((
-            GridPosition(*cell_vec),
-            Text2d::new(format!("{cluster_id}")),
-        ));
-    }
 
     // map each cluster to a faction
     let cluster_faction: HashMap<i64, Faction> = HashMap::from(
@@ -393,7 +375,7 @@ fn get_faction_source_dataset(
     rng: &mut WyRand,
 ) -> Dataset {
     Dataset {
-        contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
+        contents: HashMap::from([(BasicDataType::Biometric, HashSet::from([DataAttribute::Aggregated, DataAttribute::DeIdentified])), (BasicDataType::Economic, HashSet::<DataAttribute>::new()), (BasicDataType::Behavioural, HashSet::<DataAttribute>::new()) ]),
     }
 }
 
@@ -428,7 +410,6 @@ fn spawn_source(
 
     commands.entity(entity).insert((
         ZIndex(3),
-        Text2d::new(format!("{}: {throughput}", dataset)),
         Undeletable,
     ));
 

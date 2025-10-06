@@ -16,6 +16,7 @@ use crate::{
     factory::FactoryPlugin,
     grid::{GridPlugin, GridPosition},
     ui::UIPlugin,
+    pause::PausePlugin,
 };
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
@@ -32,13 +33,15 @@ mod player;
 mod test;
 mod ui;
 mod world_gen;
+mod pause;
 
-fn main() {
+fn main() {    
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(AssetPlugin)
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(EntropyPlugin::<WyRand>::default())
+        .add_plugins(PausePlugin)
         .add_plugins(EventsPlugin)
         .add_plugins(ContractsPlugin)
         .add_plugins(GameCameraPlugin)
@@ -54,7 +57,7 @@ fn main() {
         .run();
 }
 
-fn startup(mut commands: Commands) {
+fn startup(_commands: Commands) {
     //test::spawn_splitter_test(&mut commands);
     //test::spawn_delinker_test(&mut commands);
     //test::spawn_combiner_test(&mut commands);

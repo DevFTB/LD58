@@ -75,9 +75,10 @@ impl Building for SinkBuilding {
                 },
                 *pos,
                 GridAtlasSprite {
+                    atlas_id: crate::assets::AtlasId::Buildings1x1,
+                    atlas_index: 1,
                     grid_height: 1,
                     grid_width: 1,
-                    atlas_index: 1,
                     orientation,
                 },
             )

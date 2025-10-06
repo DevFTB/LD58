@@ -55,7 +55,7 @@ pub fn spawn_newsfeed_ui(mut commands: Commands) {
             top: Val::Px(0.0),
             left: Val::Px(0.0),
             width: Val::Percent(100.0),
-            height: Val::Px(40.0),
+            height: Val::Px(45.0),
             overflow: Overflow::clip(),
             ..default()
         },
@@ -104,10 +104,10 @@ pub fn add_newsfeed_item_system(
                     position_type: PositionType::Absolute,
                     left: Val::Px(spawn_x),
                     top: Val::Px(0.0),
-                    height: Val::Px(40.0),
+                    height: Val::Px(45.0),
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
-                    column_gap: Val::Px(8.0),
+                    column_gap: Val::Px(8.0), 
                     padding: UiRect::horizontal(Val::Px(12.0)),
                     ..default()
                 },
@@ -116,7 +116,7 @@ pub fn add_newsfeed_item_system(
             .id();
 
         // Add faction icon with fixed size and maintain aspect ratio
-        let icon_index = game_assets.faction_icon(event.faction);
+        let icon_index = game_assets.faction_icon(event.faction, crate::assets::IconSize::Small).map(|(_, idx)| idx).unwrap_or(0);
         let icon = commands
             .spawn((
                 ImageNode::from_atlas_image(
@@ -124,8 +124,8 @@ pub fn add_newsfeed_item_system(
                     TextureAtlas { layout: game_assets.small_sprites_layout.clone(), index: icon_index },
                 ),
                 Node {
-                    width: Val::Px(32.0),  // Set desired size
-                    height: Val::Px(32.0),
+                   width: Val::Px(45.0),  // Set desired size
+                    height: Val::Px(45.0),
                     // Auto mode with fixed dimensions will maintain aspect ratio by default
                     ..default()
                 },
@@ -133,14 +133,11 @@ pub fn add_newsfeed_item_system(
             ))
             .id();
 
-        // Add text
+        // Add text with ScalableText component
         let text = commands
             .spawn((
                 Text::new(&event.headline),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
+                game_assets.text_font(24.0), 
                 TextColor(faction_color),
                 Node {
                     ..default()
@@ -152,10 +149,7 @@ pub fn add_newsfeed_item_system(
         let separator = commands
             .spawn((
                 Text::new(" | "),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
+                game_assets.text_font(24.0),
                 TextColor(Color::srgb(0.5, 0.5, 0.5)),
                 Node {
                     ..default()
