@@ -1,3 +1,4 @@
+use bevy::ecs::entity;
 use bevy::{prelude::*};
 use bevy::ecs::relationship::{RelationshipTarget};
 use serde::Deserialize;
@@ -148,8 +149,8 @@ pub struct ContractsPlugin;
 
 impl Plugin for ContractsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_contracts_from_ron);
-            // .add_systems(Startup, test_find_and_generate_contract);
+        app.add_systems(PreStartup, load_contracts_from_ron)
+            .add_systems(Startup, test_find_and_generate_contract);
 
         // System to generate a new pending random contract every 2 minutes
         app.add_systems(
@@ -213,12 +214,13 @@ fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: 
     let faction_corporate = Faction::Academia;
     let reputation = ReputationLevel::Neutral;
 
-    if let Some(contract_bundle) =
+    if let Some(mut contract_bundle) =
         find_and_generate_contract(faction_corporate, reputation, &library)
     {
         info!(
             "  -> SUCCESS: Found contract '{:?}'", contract_bundle
         );
+        contract_bundle.status = ContractStatus::Active;
         commands.spawn(contract_bundle);
     } else {
         info!("  -> FAILURE: No contract found for Corporate faction reputation.");

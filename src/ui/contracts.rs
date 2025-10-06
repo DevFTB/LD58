@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::contracts::{Contract, ContractStatus, ContractDescription};
+use crate::contracts::{Contract, ContractDescription, ContractFulfillment, ContractStatus, ContractFulfillmentStatus};
 
 #[derive(Component)]
 pub struct ContractsSidebarRoot;
@@ -27,7 +27,7 @@ pub fn spawn_contracts_sidebar_ui(mut commands: Commands) {
 pub fn update_contracts_sidebar_ui(
     mut commands: Commands,
     sidebar_query: Query<Entity, With<ContractsSidebarRoot>>,
-    contract_query: Query<(&Contract, &ContractStatus, &ContractDescription)>,
+    contract_query: Query<(&Contract, &ContractStatus, &ContractDescription, &ContractFulfillment)>,
     children_query: Query<&Children>,
 ) {
     let Ok(sidebar) = sidebar_query.single() else { return; };
@@ -40,36 +40,59 @@ pub fn update_contracts_sidebar_ui(
     }
 
     // Add a card for each contract (pending or active)
-    for (_contract, status, desc) in contract_query.iter() {
+    for (_contract, status, desc, fulfillment) in contract_query.iter() {
         if matches!(status, ContractStatus::Pending | ContractStatus::Active) {
-            let color = match status {
-                ContractStatus::Active => Color::srgb(0.2, 0.7, 0.3),
-                ContractStatus::Pending => Color::srgb(0.8, 0.8, 0.2),
-                _ => Color::srgb(0.5, 0.5, 0.5)
+            // Card background color
+            let card_color = match status {
+                ContractStatus::Pending => Color::srgb(0.25, 0.22, 0.10), // gold-brown for pending
+                ContractStatus::Active => match fulfillment.status {
+                    ContractFulfillmentStatus::Exceeding => Color::srgb(0.18, 0.32, 0.60), // blue for exceeding
+                    ContractFulfillmentStatus::Meeting => Color::srgb(0.18, 0.45, 0.18),   // green for meeting
+                    ContractFulfillmentStatus::Failing => Color::srgb(0.45, 0.18, 0.18),   // red for failing
+                },
+                _ => Color::srgb(0.15, 0.15, 0.18),
+            };
+            // Status text color
+            let status_text_color = match status {
+                ContractStatus::Pending => Color::srgb(0.95, 0.85, 0.25), // yellow for pending
+                ContractStatus::Active => match fulfillment.status {
+                    ContractFulfillmentStatus::Exceeding => Color::srgb(0.45, 0.65, 1.0), // light blue
+                    ContractFulfillmentStatus::Meeting => Color::srgb(0.3, 0.9, 0.3),     // bright green
+                    ContractFulfillmentStatus::Failing => Color::srgb(1.0, 0.3, 0.3),     // bright red
+                },
+                _ => Color::WHITE,
             };
             let card = commands.spawn((
                 Node {
-                    margin: UiRect::all(Val::Px(8.0)),
                     padding: UiRect::all(Val::Px(16.0)),
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::FlexStart,
+                    width: Val::Percent(100.0), // take full width of sidebar
                     ..default()
                 },
-                BackgroundColor(Color::srgb(0.15, 0.15, 0.18)),
+                BackgroundColor(card_color),
             ))
             .with_children(|parent| {
                 parent.spawn((
                     Text::new(&desc.name),
                     TextFont { font_size: 20.0, ..default() },
-                    TextColor(color),
+                    TextColor(Color::WHITE),
                     Node { ..default() },
                 ));
                 parent.spawn((
                     Text::new(format!("Status: {:?}", status)),
                     TextFont { font_size: 12.0, ..default() },
-                    TextColor(color),
+                    TextColor(status_text_color),
                     Node { ..default() },
                 ));
+                if let ContractStatus::Active = status {
+                    parent.spawn((
+                        Text::new(format!("Fulfillment: {:?}", fulfillment.status)),
+                        TextFont { font_size: 12.0, ..default() },
+                        TextColor(status_text_color),
+                        Node { ..default() },
+                    ));
+                }
             })
             .id();
             commands.entity(sidebar).add_child(card);
