@@ -2,28 +2,121 @@
     // A list of all possible contracts that can be generated in the game.
     // the reputation refers to the reputation unlock of the sinks that will offer the contract
     contracts: [
+        // === GOVERNMENT FACTION ===
+        // Hostile Level (2 contracts)
         (
             id: 1,
-            name: "Beginner's Data Run",
-            description: "A simple task for a new runner. Deliver the specified data package.",
-            faction: Academia,
+            name: "Basic Census Data",
+            description: "Collect standardized telemetry data for population tracking. Low security clearance required.",
+            faction: Government,
             reputation: Hostile,
-            base_threshold: 5.0,
-            base_money: 10.0,
+            base_threshold: 10.0,
+            base_money: 15.0,
             dataset: (
                 contents: {
-                    Biometric: [],
+                    Telemetry: [],
                 }
             ),
         ),
         (
             id: 2,
-            name: "Corporate Espionage",
-            description: "Acquire sensitive corporate data. High risk, high reward.",
-            faction: Criminal,
+            name: "Public Health Survey",
+            description: "Gather economic patterns for public health initiatives. Basic data processing needed.",
+            faction: Government,
             reputation: Hostile,
-            base_threshold: 5.0,
-            base_money: 50.0,
+            base_threshold: 8.0,
+            base_money: 12.0,
+            dataset: (
+                contents: {
+                    Economic: [],
+                }
+            ),
+        ),
+        // Friendly Level (2 contracts)
+        (
+            id: 3,
+            name: "Infrastructure Monitoring",
+            description: "Process telemetry data from city infrastructure systems. Security clearance verified.",
+            faction: Government,
+            reputation: Friendly,
+            base_threshold: 25.0,
+            base_money: 60.0,
+            dataset: (
+                contents: {
+                    Telemetry: [],
+                }
+            ),
+        ),
+        (
+            id: 4,
+            name: "Economic Census Analysis",
+            description: "Analyze economic data patterns for policy development. Requires data aggregation.",
+            faction: Government,
+            reputation: Friendly,
+            base_threshold: 30.0,
+            base_money: 70.0,
+            dataset: (
+                contents: {
+                    Economic: [Aggregated],
+                }
+            ),
+        ),
+        // Trusted Level (2 contracts)
+        (
+            id: 5,
+            name: "National Security Dataset",
+            description: "Process classified telemetry data for security agencies. Top secret clearance required.",
+            faction: Government,
+            reputation: Trusted,
+            base_threshold: 50.0,
+            base_money: 120.0,
+            dataset: (
+                contents: {
+                    Telemetry: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 6,
+            name: "Intelligence Operation Data",
+            description: "Handle sanitized economic intelligence for strategic operations. Maximum security protocols.",
+            faction: Government,
+            reputation: Trusted,
+            base_threshold: 60.0,
+            base_money: 150.0,
+            dataset: (
+                contents: {
+                    Economic: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+        // Exclusive Level (1 contract)
+        (
+            id: 7,
+            name: "Black Site Operations",
+            description: "Process ultra-classified multi-spectrum data for deep state operations. Existence denied.",
+            faction: Government,
+            reputation: Exclusive,
+            base_threshold: 100.0,
+            base_money: 300.0,
+            dataset: (
+                contents: {
+                    Telemetry: [DeIdentified, Aggregated],
+                    Economic: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+
+        // === CORPORATE FACTION ===
+        // Hostile Level (2 contracts)
+        (
+            id: 8,
+            name: "Market Research Data",
+            description: "Basic consumer biometric analysis for product development. Entry-level corporate contract.",
+            faction: Corporate,
+            reputation: Hostile,
+            base_threshold: 12.0,
+            base_money: 18.0,
             dataset: (
                 contents: {
                     Biometric: [],
@@ -31,16 +124,303 @@
             ),
         ),
         (
-            id: 3,
-            name: "Government Compliance Audit",
-            description: "Verify and deliver a large dataset for government records.",
-            faction: Government,
+            id: 9,
+            name: "Employee Productivity Metrics",
+            description: "Process workplace telemetry for efficiency optimization. Standard corporate monitoring.",
+            faction: Corporate,
             reputation: Hostile,
-            base_threshold: 5.0,
-            base_money: 100.0,
+            base_threshold: 15.0,
+            base_money: 20.0,
+            dataset: (
+                contents: {
+                    Telemetry: [],
+                }
+            ),
+        ),
+        // Friendly Level (2 contracts)
+        (
+            id: 10,
+            name: "Financial Analytics Package",
+            description: "Process aggregated telemetry data for investment strategies. Trusted partner contract.",
+            faction: Corporate,
+            reputation: Friendly,
+            base_threshold: 35.0,
+            base_money: 80.0,
+            dataset: (
+                contents: {
+                    Telemetry: [Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 11,
+            name: "Executive Health Monitoring",
+            description: "Manage sanitized biometric data for corporate wellness programs. Confidentiality assured.",
+            faction: Corporate,
+            reputation: Friendly,
+            base_threshold: 28.0,
+            base_money: 70.0,
+            dataset: (
+                contents: {
+                    Biometric: [DeIdentified],
+                }
+            ),
+        ),
+        // Trusted Level (2 contracts)
+        (
+            id: 12,
+            name: "Hostile Takeover Intelligence",
+            description: "Process competitor biometric and telemetry intelligence. Corporate espionage sanctioned.",
+            faction: Corporate,
+            reputation: Trusted,
+            base_threshold: 65.0,
+            base_money: 180.0,
+            dataset: (
+                contents: {
+                    Biometric: [Aggregated],
+                    Telemetry: [DeIdentified],
+                }
+            ),
+        ),
+        (
+            id: 13,
+            name: "Insider Trading Data",
+            description: "Handle market manipulation telemetry and biometric signals. Plausible deniability maintained.",
+            faction: Corporate,
+            reputation: Trusted,
+            base_threshold: 70.0,
+            base_money: 200.0,
+            dataset: (
+                contents: {
+                    Telemetry: [Aggregated],
+                    Biometric: [DeIdentified],
+                }
+            ),
+        ),
+        // Exclusive Level (1 contract)
+        (
+            id: 14,
+            name: "Global Market Manipulation",
+            description: "Orchestrate worldwide biometric and telemetry streams for market control. Shadow corporate directive.",
+            faction: Corporate,
+            reputation: Exclusive,
+            base_threshold: 120.0,
+            base_money: 380.0,
+            dataset: (
+                contents: {
+                    Biometric: [DeIdentified, Aggregated],
+                    Telemetry: [Aggregated],
+                }
+            ),
+        ),
+
+        // === CRIMINAL FACTION ===
+        // Hostile Level (2 contracts)
+        (
+            id: 15,
+            name: "Identity Theft Starter Pack",
+            description: "Basic biometric data for small-scale identity fraud. Low-risk criminal enterprise.",
+            faction: Criminal,
+            reputation: Hostile,
+            base_threshold: 8.0,
+            base_money: 25.0,
             dataset: (
                 contents: {
                     Biometric: [],
+                }
+            ),
+        ),
+        (
+            id: 16,
+            name: "Surveillance Evasion Data",
+            description: "Behavioral patterns for avoiding law enforcement detection. Street-level intelligence.",
+            faction: Criminal,
+            reputation: Hostile,
+            base_threshold: 10.0,
+            base_money: 22.0,
+            dataset: (
+                contents: {
+                    Behavioural: [],
+                }
+            ),
+        ),
+        // Friendly Level (2 contracts)
+        (
+            id: 17,
+            name: "Money Laundering Network",
+            description: "Process cleaned biometric data for financial crime operations. Established criminal network.",
+            faction: Criminal,
+            reputation: Friendly,
+            base_threshold: 40.0,
+            base_money: 100.0,
+            dataset: (
+                contents: {
+                    Biometric: [Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 18,
+            name: "Blackmail Database",
+            description: "Compile aggregated behavioral profiles for extortion schemes. Organized crime operation.",
+            faction: Criminal,
+            reputation: Friendly,
+            base_threshold: 32.0,
+            base_money: 95.0,
+            dataset: (
+                contents: {
+                    Behavioural: [Aggregated, DeIdentified],
+                }
+            ),
+        ),
+        // Trusted Level (2 contracts)
+        (
+            id: 19,
+            name: "International Crime Syndicate",
+            description: "Multi-spectrum data for global criminal operations. High-level organized crime.",
+            faction: Criminal,
+            reputation: Trusted,
+            base_threshold: 75.0,
+            base_money: 240.0,
+            dataset: (
+                contents: {
+                    Biometric: [DeIdentified],
+                    Behavioural: [Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 20,
+            name: "Corporate Sabotage Campaign",
+            description: "Industrial espionage behavioural data for corporate destruction. Elite criminal services.",
+            faction: Criminal,
+            reputation: Trusted,
+            base_threshold: 80.0,
+            base_money: 270.0,
+            dataset: (
+                contents: {
+                    Behavioural: [Aggregated],
+                    Biometric: [DeIdentified],
+                }
+            ),
+        ),
+        // Exclusive Level (1 contract)
+        (
+            id: 21,
+            name: "Shadow World Order",
+            description: "Orchestrate global data manipulation for world domination. Criminal mastermind contract.",
+            faction: Criminal,
+            reputation: Exclusive,
+            base_threshold: 150.0,
+            base_money: 450.0,
+            dataset: (
+                contents: {
+                    Biometric: [DeIdentified, Aggregated],
+                    Behavioural: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+
+        // === ACADEMIA FACTION ===
+        // Hostile Level (2 contracts)
+        (
+            id: 22,
+            name: "Student Research Project",
+            description: "Basic economic data collection for undergraduate thesis. Academic research purposes only.",
+            faction: Academia,
+            reputation: Hostile,
+            base_threshold: 6.0,
+            base_money: 8.0,
+            dataset: (
+                contents: {
+                    Economic: [],
+                }
+            ),
+        ),
+        (
+            id: 23,
+            name: "Medical Study Data",
+            description: "Economic information for public health research. IRB-approved research protocol.",
+            faction: Academia,
+            reputation: Hostile,
+            base_threshold: 9.0,
+            base_money: 10.0,
+            dataset: (
+                contents: {
+                    Economic: [],
+                }
+            ),
+        ),
+        // Friendly Level (2 contracts)
+        (
+            id: 24,
+            name: "Longitudinal Economic Study",
+            description: "Aggregated economic data for peer-reviewed research. Grant-funded project.",
+            faction: Academia,
+            reputation: Friendly,
+            base_threshold: 22.0,
+            base_money: 50.0,
+            dataset: (
+                contents: {
+                    Economic: [Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 25,
+            name: "Economic Research Initiative",
+            description: "De-identified economic patterns for macroeconomic modeling. University collaboration.",
+            faction: Academia,
+            reputation: Friendly,
+            base_threshold: 26.0,
+            base_money: 55.0,
+            dataset: (
+                contents: {
+                    Economic: [DeIdentified],
+                }
+            ),
+        ),
+        // Trusted Level (2 contracts)
+        (
+            id: 26,
+            name: "Advanced AI Training Dataset",
+            description: "Economic data for machine learning research. Cutting-edge academic project.",
+            faction: Academia,
+            reputation: Trusted,
+            base_threshold: 55.0,
+            base_money: 135.0,
+            dataset: (
+                contents: {
+                    Economic: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+        (
+            id: 27,
+            name: "Societal Impact Analysis",
+            description: "Comprehensive economic analysis for social science research. Nobel-level work.",
+            faction: Academia,
+            reputation: Trusted,
+            base_threshold: 45.0,
+            base_money: 110.0,
+            dataset: (
+                contents: {
+                    Economic: [DeIdentified, Aggregated],
+                }
+            ),
+        ),
+        // Exclusive Level (1 contract)
+        (
+            id: 28,
+            name: "Human Consciousness Mapping",
+            description: "Ultimate economic dataset for understanding human nature. Revolutionary academic breakthrough.",
+            faction: Academia,
+            reputation: Exclusive,
+            base_threshold: 90.0,
+            base_money: 270.0,
+            dataset: (
+                contents: {
+                    Economic: [DeIdentified, Aggregated],
                 }
             ),
         ),
