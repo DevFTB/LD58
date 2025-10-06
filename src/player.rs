@@ -35,11 +35,11 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<Player>()
-            .add_systems(Update, (
-                update_contract_fulfillment,
-                update_money,
-            ).chain().run_if(on_timer(Duration::from_secs(1))));
+        // app.init_resource::<Player>()
+        //     .add_systems(Update, (
+        //         update_contract_fulfillment,
+        //         update_money,
+        //     ).chain().run_if(on_timer(Duration::from_secs(1))));
     }
 }
 

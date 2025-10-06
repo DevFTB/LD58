@@ -20,6 +20,7 @@ use crate::{
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
+use crate::factory::buildings::sink::update_sink_debug_text;
 
 mod assets;
 mod camera;
