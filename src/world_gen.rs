@@ -1,3 +1,4 @@
+use crate::assets::GameAssets;
 use crate::GridPosition;
 use core::panic;
 use std::{collections::VecDeque, ops::RangeInclusive};
@@ -43,7 +44,7 @@ pub struct FactionCluster {
 pub struct ClusterID(i64);
 
 // might need to change min/max logic a bit if not even lol
-const WORLD_SIZE: i64 = 100;
+const WORLD_SIZE: i64 = 80;
 const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
 const WORLD_MAX: i64 = (WORLD_SIZE / 2) - 1;
 
@@ -61,7 +62,7 @@ const SOURCES_PER_FACTION_CLUSTER: RangeInclusive<i32> = 2..=3;
 
 const FACTION_CLUSTER_THRESHOLD: f32 = 0.30;
 // check to stop broken clusters from spawning because of start area cutting through them
-const MIN_CLUSTER_SIZE: i32 = 20;
+const MIN_CLUSTER_SIZE: i32 = 32;
 
 impl Plugin for WorldGenPlugin {
     fn build(&self, app: &mut App) {
@@ -72,6 +73,7 @@ impl Plugin for WorldGenPlugin {
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    game_asset: Res<GameAssets>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
     let _startup_span = info_span!("startup_span", name = "startup_span").entered();
@@ -86,7 +88,8 @@ fn startup(
         for j in WORLD_MIN..=WORLD_MAX {
             let cell_vec = I64Vec2::new(i, j);
             if in_start_area(cell_vec)
-                || get_locked_tile_noise(cell_vec, noise_offset) > FACTION_CLUSTER_THRESHOLD
+                || (get_locked_tile_noise(cell_vec, noise_offset) > FACTION_CLUSTER_THRESHOLD)
+                || (cell_vec.length_squared() > (WORLD_SIZE/2).pow(2))
             {
                 unlocked_cells.push(cell_vec);
             } else {
@@ -164,21 +167,6 @@ fn startup(
     // Debug visualization disabled for performance - was spawning 100,000+ entities
     // Uncomment only for debugging world generation
 
-    for cell_vec in locked_cells {
-        commands.spawn((
-            Locked,
-            GridPosition(cell_vec),
-            GridSprite(Color::linear_rgba(0., 0.5, 1., 0.8)),
-        ));
-    }
-
-    for (cell_vec, cluster_id) in &cluster_map {
-        commands.spawn((
-            GridPosition(*cell_vec),
-            Text2d::new(format!("{cluster_id}")),
-        ));
-    }
-
     // map each cluster to a faction
     let cluster_faction: HashMap<i64, Faction> = HashMap::from(
         center_map
@@ -196,6 +184,21 @@ fn startup(
             })
             .collect::<HashMap<i64, ReputationLevel>>(),
     );
+
+    for (cell_vec, cluster_id) in cluster_map.iter().collect::<Vec<(&I64Vec2, &i64)>>()
+    {
+        if let Some(faction) = cluster_faction.get(cluster_id) {
+            let faction_color = game_asset.faction_color(*faction);
+            commands.spawn((
+                Locked,
+                GridPosition(*cell_vec),
+                GridSprite(faction_color),
+                Transform::from_xyz(0.0, 0.0, 50.0), // Higher Z coordinate to appear above other sprites
+            ));
+        } else {
+            panic!("cluster {cluster_id} has no faction");
+        }
+    }
 
     // // debug printing to ensure that gen logic is working
     // for (cluster_id, cell_vec) in &center_map {
@@ -366,14 +369,8 @@ fn get_basic_source_throughput(vec: I64Vec2) -> f32 {
     let length_f64 = length_f64_squared.sqrt();
     if length_f64 <= 40. {
         50.
-    } else if length_f64 <= 60. {
-        100.
-    } else if length_f64 <= 100. {
-        150.
-    } else if length_f64 <= 150. {
-        200.
     } else {
-        250.
+        100.
     }
 }
 
@@ -400,9 +397,9 @@ fn get_faction_source_dataset(
 fn get_faction_cluster_reputation(vec: I64Vec2) -> ReputationLevel {
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
-    if length_f64 <= 80. {
+    if length_f64 <= 40. {
         ReputationLevel::Friendly
-    } else if length_f64 <= 130. {
+    } else if length_f64 <= 60. {
         ReputationLevel::Trusted
     } else {
         ReputationLevel::Exclusive
