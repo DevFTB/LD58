@@ -449,20 +449,14 @@ fn spawn_faction_sink(
         }
     }
 
-    for grid_vec in &sink_vecs {
-        commands.spawn((
-            GridPosition(*grid_vec),
-            GridSprite(Color::linear_rgba(1., 1., 1., 1.)),
-            ZIndex(3),
-        ));
-    }
-
     // remove sink location from allowable source spawn locations
     if let Some(cluster_hash_set_val) = cluster_hash_set {
         let remove_set: HashSet<I64Vec2> = sink_vecs.into_iter().collect();
         cluster_hash_set_val.retain(|e| !remove_set.contains(e));
     }
 
+
+    // TODO: sink tiles can spawn outside locked area, ensure they are locked, either after or before
     let sink = SinkBuilding::get_sized_bundle(position.into(), 2, None);
     commands.spawn(sink);
 }
