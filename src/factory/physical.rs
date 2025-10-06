@@ -37,7 +37,7 @@ impl Building for PhysicalLink {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas(2),
+            sprite: Some(SpriteResource::Atlas(2)),
             grid_width: 1,
             grid_height: 1,
             cost: 25,
@@ -103,6 +103,10 @@ pub fn connect_direct(
     for (source_entity, source_pos, source) in sources.iter() {
         // Check each sink to see if it's a neighbor
         for (sink_entity, sink_pos, sink) in sinks.iter() {
+            println!(
+                "Testing sink {:?} at {:?} to source {:?} at {:?} of {:?} ",
+                sink_entity, sink_pos, source_entity, source_pos, source.buffer
+            );
             // Skip if this sink already has a logical link
             if existing_links.get(sink_entity).is_ok() {
                 continue;

@@ -59,7 +59,7 @@ impl Building for Delinker {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas(self.source_count as usize + 7),
+            sprite: Some(SpriteResource::Atlas(self.source_count as usize + 7)),
             grid_width: self.source_count,
             grid_height: 1,
             cost: 60,

@@ -19,7 +19,7 @@ pub trait Building: Send + Sync {
         let data = self.data();
 
         match data.sprite {
-            SpriteResource::Atlas(index) => {
+            Some(SpriteResource::Atlas(index)) => {
                 commands.entity(id).insert(GridAtlasSprite {
                     atlas_index: index,
                     grid_width: data.grid_width,
@@ -27,10 +27,11 @@ pub trait Building: Send + Sync {
                     orientation,
                 });
             }
-            SpriteResource::Sprite(image) => {
+            Some(SpriteResource::Sprite(image)) => {
                 commands.entity(id).insert(Sprite { image, ..default() });
             }
-        }
+            None => {}
+        };
 
         id
     }
@@ -44,28 +45,12 @@ pub enum SpriteResource {
     Sprite(Handle<Image>), // Fallback to individual sprite file
 }
 
-pub struct SpriteComponent {
-    pub grid_width: i64,
-    pub grid_height: i64,
-    pub sprite: SpriteResource,
-}
-
 #[derive(Clone)]
 pub struct BuildingData {
     // Common UI fields
-    pub sprite: SpriteResource,
+    pub sprite: Option<SpriteResource>,
     pub grid_width: i64,
     pub grid_height: i64,
     pub cost: i32,
     pub name: String,
-}
-
-impl BuildingData {
-    pub fn get_sprite_component(&self) -> SpriteComponent {
-        SpriteComponent {
-            sprite: self.sprite.clone(),
-            grid_height: self.grid_height,
-            grid_width: self.grid_width,
-        }
-    }
 }

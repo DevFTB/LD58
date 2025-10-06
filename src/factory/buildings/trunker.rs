@@ -58,7 +58,7 @@ impl Building for Trunker {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas(self.sink_count as usize + 10),
+            sprite: Some(SpriteResource::Atlas(self.sink_count as usize + 10)),
             grid_width: self.sink_count,
             grid_height: 1,
             cost: 60,

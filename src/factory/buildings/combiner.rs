@@ -62,7 +62,7 @@ impl Building for Combiner {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas(self.sink_count as usize + 4),
+            sprite: Some(SpriteResource::Atlas(self.sink_count as usize + 4)),
             grid_width: self.sink_count,
             grid_height: 1,
             cost: 60,

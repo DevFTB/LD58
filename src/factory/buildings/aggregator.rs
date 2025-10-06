@@ -54,7 +54,7 @@ impl Building for Aggregator {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas(1),
+            sprite: Some(SpriteResource::Atlas(1)),
             grid_width: 1,
             grid_height: 1,
             cost: 75,

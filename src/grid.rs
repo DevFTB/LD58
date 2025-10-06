@@ -106,6 +106,44 @@ impl Orientation {
         }
     }
 
+    /// Transform a direction that is relative to the default (Up) orientation
+    /// into the world direction for this orientation (taking `flipped` into account).
+    pub fn transform_relative(&self, dir: Direction) -> Direction {
+        // Step 1: apply flip in local (Up-based) coords: swap Left <-> Right
+        let local = if self.flipped {
+            match dir {
+                Direction::Left => Direction::Right,
+                Direction::Right => Direction::Left,
+                other => other,
+            }
+        } else {
+            dir
+        };
+
+        // Step 2: rotate local (Up-based) direction into world direction
+        match self.direction {
+            Direction::Up => local,
+            Direction::Right => match local {
+                Direction::Up => Direction::Right,
+                Direction::Right => Direction::Down,
+                Direction::Down => Direction::Left,
+                Direction::Left => Direction::Up,
+            },
+            Direction::Down => match local {
+                Direction::Up => Direction::Down,
+                Direction::Right => Direction::Left,
+                Direction::Down => Direction::Up,
+                Direction::Left => Direction::Right,
+            },
+            Direction::Left => match local {
+                Direction::Up => Direction::Left,
+                Direction::Right => Direction::Up,
+                Direction::Down => Direction::Right,
+                Direction::Left => Direction::Down,
+            },
+        }
+    }
+
     /// Get the layout direction - which way the building extends from the anchor.
     /// This represents the perpendicular direction to the facing direction.
     /// This is useful for determining tile placement in multi-tile buildings.
