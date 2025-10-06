@@ -105,7 +105,7 @@ pub fn update_contracts_sidebar_ui(
                     ));
 
                     // Progress bar for throughput over threshold
-                    let progress = (fulfillment.throughput / fulfillment.base_threshold).min(1.0).max(0.0);
+                    let progress = (fulfillment.throughput / (fulfillment.base_threshold * 2.0)).min(1.0).max(0.0);
                     parent.spawn((
                         Node {
                             width: Val::Px(180.0),

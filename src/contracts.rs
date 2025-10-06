@@ -215,6 +215,7 @@ fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: 
             "  -> SUCCESS: Found contract '{:?}'", contract_bundle
         );
         contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(50.0);
         commands.spawn(contract_bundle);
     } else {
         info!("  -> FAILURE: No contract found for Corporate faction reputation.");
