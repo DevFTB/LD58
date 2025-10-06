@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
+use bevy::audio::{AudioPlayer, AudioSource, PlaybackSettings};
 use crate::factions::Faction;
 use crate::factory::logical::BasicDataType;
 
@@ -212,7 +213,8 @@ pub struct AssetPlugin;
 
 impl Plugin for AssetPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_assets);
+        app.add_systems(PreStartup, load_assets)
+           .add_systems(Startup, play_background_audio);
     }
 }
 
@@ -407,4 +409,16 @@ pub fn load_assets(
     };
 
     commands.insert_resource(game_assets);
+}
+
+/// Play looped background audio
+pub fn play_background_audio(mut commands: Commands, asset_server: Res<AssetServer>) {
+    // Try to play looped background audio
+    // Note: Bevy supports OGG Vorbis (.ogg) and FLAC (.flac) by default
+    // WAV files need to be in a specific format (PCM) to work
+    let audio_handle: Handle<AudioSource> = asset_server.load("data_collection.ogg");
+    commands.spawn((
+        AudioPlayer::new(audio_handle),
+        PlaybackSettings::LOOP.with_volume(bevy::audio::Volume::Linear(0.05)),
+    ));
 }
