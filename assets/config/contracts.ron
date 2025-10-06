@@ -2,12 +2,13 @@
     // A list of all possible contracts that can be generated in the game.
     contracts: [
         (
+            id: 1,
             name: "Beginner's Data Run",
             description: "A simple task for a new runner. Deliver the specified data package.",
             faction: Academia,
             reputation: 1,
-            throughput: 50.0,
-            money_rate: 10.0,
+            base_threshold: 50.0,
+            base_money: 10.0,
             dataset: (
                 contents: {
                     Biometric: [],
@@ -15,12 +16,13 @@
             ),
         ),
         (
+            id: 2,
             name: "Corporate Espionage",
             description: "Acquire sensitive corporate data. High risk, high reward.",
             faction: Criminal,
             reputation: 3,
-            throughput: 200.0,
-            money_rate: 50.0,
+            base_threshold: 200.0,
+            base_money: 50.0,
             dataset: (
                 contents: {
                     Economic: [ Aggregated ],
@@ -29,12 +31,13 @@
             ),
         ),
         (
+            id: 3,
             name: "Government Compliance Audit",
             description: "Verify and deliver a large dataset for government records.",
             faction: Government,
             reputation: 4,
-            throughput: 250.0,
-            money_rate: 100.0,
+            base_threshold: 250.0,
+            base_money: 100.0,
             dataset: (
                 contents: {
                     Telemetry: [],

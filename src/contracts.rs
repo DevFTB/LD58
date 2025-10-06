@@ -20,10 +20,10 @@ pub enum ContractStatus {
 }
 
 #[derive(Component, Deserialize, Debug)]
-pub struct ContractThroughput(f64);
+pub struct ContractBaseThreshold(f64);
 
 #[derive(Component, Deserialize, Debug)]
-pub struct ContractMoneyRate(f64);
+pub struct ContractBaseMoney(f64);
 
 
 #[derive(Component, Default, Deserialize, Clone, Debug)]
@@ -41,8 +41,8 @@ pub struct ContractDefinition {
     pub description: String,
     pub faction: Faction,
     pub reputation: i32,
-    pub throughput: f64,
-    pub money_rate: f64,
+    pub base_threshold: f64,
+    pub base_money: f64,
     pub dataset: Dataset,
 }
 
@@ -113,8 +113,8 @@ pub fn find_and_generate_contract(
         contract: Contract,
         status: ContractStatus::Pending,
         dataset: suitable_contract.dataset.clone(),
-        throughput: ContractThroughput(suitable_contract.throughput),
-        money_rate: ContractMoneyRate(suitable_contract.money_rate),
+        base_threshold: ContractBaseThreshold(suitable_contract.base_threshold),
+        base_money: ContractBaseMoney(suitable_contract.base_money),
         faction: suitable_contract.faction.clone(),
         timeout: ContractTimeout(120.0), // Default timeout
         description: ContractDescription {
@@ -144,8 +144,8 @@ pub struct ContractBundle {
     pub contract: Contract,
     pub status: ContractStatus,
     pub dataset: Dataset,
-    pub throughput: ContractThroughput,
-    pub money_rate: ContractMoneyRate,
+    pub base_threshold: ContractBaseThreshold,
+    pub base_money: ContractBaseMoney,
     pub faction: Faction,
     pub timeout: ContractTimeout,
     pub description: ContractDescription,
