@@ -151,7 +151,7 @@ pub fn spawn_trunking_test(commands: &mut Commands) {
     );
 
     Trunker {
-        threshold_per_sink: 10.0,
+        throughput_per_sink: 10.0,
         sink_count: 2,
     }
     .spawn(

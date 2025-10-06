@@ -1,10 +1,10 @@
 use crate::ui::tooltip::TooltipPlugin;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
-pub mod newsfeed;
-pub mod shop;
 pub mod contracts;
 pub mod interactive_event;
+pub mod newsfeed;
+pub mod shop;
 pub mod tooltip;
 
 pub struct UIPlugin;
@@ -27,11 +27,15 @@ impl Plugin for UIPlugin {
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .insert_resource(interactive_event::ModalSpawnCooldown::default())
             .insert_resource(interactive_event::QueuedEvents::default())
-            .add_systems(Update, (
-                contracts::send_scroll_events,
-                contracts::handle_contract_buttons,
-                contracts::update_contracts_sidebar_ui,
-            ).chain())
+            .add_systems(
+                Update,
+                (
+                    contracts::send_scroll_events,
+                    contracts::handle_contract_buttons,
+                    contracts::update_contracts_sidebar_ui,
+                )
+                    .chain(),
+            )
             .add_observer(contracts::on_scroll_handler)
             .add_systems(Startup, startup)
             .add_systems(Startup, shop::spawn_building_shop)
