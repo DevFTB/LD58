@@ -16,7 +16,7 @@ use bevy::{
     prelude::*
 };
 
-use crate::ui::BlocksWorldScroll;
+use crate::{grid::{GridPosition, Grid}, ui::BlocksWorldScroll};
 
 #[derive(Debug, Resource)]
 struct CameraSettings {
@@ -100,4 +100,9 @@ fn pan_camera(
     let delta = -mouse_motion.delta * camera_scale;
     camera_transform.translation.x += delta.x;
     camera_transform.translation.y -= delta.y; // Y is inverted in screen space
+}
+
+pub fn focus_camera_on_grid_pos(grid_pos: &GridPosition, grid: &Grid, camera_transform: &mut Transform, orthographic: &mut OrthographicProjection) {
+    camera_transform.translation = grid.grid_to_world_center(grid_pos).extend(camera_transform.translation.z);
+    orthographic.scale = 0.7;
 }

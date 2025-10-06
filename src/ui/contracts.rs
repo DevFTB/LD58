@@ -1,12 +1,16 @@
-use bevy::prelude::*;
+use bevy::{camera, prelude::*};
 use crate::{
-    contracts::{Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus, AssociatedWithSink}, 
-    ui::BlocksWorldScroll
+    contracts::{AssociatedWithSink, Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus},
+    grid::GridPosition,
+    grid::Grid,
+    ui::BlocksWorldScroll,
+    factory::buildings::sink::SinkBuilding,
 };
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     picking::hover::HoverMap,
 };
+use crate::camera::focus_camera_on_grid_pos;
 
 #[derive(Component)]
 pub struct ContractAcceptButton;
@@ -199,12 +203,55 @@ pub fn update_contracts_sidebar_ui(
                 BackgroundColor(card_color),
             ))
             .with_children(|parent| {
-                parent.spawn((
-                    Text::new(&desc.name),
-                    TextFont { font_size: 20.0, ..default() },
-                    TextColor(Color::WHITE),
-                    Node { ..default() },
-                ));
+                if let ContractStatus::Active = status {
+                    // Create a horizontal container for the title and view sink button
+                    parent.spawn((
+                        Node {
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            align_items: AlignItems::Center,
+                            width: Val::Percent(100.0),
+                            margin: UiRect::bottom(Val::Px(8.0)),
+                            ..default()
+                        },
+                        BackgroundColor(Color::NONE),
+                    )).with_children(|header| {
+                        // Contract name on the left
+                        header.spawn((
+                            Text::new(&desc.name),
+                            TextFont { font_size: 20.0, ..default() },
+                            TextColor(Color::WHITE),
+                            Node { ..default() },
+                        ));
+                        
+                        // View Sink button on the right
+                        header.spawn((
+                            Node {
+                                padding: UiRect::all(Val::Px(6.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
+                            ViewSinkButton,
+                            ContractEntityLink(contract_entity),
+                            Interaction::None,
+                        )).with_children(|button| {
+                            button.spawn((
+                                Text::new("View Sink"),
+                                TextFont { font_size: 12.0, ..default() },
+                                TextColor(Color::WHITE),
+                                Node::default()
+                            ));
+                        });
+                    });
+                } else {
+                    parent.spawn((
+                        Text::new(&desc.name),
+                        TextFont { font_size: 20.0, ..default() },
+                        TextColor(Color::WHITE),
+                        Node { ..default() },
+                    ));
+                }
                 parent.spawn((
                     Text::new(format!("Status: {:?}", status)),
                     TextFont { font_size: 12.0, ..default() },
@@ -212,27 +259,6 @@ pub fn update_contracts_sidebar_ui(
                     Node { ..default() },
                 ));
                 if let ContractStatus::Active = status {
-                    // View Sink button at the top
-                    parent.spawn((
-                        Node {
-                            margin: UiRect::bottom(Val::Px(8.0)),
-                            padding: UiRect::all(Val::Px(8.0)),
-                            width: Val::Px(80.0),
-                            ..default()
-                        },
-                        BackgroundColor(Color::srgb(0.3, 0.3, 0.3)),
-                        ViewSinkButton,
-                        ContractEntityLink(contract_entity),
-                        Interaction::None,
-                    )).with_children(|button| {
-                        button.spawn((
-                            Text::new("View Sink"),
-                            TextFont { font_size: 14.0, ..default() },
-                            TextColor(Color::WHITE),
-                            Node::default()
-                        ));
-                    });
-
                     parent.spawn((
                         Text::new(format!("Fulfillment: {:?}", fulfillment.status)),
                         TextFont { font_size: 12.0, ..default() },
@@ -395,8 +421,9 @@ pub fn handle_contract_buttons(
     reject_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ContractRejectButton>)>,
     view_sink_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ViewSinkButton>)>,
     associated_sink_query: Query<&AssociatedWithSink>,
-    mut camera_query: Query<&mut Transform, With<Camera>>,
-    sink_query: Query<&GlobalTransform>,
+    camera_query: Single<(&mut Transform, &mut Projection), With<Camera>>,
+    sink_query: Query<&GridPosition, With<SinkBuilding>>, // Assuming SinkBuilding is a marker component for sink entities
+    grid: Res<Grid>,
 ) {
     // Handle accept button clicks
     for (interaction, link) in accept_query.iter() {
@@ -416,16 +443,17 @@ pub fn handle_contract_buttons(
         }
     }
 
+    let (mut camera_transform, camera_projection) = camera_query.into_inner();
+
     // Handle view sink button clicks
-    for (interaction, link) in view_sink_query.iter() {
-        if *interaction == Interaction::Pressed {
-            if let Ok(associated_sink) = associated_sink_query.get(link.0) {
-                if let Ok(sink_transform) = sink_query.get(associated_sink.0) {
-                    // Move camera to sink position
-                    if let Ok(mut camera_transform) = camera_query.single_mut() {
-                        let sink_pos = sink_transform.translation();
-                        camera_transform.translation.x = sink_pos.x;
-                        camera_transform.translation.z = sink_pos.z;
+    // a lot of hard coded stuff and a bit sus but it works for now
+    if let Projection::Orthographic(ref mut orthographic) = *camera_projection.into_inner() {
+        for (interaction, link) in view_sink_query.iter() {
+            if *interaction == Interaction::Pressed {
+                if let Ok(associated_sink) = associated_sink_query.get(link.0) {
+                    if let Ok(sink_gridpos) = sink_query.get(associated_sink.0) {
+                        // Move camera to sink grid position
+                        focus_camera_on_grid_pos(sink_gridpos, &grid, &mut camera_transform, orthographic);
                     }
                 }
             }
