@@ -268,7 +268,7 @@ fn generate_random_pending_contract_system(
 // Startup system to load the contracts.ron file
 fn load_contracts_from_ron(mut commands: Commands) {
     // Read the file from the assets folder.
-    let ron_str = std::fs::read_to_string("assets/config/contracts.ron")
+    let ron_str = std::fs::read_to_string("assets/text/contracts.ron")
         .expect("Failed to read contracts.ron");
 
     // Parse the RON string into a Vec first, then collect into a HashMap by id

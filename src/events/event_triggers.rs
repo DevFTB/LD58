@@ -220,6 +220,9 @@ pub fn handle_player_choice_system(
                             player.money = 0;
                             warn!("Player went bankrupt!");
                         }
+                        ConsequenceType::UnlockContract(contract_id) => {
+                            //TODO: implement contract unlocking
+                        }
                     }
                 }
             }

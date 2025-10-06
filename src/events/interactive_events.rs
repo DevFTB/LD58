@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-use crate::factions::{Faction, FactionReputations};
+use crate::factions::{Faction, FactionReputations, ReputationLevel};
 use crate::player::Player;
 
 pub const RANDOM_EVENT_COOLDOWN_SECONDS: f32 = 60.0; // 2 minutes
@@ -10,8 +10,9 @@ pub const RANDOM_EVENT_COOLDOWN_SECONDS: f32 = 60.0; // 2 minutes
 /// Requirements that must be met for an event to trigger
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum Requirements {
-    /// Faction reputation must be at least this value (0-100)
-    FactionReputation { faction: Faction, min: i32 },
+    MinReputation { faction: Faction, reputation: ReputationLevel },
+    MaxReputation { faction: Faction, reputation: ReputationLevel },
+    ExactReputation { faction: Faction, reputation: ReputationLevel },
     /// Player must have at least this much money
     MinMoney(i32),
     /// Player must have at most this much money
@@ -32,6 +33,7 @@ pub enum Requirements {
     EventUnlocked(String),
     /// Event with this ID must NOT be completed
     EventNotCompleted(String),
+    ContractFulfilled(i32)
 }
 
 /// How an event should be triggered
@@ -59,6 +61,8 @@ pub enum ConsequenceType {
     CompleteEvent(String),
     /// Trigger bankruptcy (game over?)
     Bankruptcy,
+    UnlockContract(i32)
+
 }
 
 /// A single choice option within an interactive event
@@ -252,8 +256,14 @@ impl<'a> GameContext<'a> {
 
     fn check_requirement(&self, requirement: &Requirements) -> bool {
         match requirement {
-            Requirements::FactionReputation { faction, min } => {
-                self.factions.get(*faction) >= *min
+            Requirements::MinReputation { faction, reputation } => {
+                self.factions.get_level(*faction) >= *reputation
+            }
+            Requirements::MaxReputation { faction, reputation } => {
+                self.factions.get_level(*faction) <= *reputation
+            }
+            Requirements::ExactReputation { faction, reputation } => {
+                self.factions.get_level(*faction) == *reputation
             }
             Requirements::MinMoney(amount) => self.player.money >= *amount,
             Requirements::MaxMoney(amount) => self.player.money <= *amount,
@@ -265,6 +275,10 @@ impl<'a> GameContext<'a> {
             Requirements::NoneOf(reqs) => !reqs.iter().any(|r| self.check_requirement(r)),
             Requirements::EventUnlocked(id) => self.event_state.is_unlocked(id),
             Requirements::EventNotCompleted(id) => !self.event_state.is_completed(id),
+            Requirements::ContractFulfilled(_contract_id) => {
+                // TODO: Implement contract checking when contract system is ready
+                false // For now, always fail this requirement
+            }
         }
     }
 }

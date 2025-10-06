@@ -11,6 +11,7 @@ use crate::grid::{
     are_positions_free, calculate_occupied_cells_rotated, Grid, GridPosition, Orientation, WorldMap,
 };
 use crate::ui::interaction::MouseButtonEvent;
+use crate::ui::interactive_event::ScalableText;
 use crate::ui::BlocksWorldClicks;
 use bevy::color::palettes::css::DIM_GRAY;
 use bevy::prelude::*;
@@ -92,17 +93,35 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
             for building in &buildings {
                 let data = building.building_type.data();
                 let mut image_node = match &data.sprite {
-                    Some(SpriteResource::Atlas(index)) => ImageNode::from_atlas_image(
-                        assets.machines_texture.clone(),
-                        TextureAtlas {
-                            layout: assets.machines_layout.clone(),
-                            index: *index,
-                        },
-                    ),
+                    Some(SpriteResource::Atlas(atlas_id, index)) => {
+                        let (texture, layout) = assets.get_atlas(*atlas_id);
+                        ImageNode::from_atlas_image(
+                            texture,
+                            TextureAtlas {
+                                layout,
+                                index: *index,
+                            },
+                        )
+                    },
+                    Some(SpriteResource::Machine(machine_type, variant)) => {
+                        if let Some((atlas_id, index)) = assets.machine_sprite(*machine_type, *variant) {
+                            let (texture, layout) = assets.get_atlas(atlas_id);
+                            ImageNode::from_atlas_image(
+                                texture,
+                                TextureAtlas {
+                                    layout,
+                                    index,
+                                },
+                            )
+                        } else {
+                            ImageNode::default()
+                        }
+                    },
                     Some(SpriteResource::Sprite(path)) => ImageNode::new(path.clone()),
                     None => ImageNode::default(),
                 };
-                image_node.image_mode = NodeImageMode::Stretch;
+                // Use Auto mode to maintain aspect ratio
+                image_node.image_mode = NodeImageMode::Auto;
 
                 parent.spawn((
                     Node {
@@ -113,8 +132,10 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                     children![
                         (
                             Node {
-                                width: Val::Px(BUILDING_TILE_SIZE as f32),
-                                height: Val::Px(BUILDING_TILE_SIZE as f32),
+                                width: Val::Vh(8.0 * data.grid_width as f32),
+                                height: Val::Vh(8.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
                                 ..default()
                             },
                             image_node,
@@ -122,7 +143,11 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                             Interaction::None,
                             Button,
                         ),
-                        Text(data.name),
+                        (
+                            Text(data.name),
+                            assets.text_font(12.0),
+                            ScalableText::from_vw(0.7),
+                        ),
                     ],
                 ));
             }
@@ -181,14 +206,33 @@ pub fn handle_building_click(
 
             // Create sprite based on SpriteResource type
             let sprite = match &data.sprite {
-                Some(SpriteResource::Atlas(index)) => Sprite {
-                    image: assets.machines_texture.clone(),
-                    custom_size: Some(sprite_size),
-                    texture_atlas: Some(TextureAtlas {
-                        layout: assets.machines_layout.clone(),
-                        index: *index,
-                    }),
-                    ..default()
+                Some(SpriteResource::Atlas(atlas_id, index)) => {
+                    let (texture, layout) = assets.get_atlas(*atlas_id);
+                    Sprite {
+                        image: texture,
+                        custom_size: Some(sprite_size),
+                        texture_atlas: Some(TextureAtlas {
+                            layout,
+                            index: *index,
+                        }),
+                        ..default()
+                    }
+                },
+                Some(SpriteResource::Machine(machine_type, variant)) => {
+                    if let Some((atlas_id, index)) = assets.machine_sprite(*machine_type, *variant) {
+                        let (texture, layout) = assets.get_atlas(atlas_id);
+                        Sprite {
+                            image: texture,
+                            custom_size: Some(sprite_size),
+                            texture_atlas: Some(TextureAtlas {
+                                layout,
+                                index,
+                            }),
+                            ..default()
+                        }
+                    } else {
+                        Sprite::default()
+                    }
                 },
                 Some(SpriteResource::Sprite(image)) => Sprite {
                     image: image.clone(),

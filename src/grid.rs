@@ -196,10 +196,11 @@ pub struct Grid {
 pub struct GridSprite(pub Color);
 
 /// Component for buildings that use texture atlas sprites
-/// Contains the atlas index and size information for proper rendering
+/// Contains the atlas ID, atlas index, and size information for proper rendering
 #[derive(Component)]
 pub struct GridAtlasSprite {
-    pub atlas_index: usize,
+    pub atlas_id: crate::assets::AtlasId,  // Which texture atlas to use
+    pub atlas_index: usize,                 // Index within that atlas
     pub grid_width: i64,
     pub grid_height: i64,
     pub orientation: Orientation,
@@ -548,12 +549,15 @@ fn spawn_grid_atlas_sprite_system(
         // Calculate rotation angle based on orientation
         let rotation_angle = atlas_sprite.orientation.rotation_angle();
 
+        // Get the correct texture and layout based on atlas_id
+        let (texture, layout) = game_assets.get_atlas(atlas_sprite.atlas_id);
+
         commands.entity(entity).insert((
             Sprite {
                 custom_size: Some(Vec2::new(sprite_width, sprite_height)),
-                image: game_assets.machines_texture.clone(),
+                image: texture,
                 texture_atlas: Some(TextureAtlas {
-                    layout: game_assets.machines_layout.clone(),
+                    layout,
                     index: atlas_sprite.atlas_index,
                 }),
                 flip_x: atlas_sprite.orientation.flipped, // Always apply flip_x when flipped

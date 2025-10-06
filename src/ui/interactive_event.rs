@@ -1,7 +1,8 @@
 use crate::events::{InteractiveEventData, PlayerChoiceEvent, ShowInteractiveEvent, GameContext, EventState, Requirements};
 use crate::assets::GameAssets;
-use crate::factions::FactionReputations;
+use crate::factions::{FactionReputations, reputation_level_name};
 use crate::player::Player;
+use crate::pause::GameState;
 use bevy::prelude::*;
 use std::slice::from_ref;
 
@@ -12,8 +13,7 @@ const BUBBLE_LEFT_OFFSET: f32 = 20.0;
 const BUBBLE_BOTTOM_OFFSET: f32 = 20.0;
 
 /// Helper function to check choice requirements and generate disabled reason
-fn check_choice_requirements(requirements: &[Requirements], context: &GameContext) -> (bool, Option<String>) {
-    
+fn check_choice_requirements(requirements: &[Requirements], context: &GameContext) -> (bool, Option<String>) {    
     for req in requirements {
         match req {
             Requirements::MinMoney(amount) => {
@@ -22,16 +22,60 @@ fn check_choice_requirements(requirements: &[Requirements], context: &GameContex
                     return (true, Some(format!("Need ${}", amount)));
                 }
             }
-            Requirements::FactionReputation { faction, min } => {
-                let current = context.factions.get(*faction);
-                if current < *min {
-                    return (true, Some(format!("Need {:?} reputation {}", faction, min)));
-                }
-            }
             Requirements::MaxMoney(amount) => {
                 if context.player.money > *amount {
                     return (true, Some(format!("Too much money (max ${})", amount)));
                 }
+            }
+            Requirements::MinReputation { faction, reputation } => {
+                let current_level = context.factions.get_level(*faction);
+                if current_level < *reputation {
+                    let level_name = reputation_level_name(*reputation);
+                    return (true, Some(format!("Need {:?} {} or better", faction, level_name)));
+                }
+            }
+            Requirements::MaxReputation { faction, reputation } => {
+                let current_level = context.factions.get_level(*faction);
+                if current_level > *reputation {
+                    let level_name = reputation_level_name(*reputation);
+                    return (true, Some(format!("Need {:?} {} or worse", faction, level_name)));
+                }
+            }
+            Requirements::ExactReputation { faction, reputation } => {
+                let current_level = context.factions.get_level(*faction);
+                if current_level != *reputation {
+                    let level_name = reputation_level_name(*reputation);
+                    return (true, Some(format!("Need exactly {:?} {}", faction, level_name)));
+                }
+            }
+            Requirements::MinYear(year) => {
+                if context.player.current_year < *year {
+                    return (true, Some(format!("Need year {}", year)));
+                }
+            }
+            Requirements::MaxYear(year) => {
+                if context.player.current_year > *year {
+                    return (true, Some(format!("Only available until year {}", year)));
+                }
+            }
+            Requirements::SpecificYear(year) => {
+                if context.player.current_year != *year {
+                    return (true, Some(format!("Only in year {}", year)));
+                }
+            }
+            Requirements::EventUnlocked(event_id) => {
+                if !context.event_state.is_unlocked(event_id) {
+                    return (true, Some(format!("Event '{}' must be unlocked", event_id)));
+                }
+            }
+            Requirements::EventNotCompleted(event_id) => {
+                if context.event_state.is_completed(event_id) {
+                    return (true, Some(format!("Event '{}' already completed", event_id)));
+                }
+            }
+            Requirements::ContractFulfilled(contract_id) => {
+                // TODO: Implement contract checking when contract system is ready
+                return (true, Some(format!("Contract {} must be fulfilled", contract_id)));
             }
             Requirements::AllOf(reqs) => {
                 let (disabled, reason) = check_choice_requirements(reqs, context);
@@ -59,8 +103,6 @@ fn check_choice_requirements(requirements: &[Requirements], context: &GameContex
                     return (true, Some("Requirements conflict".to_string()));
                 }
             }
-            // Other requirements that may not apply to choices
-            _ => {}
         }
     }
     
@@ -160,10 +202,7 @@ fn spawn_choice_button(
     let text = commands
         .spawn((
             Text::new(choice),
-            TextFont {
-                font_size: 15.0,
-                ..default()
-            },
+            game_assets.text_font(15.0),
             TextColor(text_color),
             ScalableText::from_vw(1.2),
         ))
@@ -202,15 +241,6 @@ fn spawn_choice_button(
                 );
                 indicators.push(indicator);
             }
-            ConsequenceType::Bankruptcy => {
-                // Warning indicator for bankruptcy
-                let indicator = spawn_text_consequence_indicator(
-                    commands,
-                    "B",
-                    Color::srgb(1.0, 0.3, 0.3),
-                );
-                indicators.push(indicator);
-            }
             _ => {
                 // Other consequence types can be added here   
             }
@@ -239,7 +269,7 @@ fn spawn_faction_consequence_indicator(
         .id();
 
     // Faction icon
-    let faction_icon_index = game_assets.faction_icon(faction);
+    let faction_icon_index = game_assets.faction_icon(faction, crate::assets::IconSize::Small).map(|(_, idx)| idx).unwrap_or(0);
     let faction_icon = commands
         .spawn((
             ImageNode::from_atlas_image(
@@ -359,14 +389,12 @@ fn spawn_text_consequence_indicator(
     commands: &mut Commands,
     emoji: &str,
     color: Color,
+    game_assets: &crate::assets::GameAssets,
 ) -> Entity {
     commands
         .spawn((
             Text::new(emoji),
-            TextFont {
-                font_size: 20.0,
-                ..default()
-            },
+            game_assets.text_font(20.0),
             TextColor(color),
             ScalableText::from_vw(1.5),
         ))
@@ -442,6 +470,7 @@ pub fn handle_choice_tooltip(
     button_query: Query<(Entity, &Interaction, &EventChoiceButton)>,
     tooltip_query: Query<(Entity, &ChoiceTooltip)>,
     windows: Query<&Window>,
+    game_assets: Res<GameAssets>
 ) {
     // Remove tooltips for buttons that are no longer hovered
     for (tooltip_entity, tooltip) in tooltip_query.iter() {
@@ -494,10 +523,7 @@ pub fn handle_choice_tooltip(
                     .with_children(|parent| {
                         parent.spawn((
                             Text::new(reason),
-                            TextFont {
-                                font_size: 14.0,
-                                ..default()
-                            },
+                            game_assets.text_font(14.0),
                             TextColor(Color::srgb(1.0, 0.8, 0.8)),
                             ScalableText::from_vw(1.1),
                         ));
@@ -575,7 +601,7 @@ fn spawn_event_modal(commands: &mut Commands, event_data: InteractiveEventData, 
                 width: Val::Vw(65.0),
                 max_width: Val::Vw(70.0),
                 height: Val::Auto,
-                max_height: Val::Vh(85.0),
+                max_height: Val::Vh(90.0),
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Vw(2.5)),
                 row_gap: Val::Vh(2.0),
@@ -600,7 +626,7 @@ fn spawn_event_modal(commands: &mut Commands, event_data: InteractiveEventData, 
 
     // Add faction icon if faction is present
     if let Some(faction) = event_data.faction {
-        let icon_index = game_assets.faction_icon(faction);
+        let icon_index = game_assets.faction_icon(faction, crate::assets::IconSize::Small).map(|(_, idx)| idx).unwrap_or(0);
         let icon = commands
             .spawn((
                 ImageNode::from_atlas_image(
@@ -625,10 +651,7 @@ fn spawn_event_modal(commands: &mut Commands, event_data: InteractiveEventData, 
     let title = commands
         .spawn((
             Text::new(&event_data.title),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
+            game_assets.text_font(24.0),
             TextColor(border_color),
             ScalableText::from_vw(2.0),
         ))
@@ -640,10 +663,7 @@ fn spawn_event_modal(commands: &mut Commands, event_data: InteractiveEventData, 
     let description = commands
         .spawn((
             Text::new(&event_data.description),
-            TextFont {
-                font_size: 16.0,
-                ..default()
-            },
+            game_assets.text_font(16.0),
             TextColor(Color::srgb(0.9, 0.9, 0.9)),
             Node {
                 margin: UiRect::bottom(Val::Vh(1.5)),
@@ -698,6 +718,7 @@ pub fn handle_choice_click(
     interaction_query: Query<(&Interaction, &EventChoiceButton), Changed<Interaction>>,
     modal_query: Query<(Entity, &StoredEventData), With<InteractiveEventModal>>,
     mut choice_events: MessageWriter<PlayerChoiceEvent>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for (interaction, button) in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
@@ -720,6 +741,9 @@ pub fn handle_choice_click(
                     "Choice {} selected for event: {}",
                     button.choice_index, stored_data.event_data.event_id
                 );
+
+                // Resume from event pause
+                next_state.set(GameState::Running);
 
                 // Close the modal
                 commands.entity(modal_entity).despawn();
@@ -818,6 +842,7 @@ pub fn route_events_by_urgency(
     player: Res<Player>,
     factions: Res<FactionReputations>,
     event_state: Res<EventState>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for event in show_events.read() {
         if event.0.popup_urgency {
@@ -834,6 +859,9 @@ pub fn route_events_by_urgency(
                 factions: &factions,
                 event_state: &event_state,
             };
+            
+            // Pause the game when showing modal
+            next_state.set(GameState::EventModal);
             
             spawn_event_modal(&mut commands, event.0.clone(), &game_assets, &context);
         } else {
@@ -906,7 +934,7 @@ fn spawn_event_bubble(
             BubbleWobble {
                 timer: 0.0,
                 cycle_timer: (index as f32) * 0.5, // Stagger start times
-                cycle_duration: 5.0,
+                cycle_duration: 2.5,
                 wobble_duration: 1.0,               // Wobble for 1 second
                 is_wobbling: false,
                 frequency: 3.0 + (index as f32) * 0.3, // Vary frequency per bubble
@@ -917,7 +945,7 @@ fn spawn_event_bubble(
         .with_children(|parent| {
             // Add faction sprite icon if available
             if let Some(faction) = event_data.faction {
-                let icon_index = game_assets.faction_icon(faction);
+                let icon_index = game_assets.faction_icon(faction, crate::assets::IconSize::Small).map(|(_, idx)| idx).unwrap_or(0);
                 parent.spawn((
                     ImageNode::from_atlas_image(
                         game_assets.small_sprites_texture.clone(),
@@ -936,10 +964,7 @@ fn spawn_event_bubble(
                 // Fallback to text indicator
                 parent.spawn((
                     Text::new("!"),
-                    TextFont {
-                        font_size: 32.0,
-                        ..default()
-                    },
+                    game_assets.text_font(32.0),
                     TextColor(Color::WHITE),
                 ));
             }
@@ -957,6 +982,7 @@ pub fn handle_bubble_clicks(
     player: Res<Player>,
     factions: Res<FactionReputations>,
     event_state: Res<EventState>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     for (interaction, bubble) in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
@@ -975,6 +1001,9 @@ pub fn handle_bubble_clicks(
                 factions: &factions,
                 event_state: &event_state,
             };
+            
+            // Pause the game when showing modal
+            next_state.set(GameState::EventModal);
             
             // Show the modal
             spawn_event_modal(&mut commands, bubble.event_data.clone(), &game_assets, &context);

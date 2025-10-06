@@ -2,6 +2,7 @@ use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResourc
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource, Dataset};
 use crate::grid::{GridPosition, GridSprite, Orientation};
+use crate::assets::{MachineType, MachineVariant};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::platform::collections::HashMap;
@@ -58,8 +59,15 @@ impl Building for Delinker {
     }
 
     fn data(&self) -> BuildingData {
+        let variant = match self.source_count {
+            2 => MachineVariant::Size2,
+            3 => MachineVariant::Size3,
+            4 => MachineVariant::Size4,
+            _ => MachineVariant::Size2,
+        };
+        
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(self.source_count as usize + 7)),
+            sprite: Some(SpriteResource::Machine(MachineType::Delinker, variant)),
             grid_width: self.source_count,
             grid_height: 1,
             cost: 60,

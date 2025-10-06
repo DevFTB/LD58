@@ -59,6 +59,8 @@ pub struct EventsPlugin;
 
 impl Plugin for EventsPlugin {
     fn build(&self, app: &mut App) {
+        use crate::pause::GameState;
+        
         app.add_message::<ShowInteractiveEvent>()
             .add_message::<TriggerInteractiveEvent>()
             .add_message::<PlayerChoiceEvent>()
@@ -67,12 +69,15 @@ impl Plugin for EventsPlugin {
             .init_resource::<Player>()
             .init_resource::<RandomEventTimer>()
             .add_systems(PreStartup, (load_news_events_from_ron, load_interactive_events_from_ron))
+            // These systems should only run during normal gameplay (not paused or in modal)
             .add_systems(Update, (
-                handle_manual_event_triggers,
                 random_event_trigger_system,
                 forced_event_checker_system,
-                handle_player_choice_system,
+                handle_manual_event_triggers,
                 bankruptcy_update_system,
+            ).run_if(in_state(GameState::Running)))
+            .add_systems(Update, (
+                handle_player_choice_system,
             ));
     }
 }
