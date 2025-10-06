@@ -1,19 +1,15 @@
 use crate::factory::buildings::aggregator::do_aggregation;
-use crate::factory::buildings::buildings::{Building, SpriteResource};
+use crate::factory::buildings::buildings::Building;
 use crate::factory::buildings::combiner::do_combining;
 use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
-use crate::factory::logical::{
-    debug_logical_links, pass_data_system, visualise_sinks, DataSink, DataSource,
-};
+use crate::factory::logical::{debug_logical_links, pass_data_system, visualise_sinks};
 use crate::factory::physical::{
-    connect_direct, connect_links, connect_physical_links_to_data,
-    establish_logical_links, on_physical_link_removed,
+    connect_direct, connect_links, connect_physical_links_to_data, establish_logical_links,
+    on_physical_link_removed,
 };
-use crate::grid::{Direction, GridAtlasSprite, GridPosition, Orientation};
-use crate::factory::buildings::buildings::{BuildingType, BuildingSpecificData};
-use crate::factory::buildings::splitter::Splitter;
+use crate::grid::{GridPosition, Orientation};
 use bevy::{
     app::{Plugin, PostUpdate, Update},
     ecs::schedule::IntoScheduleConfigs,
@@ -79,28 +75,11 @@ pub fn handle_construction_event(
     mut commands: Commands,
 ) {
     for event in construct_events.read() {
-        let data = event.building.data();
         let base_position = GridPosition(event.grid_position);
         // Extract sprite info for all buildings
 
-        let building_id = event
+        event
             .building
             .spawn(&mut commands, base_position, event.orientation);
-
-        match data.sprite {
-            SpriteResource::Atlas(index) => {
-                commands.entity(building_id).insert(GridAtlasSprite {
-                    atlas_index: index,
-                    grid_width: data.grid_width,
-                    grid_height: data.grid_height,
-                    orientation: event.orientation,
-                });
-            }
-            SpriteResource::Sprite(image) => {
-                commands
-                    .entity(building_id)
-                    .insert(Sprite { image, ..default() });
-            }
-        }
     }
 }

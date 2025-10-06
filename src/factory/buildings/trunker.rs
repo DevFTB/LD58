@@ -15,7 +15,7 @@ pub struct Trunker {
 }
 
 impl Building for Trunker {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,

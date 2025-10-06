@@ -16,7 +16,7 @@ pub struct Delinker {
 }
 
 impl Building for Delinker {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,

@@ -1,10 +1,10 @@
 use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
-use crate::factory::logical::{DataBuffer, DataSink, DataSource, pass_data_internal};
+use crate::factory::logical::{pass_data_internal, DataBuffer, DataSink, DataSource};
 use crate::grid::{GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
-use bevy::prelude::{Bundle, Commands, Component, Query, Res, SpawnWith, Time};
+use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
 
@@ -15,7 +15,7 @@ pub struct Splitter {
 }
 
 impl Building for Splitter {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,

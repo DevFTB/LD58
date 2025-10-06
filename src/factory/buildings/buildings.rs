@@ -3,16 +3,42 @@ use crate::factory::buildings::combiner::Combiner;
 use crate::factory::buildings::delinker::Delinker;
 use crate::factory::buildings::splitter::Splitter;
 use crate::factory::buildings::trunker::Trunker;
-use crate::grid::{GridPosition, Orientation};
+use crate::grid::{GridAtlasSprite, GridPosition, Orientation};
 use bevy::prelude::*;
 
 pub trait Building: Send + Sync {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,
         orientation: Orientation,
     ) -> Entity;
+
+    fn spawn(
+        &self,
+        commands: &mut Commands,
+        position: GridPosition,
+        orientation: Orientation,
+    ) -> Entity {
+        let id = self.spawn_naked(commands, position, orientation);
+        let data = self.data();
+
+        match data.sprite {
+            SpriteResource::Atlas(index) => {
+                commands.entity(id).insert(GridAtlasSprite {
+                    atlas_index: index,
+                    grid_width: data.grid_width,
+                    grid_height: data.grid_height,
+                    orientation,
+                });
+            }
+            SpriteResource::Sprite(image) => {
+                commands.entity(id).insert(Sprite { image, ..default() });
+            }
+        }
+
+        id
+    }
 
     fn data(&self) -> BuildingData;
 }

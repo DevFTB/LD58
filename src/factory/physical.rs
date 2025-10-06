@@ -24,11 +24,11 @@ pub struct PhysicalLink {
 }
 
 impl Building for PhysicalLink {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,
-        orientation: Orientation,
+        _: Orientation,
     ) -> Entity {
         commands
             .spawn((PhysicalLink { throughput: 234.0 }, position))

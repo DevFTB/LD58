@@ -19,7 +19,7 @@ pub struct Combiner {
 }
 
 impl Building for Combiner {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,

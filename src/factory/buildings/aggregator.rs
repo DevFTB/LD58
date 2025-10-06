@@ -16,7 +16,7 @@ pub struct Aggregator {
 }
 
 impl Building for Aggregator {
-    fn spawn(
+    fn spawn_naked(
         &self,
         commands: &mut Commands,
         position: GridPosition,
