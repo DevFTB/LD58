@@ -472,7 +472,7 @@ fn spawn_faction_sink(
 
     commands
         .entity(sink_building)
-        .spawn((sink, faction, reputation, Locked));
+        .insert((faction, reputation, Locked));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {
