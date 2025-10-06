@@ -1,17 +1,19 @@
-use bevy::{color::palettes::css::ANTIQUE_WHITE, prelude::*};
-use std::sync::Arc;
-
 use crate::assets::GameAssets;
 use crate::factory::buildings::aggregator::Aggregator;
 use crate::factory::buildings::buildings::{Building, SpriteResource};
 use crate::factory::buildings::combiner::Combiner;
+use crate::factory::buildings::delinker::Delinker;
 use crate::factory::buildings::splitter::Splitter;
+use crate::factory::buildings::trunker::Trunker;
 use crate::factory::physical::PhysicalLink;
 use crate::factory::ConstructBuildingEvent;
 use crate::grid::{
     are_positions_free, calculate_occupied_cells_rotated, Grid, GridPosition, Orientation, WorldMap,
 };
 use crate::ui::BlocksWorldClicks;
+use bevy::color::palettes::css::DIM_GRAY;
+use bevy::prelude::*;
+use std::sync::Arc;
 
 pub const BUILDING_BAR_WIDTH_PCT: f32 = 70.0;
 pub const BUILDING_BAR_HEIGHT_PCT: f32 = 12.0;
@@ -35,20 +37,14 @@ pub struct SelectedBuildingType(pub Option<Arc<dyn Building>>);
 pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
     let buildings = [
         UIBuilding {
+            building_type: Arc::new(PhysicalLink { throughput: 50.0 }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Aggregator { throughput: 5.0 }),
+        },
+        UIBuilding {
             building_type: Arc::new(Splitter {
                 source_count: 2,
-                throughput: 5.0,
-            }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Splitter {
-                source_count: 3,
-                throughput: 5.0,
-            }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Splitter {
-                source_count: 4,
                 throughput: 5.0,
             }),
         },
@@ -59,22 +55,16 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
             }),
         },
         UIBuilding {
-            building_type: Arc::new(Combiner {
-                sink_count: 3,
+            building_type: Arc::new(Delinker {
                 throughput: 5.0,
+                source_count: 2,
             }),
         },
         UIBuilding {
-            building_type: Arc::new(Combiner {
-                sink_count: 4,
-                throughput: 5.0,
+            building_type: Arc::new(Trunker {
+                sink_count: 2,
+                throughput_per_sink: 5.0,
             }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Aggregator { throughput: 5.0 }),
-        },
-        UIBuilding {
-            building_type: Arc::new(PhysicalLink { throughput: 50.0 }),
         },
     ];
 
@@ -93,7 +83,7 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(ANTIQUE_WHITE.into()),
+            BackgroundColor(DIM_GRAY.into()),
             ZIndex(1), // Ensure UI renders above sprites
             BlocksWorldClicks,
         ))
@@ -115,15 +105,24 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
 
                 parent.spawn((
                     Node {
-                        width: Val::Px(BUILDING_TILE_SIZE as f32),
-                        height: Val::Px(BUILDING_TILE_SIZE as f32),
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
-                    image_node,
-                    building.clone(),
-                    Interaction::None,
-                    Button,
-                    Transform::from_xyz(0.0, 0.0, 100.0),
+                    children![
+                        (
+                            Node {
+                                width: Val::Px(BUILDING_TILE_SIZE as f32),
+                                height: Val::Px(BUILDING_TILE_SIZE as f32),
+                                ..default()
+                            },
+                            image_node,
+                            building.clone(),
+                            Interaction::None,
+                            Button,
+                        ),
+                        Text(data.name),
+                    ],
                 ));
             }
         });
