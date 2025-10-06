@@ -1,4 +1,5 @@
 use crate::grid::{GridAtlasSprite, GridPosition, Orientation};
+use crate::ui::tooltip::attach_tooltip;
 use bevy::prelude::*;
 
 pub trait Building: Send + Sync {
@@ -17,6 +18,8 @@ pub trait Building: Send + Sync {
     ) -> Entity {
         let id = self.spawn_naked(commands, position, orientation);
         let data = self.data();
+
+        attach_tooltip(commands, id);
 
         match data.sprite {
             Some(SpriteResource::Atlas(index)) => {

@@ -41,7 +41,7 @@ pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 #[derive(Debug)]
 pub struct GridPosition(pub I64Vec2);
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash)]
 pub enum Direction {
     Right,
     Down,

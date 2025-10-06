@@ -1,10 +1,9 @@
-use bevy::{
-    color::palettes::css::BROWN,
-    prelude::*,
-};
+use crate::ui::tooltip::TooltipPlugin;
+use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod newsfeed;
 pub mod shop;
+pub mod tooltip;
 
 pub struct UIPlugin;
 
@@ -29,6 +28,7 @@ impl Plugin for UIPlugin {
             .add_systems(Update, newsfeed::add_newsfeed_item_system)
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
             .add_systems(Update, newsfeed::generate_news);
+        app.add_plugins(TooltipPlugin);
     }
 }
 
@@ -51,5 +51,3 @@ fn startup(mut commands: Commands) {
         BlocksWorldClicks,
     ));
 }
-
-

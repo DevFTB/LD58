@@ -38,10 +38,7 @@ impl Building for SourceBuilding {
                     DataSource {
                         direction: *dir,
                         throughput: throughput_per_side,
-                        buffer: DataBuffer {
-                            shape: Some(shape.clone()),
-                            value: 0.,
-                        },
+                        buffer: DataBuffer::with_shape(Some(shape.clone())),
                         limited: self.limited,
                     },
                     position,
