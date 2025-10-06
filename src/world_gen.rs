@@ -1,4 +1,5 @@
 use crate::assets::GameAssets;
+use crate::assets::IconSize;
 use crate::GridPosition;
 use core::panic;
 use std::{collections::VecDeque, ops::RangeInclusive};
@@ -234,7 +235,7 @@ fn startup(
             cluster_reputation.get(cluster_id),
         ) {
             // spawn faction icon
-            let icon_index = game_assets.faction_icon(*faction);
+            let icon_index = game_assets.faction_icon(*faction, crate::assets::IconSize::Large).map(|(_, idx)| idx).unwrap_or(0);
             commands.spawn((
                 GridPosition(*cell_vec),
                 Sprite {
