@@ -26,7 +26,7 @@ pub enum ContractStatus {
     Completed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ContractFulfillmentStatus {
     Exceeding,
     Meeting,
@@ -108,13 +108,7 @@ impl ContractFulfillment {
 
     fn get_fulfillment_status(&mut self) -> ContractFulfillmentStatus {
         let threshold_fraction = self.throughput / self.base_threshold;
-        if threshold_fraction >= 2.0 {
-            ContractFulfillmentStatus::Exceeding
-        } else if threshold_fraction >= 1.0 {
-            ContractFulfillmentStatus::Meeting
-        } else {
-            ContractFulfillmentStatus::Failing
-        }
+        get_fulfillment_status(threshold_fraction)
     }
 
     pub fn new(base_threshold: f64, base_money: f64) -> Self {
@@ -256,4 +250,14 @@ pub fn find_and_generate_contract(
             suitable_contract.base_money
         ),
     })
+}
+
+fn get_fulfillment_status(threshold_fraction: f64) -> ContractFulfillmentStatus {
+    if threshold_fraction >= 2.0 {
+        ContractFulfillmentStatus::Exceeding
+    } else if threshold_fraction >= 1.0 {
+        ContractFulfillmentStatus::Meeting
+    } else {
+        ContractFulfillmentStatus::Failing
+    }
 }

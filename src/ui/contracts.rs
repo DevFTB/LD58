@@ -92,6 +92,49 @@ pub fn update_contracts_sidebar_ui(
                         TextColor(status_text_color),
                         Node { ..default() },
                     ));
+
+                    // Add current money and throughput info
+                    parent.spawn((
+                        Text::new(format!(
+                            "Income: {:.2} | Throughput: {:.2}",
+                            fulfillment.get_income(), fulfillment.throughput
+                        )),
+                        TextFont { font_size: 12.0, ..default() },
+                        TextColor(Color::WHITE),
+                        Node { ..default() },
+                    ));
+
+                    // Progress bar for throughput over threshold
+                    let progress = (fulfillment.throughput / fulfillment.base_threshold).min(1.0).max(0.0);
+                    parent.spawn((
+                        Node {
+                            width: Val::Px(180.0),
+                            height: Val::Px(12.0),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgb(0.18, 0.18, 0.18)),
+                    ))
+                    .with_children(|bar| {
+                        bar.spawn((
+                            Node {
+                                width: Val::Px(180.0 * progress as f32),
+                                height: Val::Px(12.0),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.3, 0.7, 0.3)),
+                        ));
+                    });
+                } else {
+                    // Add base money and throughput info
+                    parent.spawn((
+                        Text::new(format!(
+                            "Base income: {:.2} | Throughput: {:.2}",
+                            fulfillment.base_money, fulfillment.base_threshold
+                        )),
+                        TextFont { font_size: 12.0, ..default() },
+                        TextColor(Color::WHITE),
+                        Node { ..default() },
+                    ));
                 }
             })
             .id();
