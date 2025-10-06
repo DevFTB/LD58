@@ -7,7 +7,6 @@ use crate::factory::logical::DataSink;
 use crate::factory::buildings::Tile;
 use bevy::platform::collections::HashMap;
 use crate::factory::logical::Dataset;
-use crate::factory::buildings::sink::ThroughputTracker;
 
 /// Player game state
 #[derive(Resource, Debug)]
@@ -48,11 +47,11 @@ impl Plugin for PlayerPlugin {
 /// TODO: smooth out the throughput calculation over time if necessary
 fn update_contract_fulfillment(
     mut contract_query: Query<(&mut ContractFulfillment, &mut Dataset, &AssociatedWithSink, &mut ContractStatus)>,
-    mut sink_tile_query: Query<(&mut DataSink, &mut ThroughputTracker, &Tile)>,
+    mut sink_tile_query: Query<(&mut DataSink, &Tile)>,
 ) {
     // calculate the throughput per (SinkBuilding entity, dataset) pair
     let mut dataset_sink_throughputs: HashMap<(Entity, Dataset), f32> = HashMap::new();
-    for (mut sink, mut throughput_tracker, tile) in sink_tile_query.iter_mut() {
+    for (mut sink, tile) in sink_tile_query.iter_mut() {
         let sink_building_entity = tile.0;
         if let Some(dataset) = &sink.buffer.shape {
             *dataset_sink_throughputs

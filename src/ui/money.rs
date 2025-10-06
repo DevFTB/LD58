@@ -4,6 +4,12 @@ use crate::player::Player;
 #[derive(Component)]
 pub struct MoneyDisplay;
 
+#[derive(Component)]
+pub struct MoneyText;
+
+#[derive(Component)]
+pub struct IncomeText;
+
 /// Spawns the money display UI in the top left corner
 pub fn spawn_money_display_ui(mut commands: Commands) {
     commands.spawn((
@@ -12,6 +18,7 @@ pub fn spawn_money_display_ui(mut commands: Commands) {
             top: Val::Px(20.0),
             left: Val::Px(20.0),
             padding: UiRect::all(Val::Px(12.0)),
+            flex_direction: FlexDirection::Column,
             ..default()
         },
         BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)), // Semi-transparent black background
@@ -19,6 +26,7 @@ pub fn spawn_money_display_ui(mut commands: Commands) {
         MoneyDisplay,
     ))
     .with_children(|parent| {
+        // Money display
         parent.spawn((
             Text::new("$0"),
             TextFont {
@@ -27,6 +35,22 @@ pub fn spawn_money_display_ui(mut commands: Commands) {
             },
             TextColor(Color::srgb(0.9, 0.9, 0.1)), // Gold color for money
             Node::default(),
+            MoneyText,
+        ));
+        
+        // Income display
+        parent.spawn((
+            Text::new("Income: $0/s"),
+            TextFont {
+                font_size: 16.0,
+                ..default()
+            },
+            TextColor(Color::srgb(0.7, 0.9, 0.7)), // Light green for income
+            Node {
+                margin: UiRect::top(Val::Px(4.0)),
+                ..default()
+            },
+            IncomeText,
         ));
     });
 }
@@ -34,17 +58,38 @@ pub fn spawn_money_display_ui(mut commands: Commands) {
 /// Updates the money display text when player money changes
 pub fn update_money_display(
     player: Res<Player>,
-    money_display_query: Query<&Children, With<MoneyDisplay>>,
-    mut text_query: Query<&mut Text>,
+    mut money_text_query: Query<&mut Text, With<MoneyText>>,
+    mut income_query: Query<(&mut Text, &mut TextColor), (With<IncomeText>, Without<MoneyText>)>,
 ) {
-    for children in money_display_query.iter() {
-        for child in children.iter() {
-            if let Ok(mut text) = text_query.get_mut(child) {
-                // Format money with commas for readability
-                let formatted_money = format!("${}", format_number_with_commas(player.money));
-                **text = formatted_money;
-            }
-        }
+    // Update money display
+    for mut text in money_text_query.iter_mut() {
+        let formatted_money = format!("${}", format_number_with_commas(player.money));
+        **text = formatted_money;
+    }
+    
+    // Update income display with dynamic color
+    for (mut text, mut color) in income_query.iter_mut() {
+        let income_prefix = if player.net_income > 0 { 
+            "+" 
+        } else if player.net_income < 0 { 
+            "" 
+        } else { 
+            "" 
+        };
+        
+        let formatted_income = format!("{}${}/s", 
+            income_prefix, 
+            format_number_with_commas(player.net_income));
+        **text = formatted_income;
+        
+        // Set color based on income: green for positive, red for negative, gray for zero
+        *color = if player.net_income > 0 {
+            TextColor(Color::srgb(0.7, 0.9, 0.7)) // Light green
+        } else if player.net_income < 0 {
+            TextColor(Color::srgb(0.9, 0.5, 0.5)) // Light red
+        } else {
+            TextColor(Color::srgb(0.7, 0.7, 0.7)) // Gray
+        };
     }
 }
 

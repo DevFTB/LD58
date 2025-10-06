@@ -4,7 +4,6 @@ use crate::factory::buildings::combiner::do_combining;
 use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
-use crate::factory::buildings::sink::{update_sink_throughput, update_sink_debug_text};
 use crate::factory::buildings::Undeletable;
 use crate::factory::logical::{
     calculate_throughput, debug_logical_links, pass_data_system, reset_delta,
