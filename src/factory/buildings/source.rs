@@ -34,7 +34,6 @@ impl Building for SourceBuilding {
         let bundles = directions
             .iter()
             .map(|dir| {
-                println!("Making data source point {:?}", dir);
                 (
                     DataSource {
                         direction: *dir,
