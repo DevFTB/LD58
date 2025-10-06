@@ -1,4 +1,5 @@
 use crate::GridPosition;
+use core::panic;
 use std::{collections::VecDeque, ops::RangeInclusive};
 
 use bevy::math::I64Vec2;
@@ -11,7 +12,7 @@ use rand::Rng;
 
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
-use crate::factions::Faction;
+use crate::factions::{Faction, ReputationLevel};
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
 use crate::grid::{Direction, GridSprite};
@@ -29,23 +30,19 @@ pub struct Locked;
 pub struct Cell;
 
 #[derive(Component)]
-#[require(FactionComponent, Cell, ClusterID)]
+#[require(Faction, Cell, ClusterID)]
 pub struct FactionSquare;
 
 #[derive(Component)]
-#[require(ClusterID, FactionComponent)]
+#[require(ClusterID, Faction)]
 pub struct FactionCluster {
     center: I64Vec2,
 }
 
 #[derive(Component, Default)]
-#[require(FactionComponent)]
+#[require(Faction)]
 pub struct ClusterID(i64);
 
-// single component abstraction for sinks. these manage contract, hold faction etc.
-// can be made up of many sink block children
-#[derive(Component, Default)]
-pub struct FactionComponent(Faction);
 
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i64 = 100;
@@ -194,13 +191,13 @@ fn startup(
     );
 
     // map each cluster to a reputation amount
-    let cluster_reputation: HashMap<i64, i32> = HashMap::from(
+    let cluster_reputation: HashMap<i64, ReputationLevel> = HashMap::from(
         center_map
             .iter()
             .map(|(&cluster_id, center_vec)| {
                 (cluster_id, get_faction_cluster_reputation(*center_vec))
             })
-            .collect::<HashMap<i64, i32>>(),
+            .collect::<HashMap<i64, ReputationLevel>>(),
     );
 
     // debug printing to ensure that gen logic is working
@@ -212,7 +209,7 @@ fn startup(
             commands.spawn((
                 GridPosition(*cell_vec),
                 GridSprite(Color::linear_rgba(1., 0.5, 1., 1.)),
-                Text2d::new(format!("{:?}: {cluster_id}, rep: {reputation}", faction)),
+                Text2d::new(format!("{:?}: {cluster_id}, rep: {:?}", faction, reputation)),
                 ZIndex(4),
             ));
         } else {
@@ -224,25 +221,28 @@ fn startup(
     // pass faction_source_locations in to remove sink locations from source spawn points
     // super dirty but whatevs
     for (cluster_id, cell_vec) in &center_map {
-        if let Some(faction) = cluster_faction.get(cluster_id) {
-            // spawn_faction_sink(*cell_vec, *cluster_id, faction.clone(), &cluster_map, &mut commands);
+        if let (Some(faction), Some(reputation)) = (
+            cluster_faction.get(cluster_id),
+            cluster_reputation.get(cluster_id),
+        ) {
             if let Some(cluster_allowable_spawns) = faction_source_locations.get_mut(cluster_id) {
                 spawn_faction_sink(
                     *cell_vec,
-                    faction.clone(),
+                    *faction,
+                    *reputation,
                     Some(&cluster_map),
                     Some(cluster_allowable_spawns),
                     &mut commands,
                 );
             }
         } else {
-            panic!("{cluster_id} has no faction");
+            panic!("{cluster_id} has no faction or reputation");
         }
     }
 
     // spawn intitial faction sinks
     for (position, faction) in INITIAL_FACTION_SINKS {
-        spawn_faction_sink(position, faction, Option::None, Option::None, &mut commands);
+        spawn_faction_sink(position, faction, ReputationLevel::Hostile, Option::None, Option::None, &mut commands);
     }
 
     let basic_source_amount = (unlocked_cells.length() as i32 / 1000) * BASIC_SOURCE_DENSITY;
@@ -269,6 +269,7 @@ fn startup(
                 get_basic_source_throughput(*cell_vec),
                 get_basic_source_dataset(&mut rng),
                 Option::None,
+                Option::None,
                 &mut commands,
             );
         }
@@ -286,7 +287,7 @@ fn startup(
                 *cluster_id,
                 n_spawns,
                 *reputation,
-                faction.clone(),
+                *faction,
                 available_spawns,
                 &mut rng,
                 &mut commands,
@@ -300,13 +301,13 @@ fn startup(
 fn spawn_cluster_datasets(
     _cluster_id: i64,
     n: i32,
-    reputation: i32,
+    reputation: ReputationLevel,
     faction: Faction,
     available_spawns: &HashSet<I64Vec2>,
     rng: &mut WyRand,
     commands: &mut Commands,
 ) {
-    let dataset = get_faction_source_dataset(faction.clone(), reputation, rng);
+    let dataset = get_faction_source_dataset(faction, reputation, rng);
     let throughput = get_faction_source_throughput(reputation);
 
     for cell_vec in available_spawns
@@ -319,7 +320,8 @@ fn spawn_cluster_datasets(
             *cell_vec,
             throughput,
             dataset.clone(),
-            Some(faction.clone()),
+            Some(faction),
+            Some(reputation),
             commands,
         );
     }
@@ -368,31 +370,31 @@ fn get_basic_source_throughput(vec: I64Vec2) -> f32 {
     }
 }
 
-fn get_faction_source_throughput(reputation: i32) -> f32 {
+fn get_faction_source_throughput(reputation: ReputationLevel) -> f32 {
     // TODO: introduce some randomness if desired
     match reputation {
-        6 => 400.,
-        5 => 300.,
-        4 => 150.,
+        ReputationLevel::Exclusive => 400.,
+        ReputationLevel::Trusted => 300.,
+        ReputationLevel::Friendly => 150.,
         _ => 50.,
     }
 }
 
-fn get_faction_source_dataset(faction: Faction, reputation: i32, rng: &mut WyRand) -> Dataset {
+fn get_faction_source_dataset(faction: Faction, reputation: ReputationLevel, rng: &mut WyRand) -> Dataset {
     Dataset {
         contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
     }
 }
 
-fn get_faction_cluster_reputation(vec: I64Vec2) -> i32 {
+fn get_faction_cluster_reputation(vec: I64Vec2) -> ReputationLevel {
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
     if length_f64 <= 80. {
-        4
+        ReputationLevel::Friendly
     } else if length_f64 <= 130. {
-        5
+        ReputationLevel::Trusted
     } else {
-        6
+        ReputationLevel::Exclusive
     }
 }
 
@@ -401,6 +403,7 @@ fn spawn_source(
     throughput: f32,
     dataset: Dataset,
     faction: Option<Faction>,
+    reputation: Option<ReputationLevel>,
     commands: &mut Commands,
 ) {
     let source = SourceBuilding::get_bundle(
@@ -417,8 +420,12 @@ fn spawn_source(
         Text2d::new(format!("{}: {throughput}", dataset)),
     ));
 
-    if let Some(actual_faction) = faction {
-        entity.insert(FactionComponent(actual_faction));
+    match (faction, reputation) {
+        (Some(actual_faction), Some(actual_reputation)) =>
+            {entity.insert((actual_faction, actual_reputation));},
+        (Some(_), None) => {panic!("faction without reputation in source spawn");},
+        (None, Some(_)) => {panic!("reputation without faction in source spawn");},
+        _ => { /* do nothing */ }
     }
 }
 
@@ -431,6 +438,7 @@ fn in_start_area(vec: I64Vec2) -> bool {
 fn spawn_faction_sink(
     position: I64Vec2,
     faction: Faction,
+    reputation: ReputationLevel,
     cluster_map: Option<&HashMap<I64Vec2, i64>>,
     cluster_hash_set: Option<&mut HashSet<I64Vec2>>,
     commands: &mut Commands,
@@ -458,7 +466,7 @@ fn spawn_faction_sink(
 
     // TODO: sink tiles can spawn outside locked area, ensure they are locked, either after or before
     let sink = SinkBuilding::get_sized_bundle(position.into(), 2, None);
-    commands.spawn(sink);
+    commands.spawn((sink, faction, reputation));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {

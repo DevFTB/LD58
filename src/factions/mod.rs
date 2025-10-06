@@ -12,7 +12,7 @@ pub enum Faction {
     Academia = 3,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Component)]
 #[repr(u8)]
 pub enum ReputationLevel {
     Hostile = 0,

@@ -79,7 +79,7 @@ fn load_contracts_from_ron(mut commands: Commands) {
 }
 
 /// A test system to verify contract generation logic at startup.
-fn test_find_and_generate_contract(library: Res<ContractLibrary>) {
+fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: Commands) {
     let faction_corporate = Faction::Academia;
     let reputation = 1;
 
@@ -87,9 +87,9 @@ fn test_find_and_generate_contract(library: Res<ContractLibrary>) {
         find_and_generate_contract(faction_corporate, reputation, &library)
     {
         info!(
-            "  -> SUCCESS: Found contract '{:?}'",
-            contract_bundle
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
         );
+        commands.spawn(contract_bundle);
     } else {
         info!("  -> FAILURE: No contract found for Corporate faction reputation.");
     }
