@@ -1,4 +1,5 @@
 use crate::ui::tooltip::TooltipPlugin;
+use crate::player::Player;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod newsfeed;
@@ -6,6 +7,7 @@ pub mod shop;
 pub mod contracts;
 pub mod interactive_event;
 pub mod tooltip;
+pub mod money;
 
 pub struct UIPlugin;
 
@@ -37,6 +39,8 @@ impl Plugin for UIPlugin {
             .add_systems(Startup, shop::spawn_building_shop)
             .add_systems(Startup, newsfeed::spawn_newsfeed_ui)
             .add_systems(Startup, contracts::spawn_contracts_sidebar_ui)
+            .add_systems(Startup, money::spawn_money_display_ui)
+            .add_systems(Update, money::update_money_display.run_if(resource_changed::<Player>))
             .add_systems(Update, shop::handle_building_click)
             .add_systems(Update, shop::update_selected_building_position)
             .add_systems(Update, shop::handle_placement_click)

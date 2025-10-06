@@ -26,8 +26,7 @@
             base_money: 50.0,
             dataset: (
                 contents: {
-                    Economic: [ Aggregated ],
-                    Behavioural: [],
+                    Biometric: [],
                 }
             ),
         ),
@@ -41,8 +40,7 @@
             base_money: 100.0,
             dataset: (
                 contents: {
-                    Telemetry: [],
-                    Biometric: [ Cleaned ],
+                    Biometric: [],
                 }
             ),
         ),

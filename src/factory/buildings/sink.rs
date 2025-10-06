@@ -7,6 +7,7 @@ use bevy::ecs::relationship::RelatedSpawner;
 use bevy::math::I64Vec2;
 use bevy::prelude::{Commands, Component, Entity};
 use bevy::prelude::{SpawnRelated, SpawnWith};
+use bevy::sprite::Text2d;
 use std::ops::Add;
 
 #[derive(Component, Clone)]

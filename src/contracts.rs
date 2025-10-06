@@ -19,7 +19,7 @@ pub struct Contract;
 #[derive(Component, Deserialize, Debug)]
 pub struct ContractTimeout(pub f32);
 
-#[derive(Component, Deserialize, Debug)]
+#[derive(Component, Deserialize, Debug, PartialEq, Eq)]
 pub enum ContractStatus {
     Pending,
     Active,
@@ -139,7 +139,7 @@ impl ContractFulfillment {
 }
 
 
-
+// baciscally all contract entities will have an AssociatedWithSink component as well apart from debug ones
 #[derive(Bundle, Debug)]
 pub struct ContractBundle {
     pub contract: Contract,
@@ -159,8 +159,8 @@ pub struct ContractsPlugin;
 
 impl Plugin for ContractsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_contracts_from_ron)
-            .add_systems(Startup, test_find_and_generate_contract);
+        app.add_systems(PreStartup, load_contracts_from_ron);
+            // .add_systems(Startup, test_find_and_generate_contract);
 
         // System to generate a new pending random contract every 2 minutes
         app.add_systems(

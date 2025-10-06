@@ -31,7 +31,7 @@ impl BasicDataType {
 }
 
 // Attributes that modify a data stream
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize, PartialOrd, Ord)]
 pub enum DataAttribute {
     Aggregated,
     DeIdentified,
@@ -55,6 +55,22 @@ pub struct Dataset {
     // The core of the data packet.
     // Maps each data type present in the packet to a set of its attributes.
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
+}
+
+impl std::hash::Hash for Dataset {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // Create a sorted vector of key-value pairs to ensure deterministic hashing
+        let mut items: Vec<_> = self.contents.iter().collect();
+        items.sort_by_key(|(k, _)| *k);
+        
+        for (key, value) in items {
+            key.hash(state);
+            // Hash the sorted attributes for deterministic ordering
+            let mut attrs: Vec<_> = value.iter().collect();
+            attrs.sort();
+            attrs.hash(state);
+        }
+    }
 }
 
 impl Dataset {
@@ -108,8 +124,8 @@ pub struct DataSource {
 pub struct DataBuffer {
     pub(crate) shape: Option<Dataset>,
     pub(crate) value: f32,
-    last_in: f32,
-    last_out: f32,
+    pub last_in: f32,
+    pub last_out: f32,
 }
 
 impl DataBuffer {
