@@ -1,18 +1,16 @@
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
-    grid::{Direction, GridPosition, GridSprite},
+    grid::{Direction, GridPosition, Orientation},
+};
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    query::{Added, With, Without},
+    system::{Commands, Query},
 };
 use bevy::platform::collections::{HashMap, HashSet};
-use bevy::{
-    color::Color,
-    ecs::{
-        bundle::Bundle,
-        component::Component,
-        entity::Entity,
-        query::{Added, With, Without},
-        system::{Commands, Query},
-    },
-};
+use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct PhysicalSink(Entity, Direction);
@@ -25,19 +23,32 @@ pub struct PhysicalLink {
     pub throughput: f32,
 }
 
-#[derive(Component)]
-pub struct Linked;
+impl Building for PhysicalLink {
+    fn spawn(
+        &self,
+        commands: &mut Commands,
+        position: GridPosition,
+        orientation: Orientation,
+    ) -> Entity {
+        commands
+            .spawn((PhysicalLink { throughput: 234.0 }, position))
+            .id()
+    }
 
-impl PhysicalLink {
-    pub fn get_bundle(position: GridPosition) -> impl Bundle {
-        (
-            position,
-            PhysicalLink { throughput: 234. },
-            GridSprite(Color::linear_rgba(0.0, 0.0, 1.0, 1.0)),
-        )
+    fn data(&self) -> BuildingData {
+        BuildingData {
+            sprite: SpriteResource::Atlas(2),
+            grid_width: 1,
+            grid_height: 1,
+            cost: 25,
+            name: "Link".to_string(),
+            building_type: BuildingTypes::Link { throughput: 10.0 },
+        }
     }
 }
 
+#[derive(Component)]
+pub struct Linked;
 pub fn connect_physical_links_to_data(
     query: Query<(Entity, &GridPosition), Added<PhysicalLink>>,
     mut commands: Commands,
@@ -104,10 +115,6 @@ pub fn connect_direct(
                 // Verify direction compatibility:
                 // source's output_direction should match the direction to the sink
                 // sink's input_direction should match the opposite direction (from sink to source)
-                // println!(
-                //     "Trying to match source dir {:?} {:?} {:?}",
-                //     source.direction, sink.direction
-                // );
                 if source.direction == *dir && sink.direction == dir.opposite() {
                     // Create a direct logical link with no intermediate physical links
                     let link = LogicalLink {
@@ -226,7 +233,6 @@ fn insert_physical_connection(
     commands.entity(source).insert(PhysicalSource(sink, dir));
     commands.entity(sink).insert(PhysicalSink(source, dir));
 }
-use bevy::prelude::*;
 
 pub fn on_physical_link_removed(
     trigger: On<Remove, PhysicalLink>,

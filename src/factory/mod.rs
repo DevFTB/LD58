@@ -1,4 +1,5 @@
 use crate::factory::buildings::aggregator::do_aggregation;
+use crate::factory::buildings::buildings::{Building, SpriteResource};
 use crate::factory::buildings::combiner::do_combining;
 use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
@@ -7,19 +8,19 @@ use crate::factory::logical::{
     debug_logical_links, pass_data_system, visualise_sinks, DataSink, DataSource,
 };
 use crate::factory::physical::{
-    connect_direct, connect_links, connect_physical_links_to_data, establish_logical_links,
-    on_physical_link_removed,
+    connect_direct, connect_links, connect_physical_links_to_data,
+    establish_logical_links, on_physical_link_removed,
 };
+use crate::grid::{Direction, GridAtlasSprite, GridPosition, Orientation};
 use crate::factory::buildings::buildings::{BuildingType, BuildingSpecificData};
 use crate::factory::buildings::splitter::Splitter;
-use crate::grid::{Direction, GridPosition};
-use bevy::app::Update;
-use bevy::prelude::{Added, Query};
 use bevy::{
-    app::{Plugin, PostUpdate},
+    app::{Plugin, PostUpdate, Update},
     ecs::schedule::IntoScheduleConfigs,
+    math::I64Vec2,
     prelude::*,
 };
+use std::sync::Arc;
 
 pub mod buildings;
 pub mod logical;
@@ -29,9 +30,9 @@ pub struct FactoryPlugin;
 /// Event for constructing a building
 #[derive(Event, Message)]
 pub struct ConstructBuildingEvent {
-    pub building_type: BuildingType,
-    pub grid_position: bevy::math::I64Vec2,
-    pub direction: Direction,
+    pub building: Arc<dyn Building>,
+    pub grid_position: I64Vec2,
+    pub orientation: Orientation,
 }
 
 impl Plugin for FactoryPlugin {
@@ -78,40 +79,27 @@ pub fn handle_construction_event(
     mut commands: Commands,
 ) {
     for event in construct_events.read() {
-        let data = event.building_type.data();
+        let data = event.building.data();
         let base_position = GridPosition(event.grid_position);
+        // Extract sprite info for all buildings
 
-        match event.building_type {
-            BuildingType::Splitter2x1 | BuildingType::Splitter3x1 | BuildingType::Splitter4x1 => {
-                // Splitters use the direction as the source direction
-                if let BuildingSpecificData::Splitter { outputs: _outputs, loss_rate: _loss_rate } = data.specific {
-                    let throughput = 50.0; // Default throughput
-                    commands.spawn(Splitter::get_bundle(
-                        base_position,
-                        throughput,
-                        event.direction,
-                    ));
-                }
+        let building_id = event
+            .building
+            .spawn(&mut commands, base_position, event.orientation);
+
+        match data.sprite {
+            SpriteResource::Atlas(index) => {
+                commands.entity(building_id).insert(GridAtlasSprite {
+                    atlas_index: index,
+                    grid_width: data.grid_width,
+                    grid_height: data.grid_height,
+                    orientation: event.orientation,
+                });
             }
-            BuildingType::Decoupler => {
-                // TODO: Implement Decoupler when the module is ready
-                info!("Decoupler construction not yet implemented");
-            }
-            BuildingType::Collector => {
-                // TODO: Implement Collector
-                info!("Collector construction not yet implemented");
-            }
-            BuildingType::Aggregator => {
-                // TODO: Implement Aggregator
-                info!("Aggregator construction not yet implemented");
-            }
-            BuildingType::Link => {
-                // TODO: Implement Link
-                info!("Link construction not yet implemented");
-            }
-            BuildingType::Combiner => {
-                // TODO: Implement Combiner
-                info!("Combiner construction not yet implemented");
+            SpriteResource::Sprite(image) => {
+                commands
+                    .entity(building_id)
+                    .insert(Sprite { image, ..default() });
             }
         }
     }

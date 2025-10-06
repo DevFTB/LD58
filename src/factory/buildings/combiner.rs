@@ -1,57 +1,77 @@
+use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{
     BasicDataType, DataAttribute, DataBuffer, DataSink, DataSource, Dataset,
 };
-use crate::grid::{Direction, GridPosition, GridSprite};
+use crate::grid::{GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::platform::collections::{HashMap, HashSet};
-use bevy::prelude::{Bundle, Component, Query, Res, SpawnWith, Time};
+use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
 use std::hash::Hash;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Combiner {
-    throughput: f32,
+    pub(crate) throughput: f32,
+    pub(crate) sink_count: i64,
 }
 
-impl Combiner {
-    pub fn get_bundle(
+impl Building for Combiner {
+    fn spawn(
+        &self,
+        commands: &mut Commands,
         position: GridPosition,
-        throughput: f32,
-        source_dir: Direction,
-        sink_count: i8,
-    ) -> impl Bundle {
-        (
-            Combiner { throughput },
-            position,
-            Tiles::spawn(SpawnWith(
-                move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
-                    for i in 0..sink_count {
+        orientation: Orientation,
+    ) -> Entity {
+        let sink_count = self.sink_count;
+        let throughput = self.throughput;
+        commands
+            .spawn((
+                position,
+                Tiles::spawn(SpawnWith(
+                    move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
+                        for i in 0..sink_count {
+                            spawner.spawn((
+                                DataSink {
+                                    direction: orientation.direction.opposite(),
+                                    buffer: DataBuffer::default(),
+                                },
+                                Text2d::default(),
+                                position.offset(orientation.layout_direction(), i as i64),
+                                GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
+                            ));
+                        }
                         spawner.spawn((
-                            DataSink {
-                                direction: source_dir.opposite(),
+                            DataSource {
+                                throughput,
+                                limited: true,
+                                direction: orientation.direction,
                                 buffer: DataBuffer::default(),
                             },
+                            position,
                             Text2d::default(),
-                            position.offset(source_dir.rotate_counterclockwise(), i as i64),
-                            GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 1.0)),
                         ));
-                    }
-                    spawner.spawn((
-                        DataSource {
-                            throughput,
-                            limited: true,
-                            direction: source_dir,
-                            buffer: DataBuffer::default(),
-                        },
-                        position,
-                        Text2d::default(),
-                    ));
-                },
-            )),
-        )
+                    },
+                )),
+                self.clone(),
+            ))
+            .id()
+    }
+
+    fn data(&self) -> BuildingData {
+        BuildingData {
+            sprite: SpriteResource::Atlas(self.sink_count as usize + 4),
+            grid_width: self.sink_count,
+            grid_height: 1,
+            cost: 60,
+            name: format!("Combiner {}x1", self.sink_count),
+            building_type: BuildingTypes::Combiner(Combiner {
+                sink_count: self.sink_count,
+                throughput: 5.0,
+            }),
+        }
     }
 }
 pub fn get_disjoint_data<'a, I>(

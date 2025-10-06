@@ -34,7 +34,7 @@ pub struct GridPlugin;
 pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 
 // Function to check if a set of grid positions is free
-#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default, Debug)]
+#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default)]
 #[require(Transform)]
 #[component(on_insert = grid_position_added)]
 #[component(on_remove = grid_position_removed)]
@@ -47,14 +47,97 @@ pub enum Direction {
     Left,
     Up,
 }
-impl Direction {
-    pub const ALL: [Direction; 4] = [
-        Direction::Right,
-        Direction::Down,
-        Direction::Left,
-        Direction::Up,
-    ];
+
+/// Represents the orientation of a building (direction + flip state)
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub struct Orientation {
+    pub direction: Direction,
+    pub flipped: bool,
 }
+
+impl Orientation {
+    pub fn new(direction: Direction, flipped: bool) -> Self {
+        Self { direction, flipped }
+    }
+
+    /// Calculate the effective direction for occupied cells calculation.
+    /// Only flips the direction for Left/Right orientations when flipped.
+    /// For Up/Down, the effective direction stays the same (flip is handled by anchor offset).
+    pub fn effective_direction(&self) -> Direction {
+        self.direction.calculate_effective_direction(self.flipped)
+    }
+
+    /// Get the rotation angle in radians for this orientation
+    pub fn rotation_angle(&self) -> f32 {
+        self.direction.rotation_angle()
+    }
+
+    /// Rotate the orientation clockwise
+    pub fn rotate_clockwise(&self) -> Self {
+        Self {
+            direction: self.direction.rotate_clockwise(),
+            flipped: self.flipped,
+        }
+    }
+
+    /// Rotate the orientation counterclockwise
+    pub fn rotate_counterclockwise(&self) -> Self {
+        Self {
+            direction: self.direction.rotate_counterclockwise(),
+            flipped: self.flipped,
+        }
+    }
+
+    /// Toggle the flipped state
+    pub fn toggle_flip(&self) -> Self {
+        Self {
+            direction: self.direction,
+            flipped: !self.flipped,
+        }
+    }
+
+    /// Get the layout direction - which way the building extends from the anchor.
+    /// This represents the perpendicular direction to the facing direction.
+    /// This is useful for determining tile placement in multi-tile buildings.
+    pub fn layout_direction(&self) -> Direction {
+        // For Up/Down, flip changes the layout direction
+        // For Left/Right
+        match self.direction {
+            Direction::Up => {
+                if self.flipped {
+                    Direction::Right // Flipped: extends right from anchor
+                } else {
+                    Direction::Left // Normal: extends left from anchor
+                }
+            }
+            Direction::Down => {
+                if self.flipped {
+                    Direction::Left // Flipped: extends left from anchor
+                } else {
+                    Direction::Right // Normal: extends right from anchor
+                }
+            }
+            Direction::Right => {
+                // Always extends up (counterclockwise from Right)
+                Direction::Up
+            }
+            Direction::Left => {
+                // Always extends down (counterclockwise from Left)
+                Direction::Down
+            }
+        }
+    }
+}
+
+impl Default for Orientation {
+    fn default() -> Self {
+        Self {
+            direction: Direction::Up,
+            flipped: false,
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct Grid {
     pub scale: f32,
@@ -63,6 +146,16 @@ pub struct Grid {
 
 #[derive(Component, Deref)]
 pub struct GridSprite(pub Color);
+
+/// Component for buildings that use texture atlas sprites
+/// Contains the atlas index and size information for proper rendering
+#[derive(Component)]
+pub struct GridAtlasSprite {
+    pub atlas_index: usize,
+    pub grid_width: i64,
+    pub grid_height: i64,
+    pub orientation: Orientation,
+}
 
 // This is the struct that will be passed to your shader
 #[derive(AsBindGroup, TypePath, Debug, Clone, Asset)]
@@ -90,7 +183,14 @@ impl Plugin for GridPlugin {
         app.insert_resource(WorldMap::default());
         app.add_plugins(Material2dPlugin::<GridMaterial>::default());
         app.add_systems(Startup, setup_grid);
-        app.add_systems(PostUpdate, (transform_to_grid, spawn_grid_sprite_system));
+        app.add_systems(
+            PostUpdate,
+            (
+                transform_to_grid,
+                spawn_grid_sprite_system,
+                spawn_grid_atlas_sprite_system,
+            ),
+        );
     }
 }
 
@@ -118,6 +218,52 @@ impl Grid {
             pos.y as f32 * self.scale + self.base_offset + self.scale / 2.0,
         )
     }
+
+    /// Calculate the world position for a multi-tile building sprite
+    /// accounting for anchor position, orientation, and dimensions.
+    ///
+    /// - `anchor_pos`: The base grid position (bottom-left tile)
+    /// - `width`: Grid width of the building
+    /// - `height`: Grid height of the building
+    /// - `orientation`: The orientation (direction + flip state) of the building
+    pub fn calculate_building_sprite_position(
+        &self,
+        anchor_pos: &GridPosition,
+        width: i64,
+        height: i64,
+        orientation: Orientation,
+    ) -> Vec2 {
+        let anchor_center = self.grid_to_world_center(anchor_pos);
+
+        // Calculate sprite position based on anchor and direction
+        // The sprite extends from the anchor in the direction it's facing
+        // For a 3x1 building, sprite center is (width-1)/2 cells from anchor
+        let offset_cells = (width - 1) as f32 * self.scale / 2.0;
+
+        // OFFSET CHANGES: Only for Up/Down orientations
+        // For Up/Down: flip changes which side the building extends from (anchor behavior)
+        // For Left/Right: offset stays the same, flip is handled by sprite.flip_x
+        let (x_offset, y_offset) = match orientation.direction {
+            Direction::Up => {
+                if orientation.flipped {
+                    (offset_cells, 0.0) // Flipped: extends right from anchor
+                } else {
+                    (-offset_cells, 0.0) // Normal: extends left from anchor
+                }
+            }
+            Direction::Down => {
+                if orientation.flipped {
+                    (-offset_cells, 0.0) // Flipped: extends left from anchor
+                } else {
+                    (offset_cells, 0.0) // Normal: extends right from anchor
+                }
+            }
+            Direction::Right => (0.0, offset_cells), // Extends up, flip doesn't change offset
+            Direction::Left => (0.0, -offset_cells), // Extends down, flip doesn't change offset
+        };
+
+        Vec2::new(anchor_center.x + x_offset, anchor_center.y + y_offset)
+    }
 }
 impl Direction {
     pub fn opposite(&self) -> Direction {
@@ -135,6 +281,29 @@ impl Direction {
             Direction::Down => Direction::Left,
             Direction::Left => Direction::Up,
             Direction::Up => Direction::Right,
+        }
+    }
+
+    /// Calculate the effective direction for occupied cells calculation.
+    /// Only flips the direction for Left/Right orientations when flipped.
+    /// For Up/Down, the effective direction stays the same (flip is handled by anchor offset).
+    pub fn calculate_effective_direction(&self, flipped: bool) -> Direction {
+        if flipped && matches!(self, Direction::Left | Direction::Right) {
+            self.opposite()
+        } else {
+            *self
+        }
+    }
+
+    /// Get the rotation angle in radians for this direction
+    /// Up = 0, Right = -90°, Down = -180°, Left = -270° (or 90°)
+    pub fn rotation_angle(&self) -> f32 {
+        use std::f32::consts::{FRAC_PI_2, PI};
+        match self {
+            Direction::Up => 0.0,
+            Direction::Right => -FRAC_PI_2,
+            Direction::Down => -PI,
+            Direction::Left => FRAC_PI_2, // -270° same as 90°
         }
     }
 
@@ -295,6 +464,49 @@ fn spawn_grid_sprite_system(
         );
     }
 }
+
+/// System to spawn texture atlas sprites for buildings on the grid
+/// This handles multi-tile buildings by calculating the proper size and position
+fn spawn_grid_atlas_sprite_system(
+    mut commands: Commands,
+    grid: Res<Grid>,
+    game_assets: Res<crate::assets::GameAssets>,
+    query: Query<(Entity, &GridAtlasSprite, &GridPosition), Added<GridAtlasSprite>>,
+) {
+    use bevy::prelude::TextureAtlas;
+
+    for (entity, atlas_sprite, grid_pos) in &query {
+        // Calculate the sprite size in pixels based on grid dimensions
+        let sprite_width = atlas_sprite.grid_width as f32 * grid.scale;
+        let sprite_height = atlas_sprite.grid_height as f32 * grid.scale;
+
+        // Use the shared anchoring function to calculate proper position
+        let position = grid.calculate_building_sprite_position(
+            grid_pos,
+            atlas_sprite.grid_width,
+            atlas_sprite.grid_height,
+            atlas_sprite.orientation,
+        );
+
+        // Calculate rotation angle based on orientation
+        let rotation_angle = atlas_sprite.orientation.rotation_angle();
+
+        commands.entity(entity).insert((
+            Sprite {
+                custom_size: Some(Vec2::new(sprite_width, sprite_height)),
+                image: game_assets.buildings_texture.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: game_assets.buildings_layout.clone(),
+                    index: atlas_sprite.atlas_index,
+                }),
+                flip_x: atlas_sprite.orientation.flipped, // Always apply flip_x when flipped
+                ..Default::default()
+            },
+            Transform::from_translation(position.extend(0.0))
+                .with_rotation(bevy::prelude::Quat::from_rotation_z(rotation_angle)),
+        ));
+    }
+}
 pub fn calculate_occupied_cells(base_position: I64Vec2, width: i64, height: i64) -> Vec<I64Vec2> {
     let mut cells = Vec::new();
     for dx in 0..width {
@@ -309,42 +521,22 @@ pub fn calculate_occupied_cells_rotated(
     anchor_position: I64Vec2,
     width: i64,
     height: i64,
-    direction: Direction,
+    orientation: Orientation,
 ) -> Vec<I64Vec2> {
     let mut cells = Vec::new();
 
-    // Direction is the facing direction (where output/source is)
-    // Building extends perpendicular to the facing direction
-    // Anchor position is at the corner in the facing direction
-    match direction {
-        Direction::Up => {
-            // Facing up, extends left from anchor (which is bottom-right corner)
-            // Anchor is at the rightmost position
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x - i, anchor_position.y));
-            }
-        }
-        Direction::Right => {
-            // Facing right, extends upward from anchor (which is bottom-left corner)
-            // Anchor is at the bottom position
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y + i));
-            }
-        }
-        Direction::Down => {
-            // Facing down, extends right from anchor (which is top-left corner)
-            // Anchor is at the leftmost position
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x + i, anchor_position.y));
-            }
-        }
-        Direction::Left => {
-            // Facing left, extends downward from anchor (which is top-right corner)
-            // Anchor is at the top position
-            for i in 0..width {
-                cells.push(I64Vec2::new(anchor_position.x, anchor_position.y - i));
-            }
-        }
+    // Get the layout direction (which way the building extends from anchor)
+    let layout_dir = orientation.layout_direction();
+
+    // Building extends in the layout direction from the anchor
+    for i in 0..width {
+        let offset = match layout_dir {
+            Direction::Up => I64Vec2::new(0, i),
+            Direction::Down => I64Vec2::new(0, -i),
+            Direction::Right => I64Vec2::new(i, 0),
+            Direction::Left => I64Vec2::new(-i, 0),
+        };
+        cells.push(anchor_position + offset);
     }
 
     cells

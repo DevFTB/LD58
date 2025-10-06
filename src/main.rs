@@ -3,7 +3,6 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
-use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
@@ -12,6 +11,7 @@ use crate::{
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
     ui::UIPlugin,
+    world_gen::WorldGenPlugin,
 };
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -22,6 +22,7 @@ mod events;
 mod factions;
 mod factory;
 mod grid;
+// mod test; // TODO: Update test functions with new bundle signatures
 mod test;
 mod ui;
 mod world_gen;
