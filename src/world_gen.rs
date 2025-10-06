@@ -12,7 +12,7 @@ use rand::Rng;
 
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
-use crate::factions::{Faction, ReputationLevel};
+use crate::factions::{Faction, ReputationLevel, Locked};
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
 use crate::grid::{Direction, GridSprite};
@@ -21,9 +21,6 @@ use bevy_rand::prelude::GlobalRng;
 use rand::prelude::IndexedRandom;
 
 pub struct WorldGenPlugin;
-
-#[derive(Component)]
-pub struct Locked;
 
 #[derive(Component, Default)]
 #[require(Transform, GridPosition)]
@@ -283,7 +280,7 @@ fn startup(
             cluster_reputation.get(cluster_id),
             cluster_faction.get(cluster_id),
         ) {
-            spawn_cluster_datasets(
+            spawn_cluster_sources(
                 *cluster_id,
                 n_spawns,
                 *reputation,
@@ -298,7 +295,7 @@ fn startup(
     }
 }
 
-fn spawn_cluster_datasets(
+fn spawn_cluster_sources(
     _cluster_id: i64,
     n: i32,
     reputation: ReputationLevel,
@@ -422,7 +419,7 @@ fn spawn_source(
 
     match (faction, reputation) {
         (Some(actual_faction), Some(actual_reputation)) =>
-            {entity.insert((actual_faction, actual_reputation));},
+            {entity.insert((actual_faction, actual_reputation, Locked));},
         (Some(_), None) => {panic!("faction without reputation in source spawn");},
         (None, Some(_)) => {panic!("reputation without faction in source spawn");},
         _ => { /* do nothing */ }
@@ -466,7 +463,7 @@ fn spawn_faction_sink(
 
     // TODO: sink tiles can spawn outside locked area, ensure they are locked, either after or before
     let sink = SinkBuilding::get_sized_bundle(position.into(), 2, None);
-    commands.spawn((sink, faction, reputation));
+    commands.spawn((sink, faction, reputation, Locked));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {
