@@ -152,6 +152,22 @@ pub struct ContractBundle {
 }
 
 const MAX_CONTRACTS_PER_SINK: usize = 4;
+const MAX_PENDING_CONTRACTS: usize = 3;
+
+// --- Resources ---
+
+#[derive(Resource)]
+struct GameTimer {
+    timer: Timer,
+}
+
+impl Default for GameTimer {
+    fn default() -> Self {
+        Self {
+            timer: Timer::from_seconds(60.0, TimerMode::Once), // 1 minute timer
+        }
+    }
+}
 
 // --- Plugin and Systems ---
 
@@ -159,16 +175,61 @@ pub struct ContractsPlugin;
 
 impl Plugin for ContractsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_contracts_from_ron);
-            // .add_systems(Startup, test_find_and_generate_contract);
-
-        // System to generate a new pending random contract every 2 minutes
-        app.add_systems(
-            Update,
-            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(5))),
-        );
+        app.add_systems(PreStartup, load_contracts_from_ron)
+            .init_resource::<GameTimer>()
+            .add_systems(Update, (
+                first_minute_system,
+                generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(20))),
+            ));
     }
 }
+// um super sus but not a lot of time left go ai
+/// System that runs only during the first 1 minute of the game
+fn first_minute_system(
+    mut game_timer: ResMut<GameTimer>,
+    time: Res<Time>,
+    mut commands: Commands,
+    contract_library: Res<ContractLibrary>,
+    sinks: Query<(Entity, &Faction, &ReputationLevel, &SinkContracts), (With<Unlocked>, With<SinkBuilding>)>,
+    contract_query: Query<&ContractStatus>,
+    mut rng: Single<&mut WyRand, With<GlobalRng>>,
+) {
+    if contract_query.iter().filter(|&status| *status == ContractStatus::Pending).count() >= MAX_PENDING_CONTRACTS {
+        // Already at max pending contracts
+        return;
+    }
+    // Tick the timer
+    game_timer.timer.tick(time.delta());
+
+    // Only run if the first minute hasn't passed yet
+    if !game_timer.timer.finished() {
+        // Example: Generate contracts more frequently during the first minute
+        // This could be any logic you want to run only in the first minute
+        
+        // For demonstration, let's generate a contract every 5 seconds during the first minute
+        if game_timer.timer.elapsed_secs() > 0.0 && game_timer.timer.elapsed_secs() % 5.0 < time.delta_secs() {
+            // Only consider sinks that are not full
+            let sink_entities: Vec<_> = sinks
+                .iter()
+                .filter(|(_, _, _, sink_contracts)| {
+                    sink_contracts.get_current_contracts(&contract_query).len() < MAX_CONTRACTS_PER_SINK
+                })
+                .collect();
+
+            if let Some((sink_entity, faction, reputation, _)) = sink_entities.choose(&mut rng) {
+                if let Some(contract_bundle) = find_and_generate_contract(**faction, **reputation, &contract_library) {
+                    let contract_entity = commands.spawn(contract_bundle).id();
+                    commands.entity(contract_entity).insert(AssociatedWithSink(*sink_entity));
+                    info!("Generated first-minute contract {:?} for sink {:?} at {:.1}s", 
+                          contract_entity, sink_entity, game_timer.timer.elapsed_secs());
+                }
+            }
+        }
+    }
+    // After 1 minute, this system will stop doing anything but will still run
+    // You could also remove the system entirely after the timer finishes if needed
+}
+
 /// System to generate a new pending random contract every 2 minutes and link it to a random SinkBuilding
 fn generate_random_pending_contract_system(
     mut commands: Commands,
@@ -184,6 +245,11 @@ fn generate_random_pending_contract_system(
             sink_contracts.get_current_contracts(&contract_query).len() < MAX_CONTRACTS_PER_SINK
         })
         .collect();
+
+    if contract_query.iter().filter(|&status| *status == ContractStatus::Pending).count() >= MAX_PENDING_CONTRACTS {
+        // Already at max pending contracts
+        return;
+    }
 
     if let Some((sink_entity, faction, reputation, _)) = sink_entities.choose(&mut rng) {
         // Pick a random contract definition
