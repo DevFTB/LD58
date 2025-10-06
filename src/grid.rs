@@ -38,6 +38,7 @@ pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 #[require(Transform)]
 #[component(on_insert = grid_position_added)]
 #[component(on_remove = grid_position_removed)]
+#[derive(Debug)]
 pub struct GridPosition(pub I64Vec2);
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
@@ -46,6 +47,15 @@ pub enum Direction {
     Down,
     Left,
     Up,
+}
+
+impl Direction {
+    pub const ALL: [Direction; 4] = [
+        Direction::Right,
+        Direction::Down,
+        Direction::Left,
+        Direction::Up,
+    ];
 }
 
 /// Represents the orientation of a building (direction + flip state)

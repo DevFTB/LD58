@@ -1,7 +1,8 @@
 use crate::factory::buildings::aggregator::Aggregator;
 use crate::factory::buildings::buildings::Building;
+use crate::factory::buildings::sink::SinkBuilding;
+use crate::factory::buildings::source::SourceBuilding;
 use crate::factory::buildings::splitter::Splitter;
-use crate::factory::buildings::{SinkBuilding, SourceBuilding};
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 use crate::factory::physical::PhysicalLink;
 use crate::grid::{Direction, GridPosition, Orientation};

@@ -86,7 +86,6 @@ impl SinkBuilding {
                         }
                         TilePlacement::Corner(h, v) => {
                             let pos = GridPosition((*base_position).add(I64Vec2::new(*x, *y)));
-                            println!("Corner {:?} {:?} {:?}", pos, *h, *v);
                             spawner.spawn((
                                 DataSink {
                                     direction: *h,
