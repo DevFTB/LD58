@@ -2,6 +2,7 @@ use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResourc
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSource, Dataset};
 use crate::grid::{Direction, GridPosition, GridSprite, Orientation};
+use crate::assets::{MachineType, MachineVariant};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::math::I64Vec2;
@@ -42,7 +43,7 @@ impl Building for SourceBuilding {
                         limited: self.limited,
                     },
                     position,
-                    GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 1.0)),
+                    // GridSprite(Color::linear_rgba(1.0, 0.0, 0.0, 0.1)),
                     // Text2d removed for performance - thousands of sources × 4 directions = 10k+ text entities
                     // Text2d::new("0"),
                 )
@@ -66,7 +67,7 @@ impl Building for SourceBuilding {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(1)),
+            sprite: None, // Source uses custom visual system from source_visuals.rs
             grid_width: self.size.x,
             grid_height: self.size.y,
             cost: 0,

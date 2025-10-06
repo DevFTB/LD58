@@ -101,13 +101,30 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
             for building in &buildings {
                 let data = building.building_type.data();
                 let mut image_node = match &data.sprite {
-                    Some(SpriteResource::Atlas(index)) => ImageNode::from_atlas_image(
-                        assets.machines_texture.clone(),
-                        TextureAtlas {
-                            layout: assets.machines_layout.clone(),
-                            index: *index,
-                        },
-                    ),
+                    Some(SpriteResource::Atlas(atlas_id, index)) => {
+                        let (texture, layout) = assets.get_atlas(*atlas_id);
+                        ImageNode::from_atlas_image(
+                            texture,
+                            TextureAtlas {
+                                layout,
+                                index: *index,
+                            },
+                        )
+                    },
+                    Some(SpriteResource::Machine(machine_type, variant)) => {
+                        if let Some((atlas_id, index)) = assets.machine_sprite(*machine_type, *variant) {
+                            let (texture, layout) = assets.get_atlas(atlas_id);
+                            ImageNode::from_atlas_image(
+                                texture,
+                                TextureAtlas {
+                                    layout,
+                                    index,
+                                },
+                            )
+                        } else {
+                            ImageNode::default()
+                        }
+                    },
                     Some(SpriteResource::Sprite(path)) => ImageNode::new(path.clone()),
                     None => ImageNode::default(),
                 };
@@ -181,14 +198,33 @@ pub fn handle_building_click(
 
             // Create sprite based on SpriteResource type
             let sprite = match &data.sprite {
-                Some(SpriteResource::Atlas(index)) => Sprite {
-                    image: assets.machines_texture.clone(),
-                    custom_size: Some(sprite_size),
-                    texture_atlas: Some(TextureAtlas {
-                        layout: assets.machines_layout.clone(),
-                        index: *index,
-                    }),
-                    ..default()
+                Some(SpriteResource::Atlas(atlas_id, index)) => {
+                    let (texture, layout) = assets.get_atlas(*atlas_id);
+                    Sprite {
+                        image: texture,
+                        custom_size: Some(sprite_size),
+                        texture_atlas: Some(TextureAtlas {
+                            layout,
+                            index: *index,
+                        }),
+                        ..default()
+                    }
+                },
+                Some(SpriteResource::Machine(machine_type, variant)) => {
+                    if let Some((atlas_id, index)) = assets.machine_sprite(*machine_type, *variant) {
+                        let (texture, layout) = assets.get_atlas(atlas_id);
+                        Sprite {
+                            image: texture,
+                            custom_size: Some(sprite_size),
+                            texture_atlas: Some(TextureAtlas {
+                                layout,
+                                index,
+                            }),
+                            ..default()
+                        }
+                    } else {
+                        Sprite::default()
+                    }
                 },
                 Some(SpriteResource::Sprite(image)) => Sprite {
                     image: image.clone(),

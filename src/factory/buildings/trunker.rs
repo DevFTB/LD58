@@ -2,6 +2,7 @@ use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResourc
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource};
 use crate::grid::{GridPosition, GridSprite, Orientation};
+use crate::assets::{MachineType, MachineVariant};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
@@ -57,8 +58,15 @@ impl Building for Trunker {
     }
 
     fn data(&self) -> BuildingData {
+        let variant = match self.sink_count {
+            2 => MachineVariant::Size2,
+            3 => MachineVariant::Size3,
+            4 => MachineVariant::Size4,
+            _ => MachineVariant::Size2,
+        };
+        
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(self.sink_count as usize + 10)),
+            sprite: Some(SpriteResource::Machine(MachineType::Trunker, variant)),
             grid_width: self.sink_count,
             grid_height: 1,
             cost: 60,

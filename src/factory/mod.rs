@@ -25,6 +25,8 @@ use std::time::Duration;
 pub mod buildings;
 pub mod logical;
 pub mod physical;
+pub mod source_visuals;
+
 pub struct FactoryPlugin;
 
 /// Event for constructing a building
@@ -37,8 +39,12 @@ pub struct ConstructBuildingEvent {
 
 impl Plugin for FactoryPlugin {
     fn build(&self, app: &mut bevy::app::App) {
+        use crate::pause::GameState;
+        
+        app.add_plugins(source_visuals::SourceVisualsPlugin);
         app.add_message::<ConstructBuildingEvent>();
         app.add_observer(on_physical_link_removed);
+        // Factory logic systems should only run during normal gameplay
         app.add_systems(
             Update,
             (
@@ -49,7 +55,6 @@ impl Plugin for FactoryPlugin {
                     do_combining,
                     do_trunking,
                 ),
-                handle_construction_event,
                 pass_data_system,
                 (
                     connect_physical_links_to_data,
@@ -64,13 +69,19 @@ impl Plugin for FactoryPlugin {
                 )
                     .chain(),
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(GameState::Running)),
+        );
+        app.add_systems(
+            Update,
+            handle_construction_event
+                .run_if(in_state(GameState::Running).or(in_state(GameState::ManualPause))),
         );
         app.add_systems(
             PostUpdate,
             (calculate_throughput, reset_delta)
                 .chain()
-                .run_if(on_timer(Duration::from_secs(1))),
+                .run_if(on_timer(Duration::from_secs(1)).and(in_state(GameState::Running))),
         );
     }
 }
@@ -79,6 +90,7 @@ impl Plugin for FactoryPlugin {
 pub fn handle_construction_event(
     mut construct_events: MessageReader<ConstructBuildingEvent>,
     mut commands: Commands,
+    game_assets: Res<crate::assets::GameAssets>,
 ) {
     for event in construct_events.read() {
         let base_position = GridPosition(event.grid_position);
@@ -88,3 +100,4 @@ pub fn handle_construction_event(
             .spawn(&mut commands, base_position, event.orientation);
     }
 }
+

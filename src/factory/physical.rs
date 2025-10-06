@@ -1,6 +1,7 @@
 use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::Tile;
 use crate::grid::GridAtlasSprite;
+use crate::assets::GameAssets;
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -11,6 +12,7 @@ use bevy::ecs::{
     query::{Added, With, Without},
     system::{Commands, Query},
 };
+use bevy::input::gamepad;
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use itertools::Itertools;
@@ -49,12 +51,33 @@ impl Building for PhysicalLink {
         let data = self.data();
 
         match data.sprite {
-            Some(SpriteResource::Atlas(index)) => {
+            Some(SpriteResource::Atlas(atlas_id, index)) => {
                 commands.entity(id).insert(GridAtlasSprite {
+                    atlas_id,
                     atlas_index: index,
                     grid_width: data.grid_width,
                     grid_height: data.grid_height,
                     orientation,
+                });
+            }
+            Some(SpriteResource::Machine(machine_type, variant)) => {
+                // Convert Machine to Atlas using deferred command like in buildings.rs
+                let grid_width = data.grid_width;
+                let grid_height = data.grid_height;
+                commands.queue(move |world: &mut World| {
+                    if let Some(game_assets) = world.get_resource::<crate::assets::GameAssets>() {
+                        if let Some((atlas_id, index)) = game_assets.machine_sprite(machine_type, variant) {
+                            if let Ok(mut entity) = world.get_entity_mut(id) {
+                                entity.insert(GridAtlasSprite {
+                                    atlas_id,
+                                    atlas_index: index,
+                                    grid_width,
+                                    grid_height,
+                                    orientation,
+                                });
+                            }
+                        }
+                    }
                 });
             }
             Some(SpriteResource::Sprite(image)) => {
@@ -67,7 +90,7 @@ impl Building for PhysicalLink {
     }
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(2)),
+            sprite: Some(SpriteResource::Atlas(crate::assets::AtlasId::Buildings1x1, 2)),
             grid_width: 1,
             grid_height: 1,
             cost: 25,

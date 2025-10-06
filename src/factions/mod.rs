@@ -15,7 +15,7 @@ pub enum Faction {
 
 // note: ordering from partialord/ord is independent of the enum discriminant values
 // ordering based upon the positon of the enum values
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Component, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize, Component, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum ReputationLevel {
     Hostile = 0,
@@ -116,6 +116,18 @@ pub fn reputation_score_to_level(score: u32) -> ReputationLevel {
         61..=80 => ReputationLevel::Trusted,    // Trusted
         81..=100 => ReputationLevel::Exclusive, // Exclusive
         _ => ReputationLevel::Neutral,          // Default to neutral if out of bounds
+    }
+}
+
+/// Convert a ReputationLevel enum to its string name
+pub fn reputation_level_name(level: ReputationLevel) -> &'static str {
+    match level {
+        ReputationLevel::Hostile => "Hostile",
+        ReputationLevel::Untrusted => "Untrusted",
+        ReputationLevel::Neutral => "Neutral",
+        ReputationLevel::Friendly => "Friendly",
+        ReputationLevel::Trusted => "Trusted",
+        ReputationLevel::Exclusive => "Exclusive",
     }
 }
 

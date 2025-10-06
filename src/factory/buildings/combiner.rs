@@ -4,6 +4,7 @@ use crate::factory::logical::{
     BasicDataType, DataAttribute, DataBuffer, DataSink, DataSource, Dataset,
 };
 use crate::grid::{GridPosition, GridSprite, Orientation};
+use crate::assets::{MachineType, MachineVariant};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::platform::collections::{HashMap, HashSet};
@@ -61,8 +62,15 @@ impl Building for Combiner {
     }
 
     fn data(&self) -> BuildingData {
+        let variant = match self.sink_count {
+            2 => MachineVariant::Size2,
+            3 => MachineVariant::Size3,
+            4 => MachineVariant::Size4,
+            _ => MachineVariant::Size2,
+        };
+        
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(self.sink_count as usize + 4)),
+            sprite: Some(SpriteResource::Machine(MachineType::Combiner, variant)),
             grid_width: self.sink_count,
             grid_height: 1,
             cost: 60,

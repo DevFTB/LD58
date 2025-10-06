@@ -8,7 +8,7 @@ use bevy::{
 };
 use core::fmt;
 use serde::Deserialize;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
 
 // The fundamental types of data
 #[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deserialize)]

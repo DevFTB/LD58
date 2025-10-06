@@ -1,3 +1,4 @@
+use crate::assets::GameAssets;
 use crate::factory::buildings::TileThroughputData;
 use crate::factory::logical::calculate_throughput;
 use bevy::app::{App, Plugin, Update};
@@ -61,40 +62,43 @@ pub fn update_tooltip(
 }
 
 pub fn attach_tooltip(commands: &mut Commands, id: Entity) {
-    let in_text = commands
-        .spawn((
-            Visibility::Hidden,
-            Transform::from_translation(Vec3::new(-64., 0., 0.)),
-            Text2d::default(),
-            TextFont {
-                font_size: 40.,
-                ..default()
-            },
-            TextColor(Color::linear_rgba(0., 1.0, 0., 1.0)),
-        ))
-        .id();
-    let out_text = commands
-        .spawn((
-            Visibility::Hidden,
-            Transform::from_translation(Vec3::new(64., 0., 0.)),
-            Text2d::default(),
-            TextFont {
-                font_size: 40.,
-                ..default()
-            },
-            TextColor(Color::linear_rgba(1.0, 0.0, 0., 1.0)),
-        ))
-        .id();
+    // Use a deferred command that will access GameFont from the World when executed
+    let entity_id = id;
+    commands.queue(move |world: &mut bevy::prelude::World| {
+        let text_font = {
+            let game_assets = world.resource::<GameAssets>();
+            game_assets.text_font(40.)
+        };
+        
+        let in_text = world
+            .spawn((
+                Visibility::Hidden,
+                Transform::from_translation(Vec3::new(-64., 0., 0.)),
+                Text2d::default(),
+                text_font.clone(),
+                TextColor(Color::linear_rgba(0., 1.0, 0., 1.0)),
+            ))
+            .id();
+        let out_text = world
+            .spawn((
+                Visibility::Hidden,
+                Transform::from_translation(Vec3::new(64., 0., 0.)),
+                Text2d::default(),
+                text_font,
+                TextColor(Color::linear_rgba(1.0, 0.0, 0., 1.0)),
+            ))
+            .id();
 
-    commands.entity(id).insert((
-        TileThroughputData::default(),
-        Pickable::default(),
-        ToggleOnHover(vec![in_text, out_text]),
-        TileThroughputTooltip { in_text, out_text },
-    ));
-    commands
-        .spawn(InheritTranslation(id))
-        .add_children(&[in_text, out_text]);
+        world.entity_mut(entity_id).insert((
+            TileThroughputData::default(),
+            Pickable::default(),
+            ToggleOnHover(vec![in_text, out_text]),
+            TileThroughputTooltip { in_text, out_text },
+        ));
+        world
+            .spawn(InheritTranslation(entity_id))
+            .add_children(&[in_text, out_text]);
+    });
 }
 
 #[derive(Component, Deref)]
