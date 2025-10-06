@@ -3,7 +3,6 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
-use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
@@ -12,6 +11,8 @@ use crate::{
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
     ui::UIPlugin,
+    world_gen::WorldGenPlugin,
+    contracts::ContractsPlugin,
 };
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -26,6 +27,7 @@ mod grid;
 mod test;
 mod ui;
 mod world_gen;
+mod contracts;
 
 fn main() {
     App::new()
@@ -34,6 +36,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(EventsPlugin)
+        .add_plugins(ContractsPlugin)
         .add_plugins(GameCameraPlugin)
         .add_plugins(WorldGenPlugin)
         .add_plugins(UIPlugin)

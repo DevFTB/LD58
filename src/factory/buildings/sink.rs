@@ -1,3 +1,4 @@
+use crate::contracts::SinkContracts;
 use crate::factory::buildings::buildings::{Building, BuildingData};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink};
@@ -10,6 +11,7 @@ use bevy::sprite::Text2d;
 use std::ops::Add;
 
 #[derive(Component, Clone)]
+#[require(SinkContracts)]
 pub struct SinkBuilding {
     pub size: I64Vec2,
 }

@@ -88,6 +88,6 @@ impl Plugin for EventsPlugin {
         app.add_message::<ShowInteractiveEvent>()
             .add_message::<PlayerChoiceEvent>()
             .add_message::<AddNewsfeedItemEvent>()
-            .add_systems(Startup, load_news_events_from_ron);
+            .add_systems(PreStartup, load_news_events_from_ron);
     }
 }
