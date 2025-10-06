@@ -1,4 +1,6 @@
 use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
+use crate::factory::buildings::Tile;
+use crate::grid::GridAtlasSprite;
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -33,9 +35,36 @@ impl Building for PhysicalLink {
     ) -> Entity {
         commands
             .spawn((PhysicalLink { throughput: 234.0 }, position))
+            .with_related::<Tile>(())
             .id()
     }
 
+    fn spawn(
+        &self,
+        commands: &mut Commands,
+        position: GridPosition,
+        orientation: Orientation,
+    ) -> Entity {
+        let id = self.spawn_naked(commands, position, orientation);
+        let data = self.data();
+
+        match data.sprite {
+            Some(SpriteResource::Atlas(index)) => {
+                commands.entity(id).insert(GridAtlasSprite {
+                    atlas_index: index,
+                    grid_width: data.grid_width,
+                    grid_height: data.grid_height,
+                    orientation,
+                });
+            }
+            Some(SpriteResource::Sprite(image)) => {
+                commands.entity(id).insert(Sprite { image, ..default() });
+            }
+            None => {}
+        };
+
+        id
+    }
     fn data(&self) -> BuildingData {
         BuildingData {
             sprite: Some(SpriteResource::Atlas(2)),
