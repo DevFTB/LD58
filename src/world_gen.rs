@@ -12,10 +12,11 @@ use rand::Rng;
 
 use crate::factory::logical::{BasicDataType, DataAttribute, Dataset};
 
-use crate::factions::{Faction, ReputationLevel, Locked};
+use crate::factions::{Faction, Locked, ReputationLevel};
 use crate::factory::buildings::buildings::Building;
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
+use crate::factory::buildings::Undeletable;
 use crate::grid::{Direction, GridSprite, Orientation};
 use bevy_prng::WyRand;
 use bevy_rand::prelude::GlobalRng;
@@ -40,7 +41,6 @@ pub struct FactionCluster {
 #[derive(Component, Default)]
 #[require(Faction)]
 pub struct ClusterID(i64);
-
 
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i64 = 100;
@@ -197,22 +197,25 @@ fn startup(
             .collect::<HashMap<i64, ReputationLevel>>(),
     );
 
-    // debug printing to ensure that gen logic is working
-    for (cluster_id, cell_vec) in &center_map {
-        if let (Some(faction), Some(reputation)) = (
-            cluster_faction.get(cluster_id),
-            cluster_reputation.get(cluster_id),
-        ) {
-            commands.spawn((
-                GridPosition(*cell_vec),
-                GridSprite(Color::linear_rgba(1., 0.5, 1., 1.)),
-                Text2d::new(format!("{:?}: {cluster_id}, rep: {:?}", faction, reputation)),
-                ZIndex(4),
-            ));
-        } else {
-            panic!("{cluster_id} has no faction");
-        }
-    }
+    // // debug printing to ensure that gen logic is working
+    // for (cluster_id, cell_vec) in &center_map {
+    //     if let (Some(faction), Some(reputation)) = (
+    //         cluster_faction.get(cluster_id),
+    //         cluster_reputation.get(cluster_id),
+    //     ) {
+    //         commands.spawn((
+    //             GridPosition(*cell_vec),
+    //             GridSprite(Color::linear_rgba(1., 0.5, 1., 1.)),
+    //             Text2d::new(format!(
+    //                 "{:?}: {cluster_id}, rep: {:?}",
+    //                 faction, reputation
+    //             )),
+    //             ZIndex(4),
+    //         ));
+    //     } else {
+    //         panic!("{cluster_id} has no faction");
+    //     }
+    // }
 
     // spawn faction sinks
     // pass faction_source_locations in to remove sink locations from source spawn points
@@ -239,7 +242,14 @@ fn startup(
 
     // spawn intitial faction sinks
     for (position, faction) in INITIAL_FACTION_SINKS {
-        spawn_faction_sink(position, faction, ReputationLevel::Hostile, Option::None, Option::None, &mut commands);
+        spawn_faction_sink(
+            position,
+            faction,
+            ReputationLevel::Hostile,
+            Option::None,
+            Option::None,
+            &mut commands,
+        );
     }
 
     let basic_source_amount = (unlocked_cells.length() as i32 / 1000) * BASIC_SOURCE_DENSITY;
@@ -377,7 +387,11 @@ fn get_faction_source_throughput(reputation: ReputationLevel) -> f32 {
     }
 }
 
-fn get_faction_source_dataset(faction: Faction, reputation: ReputationLevel, rng: &mut WyRand) -> Dataset {
+fn get_faction_source_dataset(
+    faction: Faction,
+    reputation: ReputationLevel,
+    rng: &mut WyRand,
+) -> Dataset {
     Dataset {
         contents: HashMap::from([(BasicDataType::Biometric, HashSet::<DataAttribute>::new())]),
     }
@@ -412,15 +426,24 @@ fn spawn_source(
     }
     .spawn(commands, GridPosition(vec), Orientation::default());
 
-    commands
-        .entity(entity)
-        .insert((ZIndex(3), Text2d::new(format!("{}: {throughput}", dataset))));
+    commands.entity(entity).insert((
+        ZIndex(3),
+        Text2d::new(format!("{}: {throughput}", dataset)),
+        Undeletable,
+    ));
 
     match (faction, reputation) {
-        (Some(actual_faction), Some(actual_reputation)) =>
-            {commands.entity(entity).insert((actual_faction, actual_reputation, Locked));},
-        (Some(_), None) => {panic!("faction without reputation in source spawn");},
-        (None, Some(_)) => {panic!("reputation without faction in source spawn");},
+        (Some(actual_faction), Some(actual_reputation)) => {
+            commands
+                .entity(entity)
+                .insert((actual_faction, actual_reputation, Locked));
+        }
+        (Some(_), None) => {
+            panic!("faction without reputation in source spawn");
+        }
+        (None, Some(_)) => {
+            panic!("reputation without faction in source spawn");
+        }
         _ => { /* do nothing */ }
     }
 }
@@ -463,15 +486,11 @@ fn spawn_faction_sink(
     let sink_building = SinkBuilding {
         size: I64Vec2 { x: 2, y: 2 },
     }
-    .spawn(
-        commands,
-        GridPosition(position),
-        Orientation::default(),
-    );
+    .spawn(commands, GridPosition(position), Orientation::default());
 
     commands
         .entity(sink_building)
-        .insert((faction, reputation, Locked));
+        .insert((faction, reputation, Locked, Undeletable));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {

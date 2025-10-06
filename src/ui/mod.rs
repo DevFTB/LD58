@@ -1,4 +1,3 @@
-use crate::ui::tooltip::TooltipPlugin;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod newsfeed;
@@ -43,18 +42,22 @@ impl Plugin for UIPlugin {
             .add_systems(Update, shop::handle_building_rotate)
             .add_systems(Update, newsfeed::add_newsfeed_item_system)
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
-            .add_systems(Update, newsfeed::generate_news) 
+            .add_systems(Update, newsfeed::generate_news)
             .add_systems(Update, interactive_event::route_events_by_urgency)
             .add_systems(Update, interactive_event::manage_event_bubbles)
             .add_systems(Update, interactive_event::handle_bubble_clicks)
             .add_systems(Update, interactive_event::animate_bubble_wobble)
-            .add_systems(Update, (
-                interactive_event::handle_choice_button_interaction,
-                interactive_event::handle_choice_click,
-                interactive_event::handle_choice_tooltip,
-                interactive_event::scale_text_system,
-            ))
+            .add_systems(
+                Update,
+                (
+                    interactive_event::handle_choice_button_interaction,
+                    interactive_event::handle_choice_click,
+                    interactive_event::handle_choice_tooltip,
+                    interactive_event::scale_text_system,
+                ),
+            )
             .add_systems(Update, interactive_event::test_trigger_random_event);
+        // app.add_plugins(TooltipPlugin);
     }
 }
 
