@@ -21,47 +21,6 @@ pub struct SinkBuilding {
     pub size: I64Vec2,
 }
 
-/// Component to track moving average of sink throughput over 2 seconds
-#[derive(Component)]
-pub struct ThroughputTracker {
-    /// Stores (timestamp, value) pairs for the last 2 seconds
-    pub samples: VecDeque<(f32, f32)>,
-    /// Current moving average throughput
-    pub average_throughput: f32,
-}
-
-impl ThroughputTracker {
-    pub fn new() -> Self {
-        Self {
-            samples: VecDeque::new(),
-            average_throughput: 0.0,
-        }
-    }
-    
-    /// Add a new sample and calculate moving average
-    pub fn add_sample(&mut self, timestamp: f32, value: f32) {
-        self.samples.push_back((timestamp, value));
-        
-        // Remove samples older than 2 seconds
-        let cutoff_time = timestamp - 2.0;
-        while let Some(&(sample_time, _)) = self.samples.front() {
-            if sample_time < cutoff_time {
-                self.samples.pop_front();
-            } else {
-                break;
-            }
-        }
-        
-        // Calculate moving average
-        if self.samples.is_empty() {
-            self.average_throughput = 0.0;
-        } else {
-            let sum: f32 = self.samples.iter().map(|(_, value)| value).sum();
-            self.average_throughput = sum / self.samples.len() as f32;
-        }
-    }
-}
-pub struct SinkThroughput(f32);
 
 impl Building for SinkBuilding {
     fn spawn_naked(
@@ -114,7 +73,6 @@ impl Building for SinkBuilding {
                     direction: *dir,
                     buffer: DataBuffer::default(),
                 },
-               ThroughputTracker::new(),
                 *pos,
                 GridAtlasSprite {
                     grid_height: 1,
@@ -122,13 +80,6 @@ impl Building for SinkBuilding {
                     atlas_index: 1,
                     orientation,
                 },
-                Text2d::new(""),
-                TextFont {
-                    font_size: 12.0,
-                    ..Default::default()
-                },
-                TextColor(Color::srgb(1.0, 1.0, 0.0)), // Yellow text
-                Transform::from_translation(bevy::math::Vec3::new(0.0, -16.0, 1.0)), // Offset below tile
             )
         })
         .collect::<Vec<_>>();
@@ -204,29 +155,16 @@ fn get_placement((x, y): (i64, i64), size: I64Vec2) -> TilePlacement {
     }
 }
 
-/// System to update debug text on sinks showing their buffer values
-pub fn update_sink_debug_text(
-    mut query: Query<(&DataSink, &ThroughputTracker, &mut Text2d)>,
-) {
-    for (sink, tracker, mut text) in query.iter_mut() {
-        // Format buffer information: type, value, and throughput
-        let buffer_info = format!(
-            "{}",
-            tracker.average_throughput
-        );
-        **text = buffer_info;
-    }
-}
-
-/// System to update sink throughput based on moving averages of last_in over 30 seconds
-pub fn update_sink_throughput(
-    mut query: Query<(&DataSink, &mut ThroughputTracker)>,
-    time: Res<Time>,
-) {
-    let current_time = time.elapsed_secs();
-    
-    for (sink, mut tracker) in query.iter_mut() {
-        // Add current buffer last_in as a sample
-        tracker.add_sample(current_time, sink.buffer.last_in);
-    }
-}
+// System to update debug text on sinks showing their buffer values
+// pub fn update_sink_debug_text(
+//     mut query: Query<(&DataSink, &ThroughputTracker, &mut Text2d)>,
+// ) {
+//     for (sink, tracker, mut text) in query.iter_mut() {
+//         // Format buffer information: type, value, and throughput
+//         let buffer_info = format!(
+//             "{}",
+//             tracker.average_throughput
+//         );
+//         **text = buffer_info;
+//     }
+// }

@@ -7,6 +7,7 @@ use crate::factory::logical::DataSink;
 use crate::factory::buildings::Tile;
 use bevy::platform::collections::HashMap;
 use crate::factory::logical::Dataset;
+use crate::factory::buildings::sink::ThroughputTracker;
 
 /// Player game state
 #[derive(Resource, Debug)]
@@ -35,11 +36,11 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        // app.init_resource::<Player>()
-        //     .add_systems(Update, (
-        //         update_contract_fulfillment,
-        //         update_money,
-        //     ).chain().run_if(on_timer(Duration::from_secs(1))));
+        app.init_resource::<Player>()
+            .add_systems(Update, (
+                update_contract_fulfillment,
+                update_money,
+            ).chain().run_if(on_timer(Duration::from_secs(1))));
     }
 }
 
@@ -47,17 +48,17 @@ impl Plugin for PlayerPlugin {
 /// TODO: smooth out the throughput calculation over time if necessary
 fn update_contract_fulfillment(
     mut contract_query: Query<(&mut ContractFulfillment, &mut Dataset, &AssociatedWithSink, &mut ContractStatus)>,
-    mut sink_tile_query: Query<(&mut DataSink, &Tile)>,
+    mut sink_tile_query: Query<(&mut DataSink, &mut ThroughputTracker, &Tile)>,
 ) {
     // calculate the throughput per (SinkBuilding entity, dataset) pair
     let mut dataset_sink_throughputs: HashMap<(Entity, Dataset), f32> = HashMap::new();
-    for (mut sink, tile) in sink_tile_query.iter_mut() {
+    for (mut sink, mut throughput_tracker, tile) in sink_tile_query.iter_mut() {
         let sink_building_entity = tile.0;
         if let Some(dataset) = &sink.buffer.shape {
             *dataset_sink_throughputs
                 .entry((sink_building_entity, dataset.clone()))
                 .or_insert(0.)
-                += sink.buffer.last_out;
+                += sink.buffer.last_in;
         }
     }
 

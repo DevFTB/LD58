@@ -8,7 +8,7 @@
             description: "A simple task for a new runner. Deliver the specified data package.",
             faction: Academia,
             reputation: Hostile,
-            base_threshold: 50.0,
+            base_threshold: 5.0,
             base_money: 10.0,
             dataset: (
                 contents: {
@@ -22,7 +22,7 @@
             description: "Acquire sensitive corporate data. High risk, high reward.",
             faction: Criminal,
             reputation: Hostile,
-            base_threshold: 200.0,
+            base_threshold: 5.0,
             base_money: 50.0,
             dataset: (
                 contents: {
@@ -36,7 +36,7 @@
             description: "Verify and deliver a large dataset for government records.",
             faction: Government,
             reputation: Hostile,
-            base_threshold: 250.0,
+            base_threshold: 5.0,
             base_money: 100.0,
             dataset: (
                 contents: {

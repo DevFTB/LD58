@@ -85,8 +85,7 @@ impl Plugin for FactoryPlugin {
                     debug_logical_links,
                 )
                     .chain(),
-                update_sink_throughput,
-                update_sink_debug_text,
+                // update_sink_debug_text,
             )
                 .chain(),
         );

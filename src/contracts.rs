@@ -165,7 +165,7 @@ impl Plugin for ContractsPlugin {
         // System to generate a new pending random contract every 2 minutes
         app.add_systems(
             Update,
-            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(1))),
+            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(5))),
         );
     }
 }

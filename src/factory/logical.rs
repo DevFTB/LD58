@@ -249,8 +249,14 @@ pub fn pass_data_system(
         // Encountered a panic in system `bevy_app::main_schedule::Main::run_main`!
         // error: process didn't exit successfully: `target\debug\LD58.exe` (exit code: 101)
         // errrored out here twice, probs the get_mut i think?
-        let mut source = sources.get_mut(link.source).unwrap();
-        pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+        // Use proper error handling instead of unwrap() to avoid panic
+        // TOOD: debug more closely
+        if let Ok(mut source) = sources.get_mut(link.source) {
+            pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+        } else {
+            // Log warning if source entity doesn't exist or doesn't have DataSource component
+            println!("Warning: LogicalLink references invalid source entity {:?}", link.source);
+        }
     }
 }
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
