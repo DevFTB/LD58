@@ -11,6 +11,7 @@ use bevy::ecs::{
 };
 use bevy::platform::collections::{HashMap, HashSet};
 use bevy::prelude::*;
+use itertools::Itertools;
 
 #[derive(Component)]
 pub struct PhysicalSink(Entity, Direction);
@@ -93,38 +94,54 @@ pub fn connect_physical_links_to_data(
 
 pub fn connect_direct(
     mut commands: Commands,
-    sources: Query<
+    all_sources: Query<
         (Entity, &GridPosition, &DataSource),
         (Without<PhysicalSource>, Without<DataSink>),
     >,
-    sinks: Query<(Entity, &GridPosition, &DataSink), (Without<PhysicalSink>, Without<DataSource>)>,
+    all_sinks: Query<
+        (Entity, &GridPosition, &DataSink),
+        (Without<PhysicalSink>, Without<DataSource>, Added<DataSink>),
+    >,
     existing_links: Query<&LogicalLink>,
 ) {
-    for (source_entity, source_pos, source) in sources.iter() {
-        // Check each sink to see if it's a neighbor
-        for (sink_entity, sink_pos, sink) in sinks.iter() {
-            // Skip if this sink already has a logical link
-            if existing_links.get(sink_entity).is_ok() {
-                continue;
-            }
+    let mut linked_sinks = HashSet::new();
 
-            // Check if they're neighbors
-            let neighbors = source_pos.neighbours();
-            if let Some((dir, _)) = neighbors.iter().find(|(_, pos)| pos == sink_pos) {
-                // Verify direction compatibility:
-                // source's output_direction should match the direction to the sink
-                // sink's input_direction should match the opposite direction (from sink to source)
-                if source.direction == *dir && sink.direction == dir.opposite() {
-                    // Create a direct logical link with no intermediate physical links
+    let source_map = all_sources.iter().into_group_map_by(|x| x.1);
+
+    for (sink_entity, sink_pos, sink) in all_sinks.iter() {
+        if existing_links.get(sink_entity).is_ok() {
+            continue;
+        }
+        if linked_sinks.contains(&sink_entity) {
+            continue;
+        }
+
+        for (dir_from_sink, pos) in sink_pos.neighbours().into_iter() {
+            if let Some(vec) = source_map.get(&pos) {
+                let dir_from_source = dir_from_sink.opposite();
+                let Some((source_entity, _, source)) = vec.iter().find(|(_, _, source)| {
+                    source.direction == dir_from_source && sink.direction == dir_from_sink
+                }) else {
+                    continue;
+                };
+
+                if source.direction == dir_from_source && sink.direction == dir_from_sink {
                     let link = LogicalLink {
-                        links: Vec::new(),             // No physical links in between
-                        throughput: source.throughput, // Use source throughput as there's no bottleneck
-                        source: source_entity,
+                        links: Vec::new(),
+                        throughput: source.throughput,
+                        source: *source_entity,
                         sink: sink_entity,
                     };
 
-                    insert_physical_connection(&mut commands, source_entity, sink_entity, *dir);
+                    insert_physical_connection(
+                        &mut commands,
+                        *source_entity,
+                        sink_entity,
+                        dir_from_source,
+                    );
                     commands.entity(sink_entity).insert(link);
+                    linked_sinks.insert(sink_entity);
+                    break;
                 }
             }
         }
@@ -269,7 +286,6 @@ pub fn on_physical_link_removed(
             }
             // Remove the logical link from its sink if it still exists
             if let Ok(mut e) = commands.get_entity(sink_entity) {
-                println!("Logical Link removed");
                 e.remove::<LogicalLink>();
             }
         }

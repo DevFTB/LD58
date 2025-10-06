@@ -75,10 +75,7 @@ impl Building for SinkBuilding {
                     grid_height: 1,
                     grid_width: 1,
                     atlas_index: 1,
-                    orientation: Orientation {
-                        direction: Direction::Up,
-                        flipped: false,
-                    },
+                    orientation,
                 },
                 Text2d(String::default()),
             )

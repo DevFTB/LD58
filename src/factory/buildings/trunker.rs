@@ -121,11 +121,6 @@ pub fn do_trunking(
                     )
                 })
                 .for_each(|(value, sink)| {
-                    // println!(
-                    //     "{} {}",
-                    //     value,
-                    //     trunker.threshold_per_sink * time.delta_secs()
-                    // );
                     sink.buffer.remove(value);
                     source.buffer.add(&shape, value)
                 });
