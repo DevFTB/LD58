@@ -5,14 +5,15 @@ use crate::factory::buildings::delinker::do_delinking;
 use crate::factory::buildings::splitter::do_splitting;
 use crate::factory::buildings::trunker::do_trunking;
 use crate::factory::logical::{
-    DataSink, DataSource, calculate_throughput, debug_logical_links, pass_data_system, reset_delta,
+    calculate_throughput, debug_logical_links, pass_data_system, reset_delta,
 };
 use crate::factory::physical::{
-    EntityPlaced, ValidateConnections, assemble_direct_logical_links, assemble_logical_links,
-    detect_building_placement, detect_link_placement, on_physical_link_removed,
-    resolve_connections, validate_placed_entities,
+    assemble_direct_logical_links, assemble_logical_links, detect_building_placement, detect_link_placement,
+    on_physical_link_removed, resolve_connections, validate_placed_entities,
+    EntityPlaced, ValidateConnections,
 };
 use crate::grid::{GridPosition, Orientation};
+use bevy::ecs::relationship::Relationship;
 use bevy::time::common_conditions::on_timer;
 use bevy::{
     app::{Plugin, Update},
@@ -20,6 +21,7 @@ use bevy::{
     math::I64Vec2,
     prelude::*,
 };
+use physical::remove_physical_link_on_right_click;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -36,9 +38,16 @@ pub struct ConstructBuildingEvent {
     pub orientation: Orientation,
 }
 
+/// Event for removing a building when a tile is clicked
+#[derive(Event, Message)]
+pub struct RemoveBuildingRequest {
+    pub tile: Entity,
+}
+
 impl Plugin for FactoryPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_message::<ConstructBuildingEvent>();
+        app.add_message::<RemoveBuildingRequest>();
 
         // Register new messages for the message-based physical connection system
         app.add_message::<EntityPlaced>();
@@ -77,6 +86,10 @@ impl Plugin for FactoryPlugin {
                 .chain()
                 .run_if(on_timer(Duration::from_secs(1))),
         );
+        app.add_systems(
+            Update,
+            (remove_physical_link_on_right_click, handle_building_removal),
+        );
     }
 }
 
@@ -91,5 +104,31 @@ pub fn handle_construction_event(
         event
             .building
             .spawn(&mut commands, base_position, event.orientation);
+    }
+}
+
+/// Handles building removal requests by despawning the parent building and all its tiles
+pub fn handle_building_removal(
+    mut events: MessageReader<RemoveBuildingRequest>,
+    mut commands: Commands,
+    tiles_query: Query<&buildings::Tile>,
+    parent_tiles_query: Query<&buildings::Tiles>,
+) {
+    for event in events.read() {
+        // Get the parent building from the clicked tile
+        if let Ok(tile) = tiles_query.get(event.tile) {
+            let parent = tile.get();
+
+            // Get all tiles from the parent
+            if let Ok(all_tiles) = parent_tiles_query.get(parent) {
+                // Despawn all tiles
+                for tile_entity in all_tiles.iter() {
+                    commands.entity(tile_entity).despawn();
+                }
+
+                // Despawn the parent building
+                commands.entity(parent).despawn();
+            }
+        }
     }
 }

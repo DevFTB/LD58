@@ -1,6 +1,7 @@
-use crate::factory::buildings::Tile;
 use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
-use crate::grid::{GridAtlasSprite, WorldMap};
+use crate::factory::buildings::Tile;
+use crate::factory::RemoveBuildingRequest;
+use crate::grid::{Grid, GridAtlasSprite, WorldMap};
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -13,7 +14,7 @@ use bevy::ecs::{
 };
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
-
+use bevy::window::PrimaryWindow;
 // ============================================================================
 // COMPONENTS
 // ============================================================================
@@ -591,5 +592,64 @@ pub fn on_physical_link_removed(
         validation_events.write(ValidateConnections {
             positions: positions_to_revalidate,
         });
+    }
+}
+
+pub fn remove_physical_link_on_right_click(
+    mut commands: Commands,
+    mouse: Res<ButtonInput<MouseButton>>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
+    grid: Res<Grid>,
+    world_map: Res<WorldMap>,
+    links: Query<&PhysicalLink>,
+    tiles: Query<&Tile>,
+    mut removal_events: MessageWriter<RemoveBuildingRequest>,
+) {
+    // Only act on the press edge to avoid repeating every frame the button is held.
+    if !mouse.just_pressed(MouseButton::Right) {
+        return;
+    }
+
+    let window = match windows.single() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+    let (camera, cam_xform) = match camera_q.single() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let cursor_screen = match window.cursor_position() {
+        Some(p) => p,
+        None => return, // cursor not over window
+    };
+
+    // 2D conversion from screen to world
+    let world_pos = match camera.viewport_to_world_2d(cam_xform, cursor_screen) {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    let grid_pos = grid.world_to_grid(world_pos);
+
+    // Get all entities at this grid position
+    let Some(entities) = world_map.get(&grid_pos) else {
+        return;
+    };
+
+    // Check each entity at this position
+    for &entity in entities.iter() {
+        // Check if it's a PhysicalLink
+        if links.get(entity).is_ok() {
+            commands.entity(entity).remove::<PhysicalLink>();
+            commands.entity(entity).despawn();
+            return; // Stop after removing first PhysicalLink
+        }
+
+        // Check if it's a Tile (part of a building)
+        if tiles.get(entity).is_ok() {
+            removal_events.write(RemoveBuildingRequest { tile: entity });
+            return; // Stop after emitting first removal request
+        }
     }
 }
