@@ -25,11 +25,12 @@ pub enum ContractStatus {
     Completed,
 }
 
-#[derive(Component, Deserialize, Debug)]
-pub struct ContractBaseThreshold(f64);
-
-#[derive(Component, Deserialize, Debug)]
-pub struct ContractBaseMoney(f64);
+#[derive(Debug)]
+pub enum ContractFulfillmentStatus {
+    Exceeding,
+    Meeting,
+    Failing,
+}
 
 
 #[derive(Component, Default, Deserialize, Clone, Debug)]
@@ -79,16 +80,64 @@ impl SinkContracts {
     }
 }
 
+
+// duplicates base_threshold and base_money in ContractBundle but i think its ok
+#[derive(Component, Debug)]
+pub struct ContractFulfillment {
+    pub throughput: f64,
+    pub status: ContractFulfillmentStatus,
+    pub base_threshold: f64,
+    pub base_money: f64,
+}
+
+impl ContractFulfillment {
+    /// Calculate the current money per second for this contract, given its base money rate.
+    pub fn get_income(&self) -> f64 {
+        match self.status {
+            ContractFulfillmentStatus::Exceeding => self.base_money * 2.0,
+            ContractFulfillmentStatus::Meeting => self.base_money,
+            ContractFulfillmentStatus::Failing => 0.,
+        }
+    }
+
+    pub fn update_throughput(&mut self, new_throughput: f64) {
+        self.throughput = new_throughput;
+        self.status = self.get_fulfillment_status();
+    }
+
+    fn get_fulfillment_status(&mut self) -> ContractFulfillmentStatus {
+        let threshold_fraction = self.throughput / self.base_threshold;
+        if threshold_fraction >= 2.0 {
+            ContractFulfillmentStatus::Exceeding
+        } else if threshold_fraction >= 1.0 {
+            ContractFulfillmentStatus::Meeting
+        } else {
+            ContractFulfillmentStatus::Failing
+        }
+    }
+
+    pub fn new(base_threshold: f64, base_money: f64) -> Self {
+        Self {
+            throughput: 0.0,
+            status: ContractFulfillmentStatus::Failing,
+            base_threshold,
+            base_money,
+        }
+    }
+
+}
+
+
+
 #[derive(Bundle, Debug)]
 pub struct ContractBundle {
     pub contract: Contract,
     pub status: ContractStatus,
     pub dataset: Dataset,
-    pub base_threshold: ContractBaseThreshold,
-    pub base_money: ContractBaseMoney,
     pub faction: Faction,
     pub timeout: ContractTimeout,
     pub description: ContractDescription,
+    pub fulfillment_info: ContractFulfillment,
 }
 
 const MAX_CONTRACTS_PER_SINK: usize = 4;
@@ -99,13 +148,13 @@ pub struct ContractsPlugin;
 
 impl Plugin for ContractsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreStartup, load_contracts_from_ron)
-            .add_systems(Startup, test_find_and_generate_contract);
+        app.add_systems(PreStartup, load_contracts_from_ron);
+            // .add_systems(Startup, test_find_and_generate_contract);
 
         // System to generate a new pending random contract every 2 minutes
         app.add_systems(
             Update,
-            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(120))),
+            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(1))),
         );
     }
 }
@@ -194,13 +243,15 @@ pub fn find_and_generate_contract(
         contract: Contract,
         status: ContractStatus::Pending,
         dataset: suitable_contract.dataset.clone(),
-        base_threshold: ContractBaseThreshold(suitable_contract.base_threshold),
-        base_money: ContractBaseMoney(suitable_contract.base_money),
         faction: suitable_contract.faction.clone(),
         timeout: ContractTimeout(120.0), // Default timeout
         description: ContractDescription {
             name: suitable_contract.name.clone(),
             description: suitable_contract.description.clone(),
         },
+        fulfillment_info: ContractFulfillment::new(
+            suitable_contract.base_threshold, 
+            suitable_contract.base_money
+        ),
     })
 }
