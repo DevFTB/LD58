@@ -3,18 +3,20 @@ use crate::factions::{Faction, ReputationLevel};
 use std::collections::HashMap;
 use serde::Deserialize;
 
-pub mod event_data;
+pub mod newsfeed_events;
+pub mod interactive_events;
 
+pub use newsfeed_events::{NewsItem, AddNewsfeedItemEvent};
+pub use interactive_events::{
+    EventChoice, InteractiveEventItem, InteractiveEventData, 
+    ShowInteractiveEvent, PlayerChoiceEvent
+};
 
 #[derive(Resource, Deserialize, Debug)]
 pub struct NewsLibrary(pub HashMap<Faction, HashMap<ReputationLevel, Vec<NewsItem>>>);
 
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct NewsItem {
-    pub id: u32,
-    pub text: String,
-}
+#[derive(Resource, Deserialize, Debug)]
+pub struct InteractiveEventLibrary(pub HashMap<Faction, HashMap<ReputationLevel, Vec<InteractiveEventItem>>>);
 
 // A startup system to read the file and insert it as a resource.
 fn load_news_events_from_ron(mut commands: Commands) {
@@ -31,53 +33,19 @@ fn load_news_events_from_ron(mut commands: Commands) {
     info!("News events loaded and inserted as a Resource.");
 }
 
-/// Types of consequences for event choices.
-#[derive(Debug, Clone)]
-pub enum ConsequenceType {
-    Money(i32), // Positive for gain, negative for loss
-    Reputation(Faction, i32), // Faction and amount (positive increase, negative decrease)
-    // Add more as needed
-}
+// A startup system to read interactive events from RON file.
+fn load_interactive_events_from_ron(mut commands: Commands) {
+    // Read the file from the assets folder.
+    let ron_str = std::fs::read_to_string("assets/text/interactive_events.ron")
+        .expect("Failed to read interactive_events.ron");
 
-/// Represents a choice in an interactive event.
-#[derive(Debug, Clone)]
-pub struct EventChoice {
-    pub description: String,
-    pub consequences: Vec<EventConsequence>,
-}
+    // Parse the RON string into our InteractiveEventLibrary struct.
+    let event_library: InteractiveEventLibrary = ron::from_str(&ron_str)
+        .expect("Failed to parse interactive events from RON");
 
-/// Represents a consequence of a choice.
-#[derive(Debug, Clone)]
-pub struct EventConsequence {
-    pub consequence_type: ConsequenceType,
-}
-
-/// Data for an interactive event.
-#[derive(Debug, Clone)]
-pub struct InteractiveEventData {
-    pub title: String,
-    pub description: String,
-    pub faction: Faction,
-    pub choices: Vec<EventChoice>,
-}
-
-/// Bevy event to show an interactive event popup.
-#[derive(Event, Message)]
-pub struct ShowInteractiveEvent {
-    pub event_data: InteractiveEventData,
-}
-
-/// Bevy event sent when player makes a choice in interactive event.
-#[derive(Event, Message)]
-pub struct PlayerChoiceEvent {
-    pub choice_data: EventChoice,
-}
-
-/// Bevy event to add an item to the newsfeed.
-#[derive(Event, Message)]
-pub struct AddNewsfeedItemEvent {
-    pub faction: Faction, // Optional, for faction-specific items
-    pub headline: String,
+    // Insert the fully loaded data as a Bevy Resource.
+    commands.insert_resource(event_library);
+    info!("Interactive events loaded and inserted as a Resource.");
 }
 
 /// Plugin for events system.
@@ -85,9 +53,9 @@ pub struct EventsPlugin;
 
 impl Plugin for EventsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<ShowInteractiveEvent>()
-            .add_message::<PlayerChoiceEvent>()
-            .add_message::<AddNewsfeedItemEvent>()
-            .add_systems(Startup, load_news_events_from_ron);
+        app.add_message::<interactive_events::ShowInteractiveEvent>()
+            .add_message::<interactive_events::PlayerChoiceEvent>()
+            .add_message::<newsfeed_events::AddNewsfeedItemEvent>()
+            .add_systems(Startup, (load_news_events_from_ron, load_interactive_events_from_ron));
     }
 }

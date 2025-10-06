@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use crate::events::{AddNewsfeedItemEvent, NewsLibrary};
+use crate::events::newsfeed_events::{AddNewsfeedItemEvent, get_news_headline};
+use crate::events::NewsLibrary;
 use crate::factions::{Faction, FactionReputations};
-use crate::events::event_data::{get_news_headline};
 use crate::assets::GameAssets;
 use rand::prelude::IndexedRandom;
 
