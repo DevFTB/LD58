@@ -1,3 +1,4 @@
+use crate::grid::{Direction};
 use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
 use crate::factions::Faction;
@@ -123,6 +124,10 @@ pub struct GameAssets {
     pub data_type_icons_large: HashMap<BasicDataType, usize>,
     
     pub font: Handle<Font>,
+    
+    // Standalone UI icons
+    pub money_icon: Handle<Image>,
+    pub contract_icon: Handle<Image>,
 }
 
 impl GameAssets {
@@ -182,6 +187,35 @@ impl GameAssets {
         match size {
             IconSize::Small => self.data_type_icons_small.get(&data_type).map(|&index| (AtlasId::SmallSprites, index)),
             IconSize::Large => self.data_type_icons_large.get(&data_type).map(|&index| (AtlasId::LargeSprites, index)),
+        }
+    }
+
+    pub fn wire_index(&self, input: Direction, output: Direction) -> usize {
+        match input {
+            Direction::Left => match output {
+                Direction::Up => 8,
+                Direction::Right => 0,
+                Direction::Down => 5,
+                _ => 0,
+            },
+            Direction::Up => match output {
+                Direction::Left => 8,
+                Direction::Right => 6,
+                Direction::Down => 2,
+                _ => 0,
+            },
+            Direction::Right => match output {
+                Direction::Left => 0,
+                Direction::Up => 6,
+                Direction::Down => 3,
+                _ => 0,
+            },
+            Direction::Down => match output {
+                Direction::Left => 5,
+                Direction::Up => 2,
+                Direction::Right => 3,
+                _ => 0,
+            },
         }
     }
 
@@ -299,8 +333,8 @@ pub fn load_assets(
     let wires_texture = asset_server.load::<Image>("wires.png");
     let wires_layout = TextureAtlasLayout::from_grid(
         UVec2::new(32, 32),  // Adjust size based on your sprite sheet
-        2,                    // columns - adjust based on your sprite sheet
-        4,                    // rows - adjust based on your sprite sheet
+        3,                    // columns - adjust based on your sprite sheet
+        3,                    // rows - adjust based on your sprite sheet
         None,
         None,
     );
@@ -364,6 +398,10 @@ pub fn load_assets(
 
     // Load font
     let font_handle = asset_server.load::<Font>("Fonts/Bitcount_Grid_Double_Ink/BitcountGridDoubleInk-VariableFont_CRSV,ELSH,ELXP,SZP1,SZP2,XPN1,XPN2,YPN1,YPN2,slnt,wght.ttf");
+    
+    // Load standalone UI icons
+    let money_icon = asset_server.load::<Image>("coin.png");
+    let contract_icon = asset_server.load::<Image>("contract.png");
 
     // Map data types to sprite indices - small (16x16) in small_sprites atlas
     let mut data_type_icons_small = HashMap::new();
@@ -404,6 +442,8 @@ pub fn load_assets(
         data_type_icons_small,
         data_type_icons_large,
         font: font_handle.clone(),
+        money_icon,
+        contract_icon,
     };
 
     commands.insert_resource(game_assets);

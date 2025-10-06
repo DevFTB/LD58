@@ -5,7 +5,7 @@ use bevy::image::{ImageSampler, ImageSamplerDescriptor};
 use crate::factory::logical::{DataAttribute, BasicDataType};
 use crate::factory::buildings::source::SourceBuilding;
 use crate::assets::{GameAssets, AtlasId};
-use crate::grid::{GridPosition, GridAtlasSprite};
+use crate::grid::GridPosition;
 use crate::factions::Faction;
 
 /// Component that marks a source building's background sprite
@@ -77,7 +77,7 @@ pub fn spawn_source_backgrounds(
     query: Query<(Entity, &SourceBuilding, &GridPosition, Option<&Faction>), Added<SourceBuilding>>,
     game_assets: Res<GameAssets>,
     grid: Res<crate::grid::Grid>,
-    asset_server: Res<AssetServer>,
+    _asset_server: Res<AssetServer>,
 ) {
     for (_entity, source, grid_pos, faction) in query.iter() {
         // Determine background sprite index based on faction or data type
@@ -317,10 +317,10 @@ fn spawn_augmentation_effects(
 
 
 
-/// System to animate scanning flash effect for identified data
+/// System to animate scanning flash effect for identified data (world sprites)
 pub fn animate_scanning_flash(
     time: Res<Time>,
-    mut flash_query: Query<(&mut ScanningFlashEffect, &mut Sprite)>,
+    mut flash_query: Query<(&mut ScanningFlashEffect, &mut Sprite), Without<ImageNode>>,
 ) {
     let delta = time.delta_secs();
     
@@ -363,6 +363,116 @@ pub fn animate_scanning_flash(
     }
 }
 
+/// Component to mark the flash overlay entity
+#[derive(Component)]
+pub struct FlashOverlay {
+    pub parent_icon: Entity,
+}
+
+/// System to animate scanning flash effect for identified data (UI elements)
+/// This system tints the ImageNode and manages a dedicated overlay child for each icon
+pub fn animate_scanning_flash_ui(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut flash_query: Query<(Entity, &mut ScanningFlashEffect, &mut ImageNode), Without<FlashOverlay>>,
+    children_query: Query<&Children>,
+    overlay_meta_query: Query<&FlashOverlay>,
+    mut overlay_image_query: Query<&mut ImageNode, With<FlashOverlay>>,
+) {
+    let delta = time.delta_secs();
+
+    for (icon_entity, mut flash, mut image_node) in flash_query.iter_mut() {
+        flash.timer += delta;
+
+        if flash.timer >= flash.flash_interval {
+            flash.timer = 0.0;
+        }
+
+        let flash_duration = 0.8;
+        let is_flashing = flash.timer < flash_duration;
+
+        let mut overlay_entity_opt = None;
+        if let Ok(children) = children_query.get(icon_entity) {
+            for child in children.iter() {
+                let child_entity = child.clone();
+                if let Ok(overlay) = overlay_meta_query.get(child_entity) {
+                    if overlay.parent_icon == icon_entity {
+                        overlay_entity_opt = Some(child_entity);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if is_flashing {
+            let progress = flash.timer / flash_duration;
+            let scan_wave = ((progress * std::f32::consts::PI * 2.0).sin() * 0.5 + 0.5).powf(2.0_f32);
+            let initial_pulse = if progress < 0.15 {
+                (1.0_f32 - (progress / 0.15)).powf(2.0_f32)
+            } else {
+                0.0
+            };
+            let flash_intensity = (scan_wave * 0.7 + initial_pulse * 0.8).min(1.0);
+
+            // Dramatically brighten and cyan-tint the base icon during flash
+            let base_tint = Color::srgba(
+                (0.25 + flash_intensity * 0.35).min(1.0),
+                (0.75 + flash_intensity * 0.25).min(1.0),
+                1.0,
+                1.0,
+            );
+            image_node.color = base_tint;
+
+            // Overlay glow for strong cyan pulse
+            let flash_color = Color::srgba(0.0, 1.0, 1.0, (0.25 + flash_intensity * 0.75).min(1.0));
+
+            match overlay_entity_opt {
+                Some(overlay_entity) => {
+                    if let Ok(mut overlay_image) = overlay_image_query.get_mut(overlay_entity) {
+                        overlay_image.color = flash_color;
+                    }
+                }
+                None => {
+                    let overlay_image = ImageNode {
+                        image: image_node.image.clone(),
+                        texture_atlas: image_node.texture_atlas.clone(),
+                        color: flash_color,
+                        ..Default::default()
+                    };
+
+                    let overlay = commands
+                        .spawn((
+                            Node {
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(100.0),
+                                ..Default::default()
+                            },
+                            FlashOverlay {
+                                parent_icon: icon_entity,
+                            },
+                            overlay_image,
+                            ZIndex(10),
+                        ))
+                        .id();
+
+                    commands.entity(icon_entity).add_child(overlay);
+                }
+            }
+        } else {
+            image_node.color = Color::WHITE;
+
+            if let Some(overlay_entity) = overlay_entity_opt {
+                if let Ok(mut overlay_image) = overlay_image_query.get_mut(overlay_entity) {
+                    overlay_image.color = Color::NONE;
+                }
+            }
+        }
+    }
+}
+
 /// System to animate floating icons (slow bounce up and down)
 pub fn animate_floating_icons(
     time: Res<Time>,
@@ -382,10 +492,10 @@ pub fn animate_floating_icons(
     }
 }
 
-/// System to animate pulse effect on augmented indicators
+/// System to animate pulse effect on augmented indicators (world sprites)
 pub fn animate_augmented_pulse(
     time: Res<Time>,
-    mut indicator_query: Query<(&AugmentedIndicator, &mut Transform)>,
+    mut indicator_query: Query<(&AugmentedIndicator, &mut Transform), Without<Node>>,
 ) {
     for (indicator, mut transform) in indicator_query.iter_mut() {
         // Create desynced time value
@@ -397,6 +507,26 @@ pub fn animate_augmented_pulse(
         
         let new_scale = indicator.base_scale * pulse_factor;
         transform.scale = Vec3::splat(new_scale);
+    }
+}
+
+/// System to animate pulse effect on augmented indicators (UI elements)
+pub fn animate_augmented_pulse_ui(
+    time: Res<Time>,
+    mut indicator_query: Query<(&AugmentedIndicator, &mut Node), With<ImageNode>>,
+) {
+    for (indicator, mut node) in indicator_query.iter_mut() {
+        // Create desynced time value
+        let desynced_t = time.elapsed_secs() + indicator.time_offset;
+        
+        // Subtle pulse: size oscillates between 0.95 and 1.05 (10% range)
+        // Using sine wave with period of ~2 seconds (frequency of 1.0)
+        let pulse_factor = 1.0 + (desynced_t * std::f32::consts::PI).sin() * 0.05;
+        
+        // Base size is 12px, scale it by pulse factor
+        let new_size = 12.0 * indicator.base_scale * pulse_factor;
+        node.width = Val::Px(new_size);
+        node.height = Val::Px(new_size);
     }
 }
 
@@ -437,7 +567,7 @@ pub fn spawn_augmented_indicator(
     let pulse_offset = if let Some(parent) = parent_entity {
         (parent.index() as f32 * 0.3) % 2.0
     } else {
-        (rand::random::<f32>() * 2.0)
+        rand::random::<f32>() * 2.0
     };
     
     commands.spawn((
@@ -463,6 +593,7 @@ pub fn spawn_augmented_indicator(
 /// * `commands` - Mutable reference to Commands for inserting components
 /// * `target_entity` - The entity that should receive the scanning flash effect
 /// * `sprite_handle` - Optional sprite handle to add if the entity doesn't have one yet
+#[allow(dead_code)]
 pub fn add_scanning_flash_effect(
     commands: &mut Commands,
     target_entity: Entity,
@@ -496,6 +627,7 @@ pub fn add_scanning_flash_effect(
 /// 
 /// # Returns
 /// The Entity ID of the spawned augmented indicator
+#[allow(dead_code)]
 pub fn spawn_full_data_visualization(
     commands: &mut Commands,
     target_entity: Entity,
@@ -532,7 +664,7 @@ pub fn spawn_augmented_indicator_ui(
     let pulse_offset = if let Some(parent) = parent_entity {
         (parent.index() as f32 * 0.3) % 2.0
     } else {
-        (rand::random::<f32>() * 2.0)
+        rand::random::<f32>() * 2.0
     };
     
     commands.spawn((
@@ -603,25 +735,20 @@ pub fn spawn_data_type_with_augmentations(
                     layout: layout.clone(),
                     index: sprite_index,
                 }),
+                color: if is_identified {
+                    Color::srgba(0.75, 0.95, 1.0, 1.0) // Bright cyan/white tint for identified data
+                } else {
+                    Color::WHITE
+                },
                 ..Default::default()
             },
         )).id();
         
-        // Add data type icon component and scanning flash separately
+        // Add data type icon component
         commands.entity(entity_id).insert(DataTypeIcon {
             data_type,
             parent_source: Entity::PLACEHOLDER,
         });
-        
-        // Add scanning flash for identified data
-        if is_identified {
-            let flash_offset = (rand::random::<f32>() * 3.0) % 3.0;
-            commands.entity(entity_id).insert(ScanningFlashEffect {
-                parent_icon: Entity::PLACEHOLDER, // Will be set after spawn
-                timer: flash_offset,
-                flash_interval: 3.0,
-            });
-        }
         
         entity_id
     } else {
@@ -649,7 +776,7 @@ pub fn spawn_data_type_with_augmentations(
         if is_identified {
             let flash_offset = (rand::random::<f32>() * 3.0) % 3.0;
             commands.entity(entity_id).insert(ScanningFlashEffect {
-                parent_icon: Entity::PLACEHOLDER, // Will be set after spawn
+                parent_icon: entity_id,
                 timer: flash_offset,
                 flash_interval: 3.0,
             });
@@ -661,10 +788,10 @@ pub fn spawn_data_type_with_augmentations(
     // Spawn augmented indicator if needed
     let augmented_entity = if has_augmentation {
         if is_ui {
-            // UI space indicator - positioned relative to icon
+            // UI space indicator - positioned at top-right corner of icon
             Some(spawn_augmented_indicator_ui(
                 commands,
-                (Val::Px(20.0), Val::Px(-2.0)), // Top-right corner
+                (Val::Px(-2.0), Val::Px(-6.0)), // (right offset, top offset) from icon's top-right
                 Some(icon_entity),
                 asset_server,
             ))
@@ -694,8 +821,10 @@ impl Plugin for SourceVisualsPlugin {
                 spawn_source_backgrounds,
                 update_source_data_icons,
                 animate_scanning_flash,
+                animate_scanning_flash_ui,
                 animate_floating_icons,
                 animate_augmented_pulse,
+                animate_augmented_pulse_ui,
             ));
     }
 }

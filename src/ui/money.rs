@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use crate::player::Player;
+use crate::ui::interactive_event::ScalableText;
+use crate::assets::GameAssets;
 
 #[derive(Component)]
 pub struct MoneyDisplay;
@@ -10,14 +12,14 @@ pub struct MoneyText;
 #[derive(Component)]
 pub struct IncomeText;
 
-/// Spawns the money display UI in the top left corner
-pub fn spawn_money_display_ui(mut commands: Commands) {
+/// Spawns the money display UI below the newsfeed with scaling support
+pub fn spawn_money_display_ui(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(20.0),
+            top: Val::Px(65.0), // Position below newsfeed (45px + small gap)
             left: Val::Px(20.0),
-            padding: UiRect::all(Val::Px(12.0)),
+            padding: UiRect::all(Val::Vw(0.9)),
             flex_direction: FlexDirection::Column,
             ..default()
         },
@@ -26,28 +28,43 @@ pub fn spawn_money_display_ui(mut commands: Commands) {
         MoneyDisplay,
     ))
     .with_children(|parent| {
-        // Money display
-        parent.spawn((
-            Text::new("$0"),
-            TextFont {
-                font_size: 24.0,
-                ..default()
-            },
-            TextColor(Color::srgb(0.9, 0.9, 0.1)), // Gold color for money
-            Node::default(),
-            MoneyText,
-        ));
+        // Money display with icon
+        parent.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Vw(0.5),
+            ..default()
+        })
+        .with_children(|money_row| {
+            // Money icon
+            money_row.spawn((
+                ImageNode::new(game_assets.money_icon.clone()),
+                Node {
+                    width: Val::Vw(2.5),
+                    height: Val::Vw(2.5),
+                    ..default()
+                },
+            ));
+            
+            // Money text
+            money_row.spawn((
+                Text::new("$0"),
+                game_assets.text_font(36.0),
+                ScalableText::from_vw(1.4),
+                TextColor(Color::srgb(0.9, 0.9, 0.1)), // Gold color for money
+                Node::default(),
+                MoneyText,
+            ));
+        });
         
         // Income display
         parent.spawn((
             Text::new("Income: $0/s"),
-            TextFont {
-                font_size: 16.0,
-                ..default()
-            },
+            game_assets.text_font(20.0),
+            ScalableText::from_vw(0.95),
             TextColor(Color::srgb(0.7, 0.9, 0.7)), // Light green for income
             Node {
-                margin: UiRect::top(Val::Px(4.0)),
+                margin: UiRect::top(Val::Vw(0.3)),
                 ..default()
             },
             IncomeText,

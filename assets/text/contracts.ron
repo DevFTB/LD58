@@ -12,7 +12,8 @@
             base_money: 10.0,
             dataset: (
                 contents: {
-                    Biometric: [],
+                    Biometric: [Aggregated],
+                    Economic: []
                 }
             ),
         ),
@@ -27,6 +28,7 @@
             dataset: (
                 contents: {
                     Biometric: [],
+                    Economic: [Aggregated, DeIdentified]
                 }
             ),
         ),
@@ -40,7 +42,7 @@
             base_money: 100.0,
             dataset: (
                 contents: {
-                    Biometric: [],
+                    Behavioural: [],
                 }
             ),
         ),

@@ -3,7 +3,7 @@ use crate::factory::buildings::Tile;
 use crate::factory::{MarkedForRemoval, RemoveBuildingRequest};
 use crate::grid::{Grid, GridAtlasSprite, WorldMap};
 use crate::ui::interaction::MouseButtonEvent;
-use crate::assets::GameAssets;
+use crate::assets::{AtlasId, GameAssets};
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -120,7 +120,9 @@ impl Building for PhysicalLink {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: Some(SpriteResource::Atlas(crate::assets::AtlasId::Buildings1x1, 2)),
+            sprite: SpriteResource::Atlas {
+                atlas_id: AtlasId::Wires,
+                atlas_index: 2}, // Default index, will be updated on connection
             grid_width: 1,
             grid_height: 1,
             cost: 25,
@@ -433,6 +435,35 @@ pub fn assemble_direct_logical_links(
                 }
             }
         }
+    }
+}
+// pub fn on_physical_link_connected(
+//     newly_connected: Query<
+//         (Entity, &GridAtlasSprite),
+//         (
+//             With<PhysicalLink>,
+//             Or<(Added<PhysicalSink>, Added<PhysicalSource>)>,
+//         )>,
+
+// ) {
+//     let 
+// }
+
+/// Updates the sprite of PhysicalLinks when they get connected
+pub fn update_link_sprite_on_connection(
+    mut links: Query<
+        (Entity, &mut GridAtlasSprite, &PhysicalSink, &PhysicalSource),
+        (
+            With<PhysicalLink>,
+            Or<(Added<PhysicalSink>, Added<PhysicalSource>)>,
+        ),
+    >,
+    game_assets: Res<GameAssets>,
+) {
+    for (_entity, mut sprite, sink, source) in links.iter_mut() {
+        // Update to wires atlas with appropriate index based on input/output directions
+        sprite.atlas_id = AtlasId::Wires;
+        sprite.atlas_index = game_assets.wire_index(sink.1, source.1);
     }
 }
 

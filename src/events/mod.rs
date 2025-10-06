@@ -34,7 +34,7 @@ fn load_news_events_from_ron(mut commands: Commands) {
 // A startup system to read interactive events from RON file.
 fn load_interactive_events_from_ron(mut commands: Commands) {
     // Read the file from the assets folder.
-    let ron_str = std::fs::read_to_string("assets/text/interactive_events.ron")
+    let ron_str = std::fs::read_to_string("assets/text/interactive_events (1).ron")
         .expect("Failed to read interactive_events.ron");
 
     // Parse the RON events as a Vec
@@ -75,7 +75,7 @@ impl Plugin for EventsPlugin {
                 forced_event_checker_system,
                 handle_manual_event_triggers,
                 bankruptcy_update_system,
-            ).run_if(in_state(GameState::Running)))
+            ).run_if(in_state(GameState::Running).and(not(in_state(GameState::EventModal)))))
             .add_systems(Update, (
                 handle_player_choice_system,
             ));

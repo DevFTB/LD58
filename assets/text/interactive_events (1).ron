@@ -1,3133 +1,433 @@
-/// Mainline events ///
 (events: [
 
-    // YEAR 1 — DATA AGE
-    (
-        id: "year1_data_age",
-        title: "The Data Age",
-        description: "Your startup uncovers a leaked biometric study. Every faction wants it. Who will you trust?",
-        trigger_mode: Forced,
-        requirements: [
-            SpecificYear(1),
+  // =========================
+  // CORPORATE — MILESTONES
+  // =========================
+  (
+    id: "corp_neutral_milestone",
+    title: "Corporate Milestone: Neutral",
+    description: "Your firm is now considered a reliable vendor by the corporate sector.",
+    trigger_mode: Forced,
+    faction: Some(Corporate),
+    choices: [
+      (
+        text: "Sign cross-promo pilots",
+        consequences: [
+          ModifyMoney(2000),
+          UnlockContract(113),
         ],
-        repeatable: false,
-        popup_urgency: true,
-        choices: [
-            (
-                text: "Sell to Corporate",
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyMoney(10000),
-                ],
-            ),
-            (
-                text: "Release as open data",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyMoney(5000),
-                ],
-            ),
-            (
-                text: "Report to Government",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyMoney(7000),
-                ],
-            ),
-            (
-                text: "Sell it to the dark web",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyMoney(12000),
-                ],
-            ),
+      ),
+      (
+        text: "Leverage civic ties",
+        consequences: [
+          ModifyReputation(faction: Government, amount: 10),
         ],
-    ),
+      ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Untrusted)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "corp_friendly_milestone",
+    title: "Corporate Milestone: Friendly",
+    description: "You’ve become a preferred analytics partner across several firms.",
+    trigger_mode: Forced,
+    faction: Some(Corporate),
+    choices: [
+      (
+        text: "Volume rebates",
+        consequences: [
+          ModifyMoney(5000),
+          UnlockContract(119),
+        ],
+      ),
+      (
+        text: "Academic white-label study",
+        consequences: [
+          ModifyReputation(faction: Academia, amount: 10),
+        ],
+      ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Friendly)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "corp_trusted_milestone",
+    title: "Corporate Milestone: Trusted",
+    description: "Executive councils cite your datasets in quarterly planning.",
+    trigger_mode: Forced,
+    faction: Some(Corporate),
+    choices: [
+      (
+        text: "License global feed",
+        consequences: [
+          ModifyMoney(15000),
+          UnlockContract(125),
+        ],
+      ),
+      (
+        text: "Policy liaison",
+        consequences: [
+          ModifyReputation(faction: Government, amount: 15),
+        ],
+      ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Trusted)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "corp_exclusive_milestone",
+    title: "Corporate Milestone: Exclusive",
+    description: "You hold de facto stewardship over key commercial data rails.",
+    trigger_mode: Forced,
+    faction: Some(Corporate),
+    choices: [
+      (
+        text: "Monopoly dividend",
+        consequences: [
+          ModifyMoney(40000),
+          UnlockContract(131),
+        ],
+      ),
+      (
+        text: "Public goodwill campaign",
+        consequences: [
+          ModifyReputation(faction: Academia, amount: 20),
+          ModifyReputation(faction: Government, amount: 10),
+        ],
+      ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Exclusive)],
+    repeatable: false,
+    priority: 2,
+    popup_urgency: true,
+  ),
 
-    // YEAR 2 — GLOBAL DATA ACT
-    (
-        id: "year2_global_data_act",
-        title: "The Global Data Act",
-        description: "The Global Data Act is being passed through parliament. You can influence the vote or adapt to the outcome.",
-        trigger_mode: Forced,
-        requirements: [
-            SpecificYear(2),
-        ],
-        repeatable: false,
-        popup_urgency: true,
-        choices: [
-            (
-                text: "Bribe the legislators to stop the act.",
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: 30),
-                    ModifyMoney(-20000),
-                ],
-            ),
-            (
-                text: "Support open-access reform.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: 25),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                    ModifyMoney(-5000),
-                ],
-            ),
-            (
-                text: "Openly support the policy and compliance.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 20),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyMoney(-10000),
-                ],
-            ),
-            (
-                text: "Bot fake votes to undermine the vote.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 20),
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyMoney(10000),
-                ],
-            ),
-        ],
-    ),
+  // CORPORATE — PUNISHMENTS
+  (
+    id: "corp_hostile_penalty",
+    title: "Corporate Lockouts",
+    description: "Major firms blacklist your bids pending review.",
+    trigger_mode: Random(weight: 3.0),
+    faction: Some(Corporate),
+    choices: [
+      (
+        text: "Offer concessions",
+        consequences: [ModifyMoney(-3000)],
+      ),
+      (
+        text: "Lean into public sector",
+        consequences: [ModifyReputation(faction: Government, amount: 5)],
+      ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Hostile)],
+    repeatable: true,
+    priority: 0,
+  ),
+  (
+    id: "corp_untrusted_penalty",
+    title: "Procurement Delays",
+    description: "Contracting cycles slow due to compliance questions.",
+    trigger_mode: Random(weight: 2.0),
+    faction: Some(Corporate),
+    choices: [
+      ( text: "Absorb the costs", consequences: [ModifyMoney(-1500)] ),
+      ( text: "Publish a neutral audit", consequences: [ModifyReputation(faction: Academia, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Corporate, reputation: Untrusted)],
+    repeatable: true,
+    priority: 0,
+  ),
 
-    // YEAR 3 — THE GREAT DATA WAR
-    (
-        id: "year3_great_data_war",
-        title: "The Great Data War",
-        description: "Factions weaponise their data. You must choose your allegiance—or exploit the chaos for profit.",
-        trigger_mode: Forced,
-        requirements: [
-            SpecificYear(3),
-        ],
-        repeatable: false,
-        popup_urgency: true,
-        choices: [
-            (
-                text: "Support the Corporate takeover and monopolise data.",
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: 50),
-                    ModifyReputation(faction: Academia, amount: -20),
-                    ModifyMoney(50000),
-                ],
-            ),
-            (
-                text: "Fund an Academic open-data future.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: 80),
-                    ModifyMoney(-50000),
-                ],
-            ),
-            (
-                text: "Provide Government access to seize control.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 50),
-                    ModifyReputation(faction: Corporate, amount: -20),
-                    ModifyReputation(faction: Academia, amount: -20),
-                    ModifyReputation(faction: Criminal, amount: -20),
-                    ModifyMoney(30000),
-                ],
-            ),
-            (
-                text: "Exploit the chaos and sell to all sides.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 50),
-                    ModifyReputation(faction: Corporate, amount: -20),
-                    ModifyReputation(faction: Government, amount: -20),
-                    ModifyReputation(faction: Academia, amount: -20),
-                    ModifyMoney(70000),
-                ],
-            ),
-        ],
-    ),
+  // =========================
+  // ACADEMIA — MILESTONES
+  // =========================
+  (
+    id: "acad_neutral_milestone",
+    title: "Academia Milestone: Neutral",
+    description: "University networks accept your pipelines for research use.",
+    trigger_mode: Forced,
+    faction: Some(Academia),
+    choices: [
+      ( text: "Open-access pilot", consequences: [ModifyMoney(1500), UnlockContract(213)] ),
+      ( text: "Corporate co-funding", consequences: [ModifyReputation(faction: Corporate, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Neutral)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "acad_friendly_milestone",
+    title: "Academia Milestone: Friendly",
+    description: "Consortium seats your org on data governance panels.",
+    trigger_mode: Forced,
+    faction: Some(Academia),
+    choices: [
+      ( text: "Grant matching", consequences: [ModifyMoney(4500), UnlockContract(219)] ),
+      ( text: "Gov research MOU", consequences: [ModifyReputation(faction: Government, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Friendly)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "acad_trusted_milestone",
+    title: "Academia Milestone: Trusted",
+    description: "Your datasets underpin national research programs.",
+    trigger_mode: Forced,
+    faction: Some(Academia),
+    choices: [
+      ( text: "Longitudinal vault", consequences: [ModifyMoney(12000), UnlockContract(225)] ),
+      ( text: "Industry bridge", consequences: [ModifyReputation(faction: Corporate, amount: 15)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Trusted)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "acad_exclusive_milestone",
+    title: "Academia Milestone: Exclusive",
+    description: "You steward the core open-science infrastructure.",
+    trigger_mode: Forced,
+    faction: Some(Academia),
+    choices: [
+      ( text: "Global open grant", consequences: [ModifyMoney(30000), UnlockContract(231)] ),
+      ( text: "Public policy forum", consequences: [ModifyReputation(faction: Government, amount: 20)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Exclusive)],
+    repeatable: false,
+    priority: 2,
+    popup_urgency: true,
+  ),
 
-    // YEAR 4 — TOWARDS THE FUTURE
-    (
-        id: "year4_towards_the_future",
-        title: "Towards the Future",
-        description: "The war is over. Factions lie weakened. You rise as the emerging fifth power. How will you shape the new order?",
-        trigger_mode: Forced,
-        requirements: [
-            SpecificYear(4),
-        ],
-        repeatable: false,
-        popup_urgency: true,
-        choices: [
-            (
-                text: "Form a Data Monopoly (Trusted in Corporate).",
-                requirements: [
-                    FactionReputation(faction: Corporate, min: 151),
-                ],
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: 200),
-                    ModifyReputation(faction: Academia, amount: -40),
-                    ModifyMoney(500000),
-                ],
-            ),
-            (
-                text: "Professor of Data (Trusted in Academia).",
-                requirements: [
-                    FactionReputation(faction: Academia, min: 151),
-                ],
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: 200),
-                    ModifyReputation(faction: Corporate, amount: -40),
-                    ModifyMoney(250000),
-                ],
-            ),
-            (
-                text: "Nationalist (Trusted in Government).",
-                requirements: [
-                    FactionReputation(faction: Government, min: 151),
-                ],
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 200),
-                    ModifyReputation(faction: Criminal, amount: -40),
-                    ModifyMoney(100000),
-                ],
-            ),
-            (
-                text: "Syndicate (Trusted in Criminal).",
-                requirements: [
-                    FactionReputation(faction: Criminal, min: 151),
-                ],
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 200),
-                    ModifyReputation(faction: Government, amount: -40),
-                    ModifyMoney(500000),
-                ],
-            ),
-            (
-                text: "All Things Balanced.",
-                requirements: [],
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: 100),
-                    ModifyReputation(faction: Academia, amount: 100),
-                    ModifyReputation(faction: Government, amount: 100),
-                    ModifyReputation(faction: Criminal, amount: 100),
-                    ModifyMoney(300000),
-                ],
-            ),
-        ],
-    ),
+  // ACADEMIA — PUNISHMENTS
+  (
+    id: "acad_hostile_penalty",
+    title: "IRB Suspensions",
+    description: "Institutional boards pause collaboration citing risk.",
+    trigger_mode: Random(weight: 3.0),
+    faction: Some(Academia),
+    choices: [
+      ( text: "Rework protocols", consequences: [ModifyMoney(-2500)] ),
+      ( text: "Shift to corporate pilots", consequences: [ModifyReputation(faction: Corporate, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Hostile)],
+    repeatable: true,
+    priority: 0,
+  ),
+  (
+    id: "acad_untrusted_penalty",
+    title: "Data Ethics Review",
+    description: "Anonymisation standards questioned by peers.",
+    trigger_mode: Random(weight: 2.0),
+    faction: Some(Academia),
+    choices: [
+      ( text: "Commission review", consequences: [ModifyMoney(-1200)] ),
+      ( text: "Government liaison", consequences: [ModifyReputation(faction: Government, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Academia, reputation: Untrusted)],
+    repeatable: true,
+    priority: 0,
+  ),
+
+  // =========================
+  // GOVERNMENT — MILESTONES
+  // =========================
+  (
+    id: "gov_neutral_milestone",
+    title: "Government Milestone: Neutral",
+    description: "You’re approved for national data procurement frameworks.",
+    trigger_mode: Forced,
+    faction: Some(Government),
+    choices: [
+      ( text: "Framework onboarding", consequences: [ModifyMoney(3000), UnlockContract(313)] ),
+      ( text: "Corporate compliance brief", consequences: [ModifyReputation(faction: Corporate, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Neutral)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "gov_friendly_milestone",
+    title: "Government Milestone: Friendly",
+    description: "Interagency bodies standardise around your telemetry formats.",
+    trigger_mode: Forced,
+    faction: Some(Government),
+    choices: [
+      ( text: "Interagency upgrade", consequences: [ModifyMoney(8000), UnlockContract(319)] ),
+      ( text: "Academic oversight panel", consequences: [ModifyReputation(faction: Academia, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Friendly)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "gov_trusted_milestone",
+    title: "Government Milestone: Trusted",
+    description: "You operate core national observability services.",
+    trigger_mode: Forced,
+    faction: Some(Government),
+    choices: [
+      ( text: "Operations mandate", consequences: [ModifyMoney(18000), UnlockContract(325)] ),
+      ( text: "Industry harmonisation", consequences: [ModifyReputation(faction: Corporate, amount: 15)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Trusted)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "gov_exclusive_milestone",
+    title: "Government Milestone: Exclusive",
+    description: "Your systems underpin planetary public services.",
+    trigger_mode: Forced,
+    faction: Some(Government),
+    choices: [
+      ( text: "Continuity allocation", consequences: [ModifyMoney(40000), UnlockContract(331)] ),
+      ( text: "Academic transparency pact", consequences: [ModifyReputation(faction: Academia, amount: 20)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Exclusive)],
+    repeatable: false,
+    priority: 2,
+    popup_urgency: true,
+  ),
+
+  // GOVERNMENT — PUNISHMENTS
+  (
+    id: "gov_hostile_penalty",
+    title: "Compliance Audits",
+    description: "Agencies flag your operations for repeated review.",
+    trigger_mode: Random(weight: 3.0),
+    faction: Some(Government),
+    choices: [
+      ( text: "Pay compliance costs", consequences: [ModifyMoney(-3500)] ),
+      ( text: "Corporate mediation", consequences: [ModifyReputation(faction: Corporate, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Hostile)],
+    repeatable: true,
+    priority: 0,
+  ),
+  (
+    id: "gov_untrusted_penalty",
+    title: "Procurement Freeze",
+    description: "Your eligibility is limited pending documentation.",
+    trigger_mode: Random(weight: 2.0),
+    faction: Some(Government),
+    choices: [
+      ( text: "File expedited brief", consequences: [ModifyMoney(-1500)] ),
+      ( text: "Academic validator", consequences: [ModifyReputation(faction: Academia, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Government, reputation: Untrusted)],
+    repeatable: true,
+    priority: 0,
+  ),
+
+  // =========================
+  // CRIMINAL — MILESTONES
+  // =========================
+  (
+    id: "crim_neutral_milestone",
+    title: "Criminal Milestone: Neutral",
+    description: "Underground brokers acknowledge your data utility.",
+    trigger_mode: Forced,
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Silent retainer", consequences: [ModifyMoney(4000), UnlockContract(413)] ),
+      ( text: "Smokescreen donation", consequences: [ModifyReputation(faction: Academia, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Neutral)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "crim_friendly_milestone",
+    title: "Criminal Milestone: Friendly",
+    description: "Multiple cells integrate your feeds into core operations.",
+    trigger_mode: Forced,
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Broker premium", consequences: [ModifyMoney(12000), UnlockContract(419)] ),
+      ( text: "Government detente",
+        consequences: [ModifyReputation(faction: Government, amount: 10)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Friendly)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "crim_trusted_milestone",
+    title: "Criminal Milestone: Trusted",
+    description: "You provide indispensable network intelligence to the underworld.",
+    trigger_mode: Forced,
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Quiet dividend", consequences: [ModifyMoney(25000), UnlockContract(425)] ),
+      ( text: "Corporate shell bridge", consequences: [ModifyReputation(faction: Corporate, amount: 15)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Trusted)],
+    repeatable: false,
+    priority: 1,
+    popup_urgency: true,
+  ),
+  (
+    id: "crim_exclusive_milestone",
+    title: "Criminal Milestone: Exclusive",
+    description: "Your channels route the majority of clandestine data trade.",
+    trigger_mode: Forced,
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Network tithe", consequences: [ModifyMoney(50000), UnlockContract(431)] ),
+      ( text: "Civic cover", consequences: [ModifyReputation(faction: Government, amount: 20)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Exclusive)],
+    repeatable: false,
+    priority: 2,
+    popup_urgency: true,
+  ),
+
+  // CRIMINAL — PUNISHMENTS
+  (
+    id: "crim_hostile_penalty",
+    title: "Dead-Drop Drought",
+    description: "Buyers avoid your routes due to credibility concerns.",
+    trigger_mode: Random(weight: 3.0),
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Pay hush fees", consequences: [ModifyMoney(-4000)] ),
+      ( text: "Civic cooperation",
+        consequences: [ModifyReputation(faction: Government, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Hostile)],
+    repeatable: true,
+    priority: 0,
+  ),
+  (
+    id: "crim_untrusted_penalty",
+    title: "Broker Withholding",
+    description: "Intermediaries slow payouts pending verification.",
+    trigger_mode: Random(weight: 2.0),
+    faction: Some(Criminal),
+    choices: [
+      ( text: "Grease the wheels", consequences: [ModifyMoney(-2000)] ),
+      ( text: "Academic laundering",
+        consequences: [ModifyReputation(faction: Academia, amount: 5)] ),
+    ],
+    requirements: [ExactReputation(faction: Criminal, reputation: Untrusted)],
+    repeatable: true,
+    priority: 0,
+  ),
+
 ])
-
-/// World random events
-
-(events: [
-
-    // ====================================================
-    // YEAR 1 RANDOM EVENTS (Start-Up Phase)
-    // ====================================================
-
-    // GOOD
-    (
-        id: "y1_random_angel_investor",
-        title: "Angel Investor Visit",
-        description: "A local entrepreneur is impressed by your early work and offers seed funding.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept the investment.",
-                consequences: [
-                    ModifyMoney(4000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-            (
-                text: "Decline politely to stay independent.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_student_research",
-        title: "Student Research Collaboration",
-        description: "A university research group uses your datasets in a study and cites you in their publication.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Embrace the positive publicity.",
-                consequences: [
-                    ModifyMoney(1500),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_tax_break",
-        title: "Small Business Tax Break",
-        description: "New legislation grants small tech firms a temporary tax reduction.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Claim the deduction.",
-                consequences: [
-                    ModifyMoney(2500),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_successful_pilot",
-        title: "Successful Pilot Program",
-        description: "Your prototype data pipeline impresses an early client, who leaves a generous testimonial.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Use their praise for promotion.",
-                consequences: [
-                    ModifyMoney(3000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // BAD
-    (
-        id: "y1_random_network_glitch",
-        title: "Network Glitch",
-        description: "A minor networking issue delays a client's delivery deadline.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Apologise and compensate the client.",
-                consequences: [
-                    ModifyMoney(-1500),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_disk_failure",
-        title: "Disk Failure",
-        description: "One of your storage drives fails, corrupting a small batch of client data.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pay for data recovery services.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-            (
-                text: "Ignore it and hope no one notices.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_client_nonpayment",
-        title: "Client Non-Payment",
-        description: "A small client disappears without paying their invoice.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pursue legal action.",
-                consequences: [
-                    ModifyMoney(-1000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Write it off as bad debt.",
-                consequences: [
-                    ModifyMoney(-2000),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y1_random_employee_error",
-        title: "Employee Error",
-        description: "A new recruit accidentally deletes important configuration files.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(1)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Invest in staff training.",
-                consequences: [
-                    ModifyMoney(-1000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-            (
-                text: "Dock their pay.",
-                consequences: [
-                    ModifyMoney(500),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // ====================================================
-    // YEAR 2 RANDOM EVENTS (Growth Phase)
-    // ====================================================
-
-    // GOOD
-    (
-        id: "y2_random_data_licensing",
-        title: "Data Licensing Deal",
-        description: "A regional retailer licenses a dataset from you for market research.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Finalise the agreement.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_innovation_award",
-        title: "Innovation Award",
-        description: "Your company wins a local innovation award for technological advancement.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Celebrate publicly.",
-                consequences: [
-                    ModifyMoney(3000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_government_grant",
-        title: "Government Research Grant",
-        description: "Your data infrastructure qualifies for a new research and innovation subsidy.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Apply for the grant.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_successful_audit",
-        title: "Successful Audit",
-        description: "A surprise compliance audit finds your systems in perfect order.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Enjoy the spotless record.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyMoney(2000),
-                ],
-            ),
-        ],
-    ),
-
-    // BAD
-    (
-        id: "y2_random_minor_breach",
-        title: "Minor Security Breach",
-        description: "An unauthorised user gains temporary access to one of your data feeds.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Report the incident publicly.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 5),
-                    ModifyMoney(-2000),
-                ],
-            ),
-            (
-                text: "Cover it up quietly.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 5),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_power_spike",
-        title: "Power Spike",
-        description: "A surge damages a section of your server array.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Replace the damaged hardware.",
-                consequences: [
-                    ModifyMoney(-3000),
-                ],
-            ),
-            (
-                text: "Patch and continue running.",
-                consequences: [
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_lawsuit",
-        title: "Data Misuse Lawsuit",
-        description: "A client claims you mishandled anonymised data and threatens legal action.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Settle out of court.",
-                consequences: [
-                    ModifyMoney(-6000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Fight the case.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y2_random_staff_theft",
-        title: "Internal Theft",
-        description: "A trusted employee is caught selling internal access credentials.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(2)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Fire them and alert authorities.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyMoney(-1000),
-                ],
-            ),
-            (
-                text: "Keep it quiet to protect your reputation.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: 5),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-])
-(events: [
-
-    // ====================================================
-    // YEAR 3 RANDOM EVENTS (The Great Data War)
-    // ====================================================
-
-    // GOOD
-    (
-        id: "y3_random_wartime_contract",
-        title: "Wartime Data Contract",
-        description: "As tensions rise, multiple clients scramble for reliable analytics. A lucrative emergency contract lands on your desk.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept the crisis-time contract.",
-                consequences: [
-                    ModifyMoney(12000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_hacker_defection",
-        title: "Hacker Defection",
-        description: "A skilled rogue hacker offers to join your security team in exchange for amnesty.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Hire them under strict supervision.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Turn them in for a bounty.",
-                consequences: [
-                    ModifyMoney(4000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_analytics_breakthrough",
-        title: "Analytics Breakthrough",
-        description: "Your R&D team pioneers a new data correlation method that triples output efficiency.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "File the patent immediately.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-            (
-                text: "Sell it quietly to private buyers.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_refugee_data_cache",
-        title: "Refugee Data Cache",
-        description: "A displaced research team entrusts you with terabytes of unclaimed environmental data.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Preserve and analyse the data ethically.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Monetise it through commercial channels.",
-                consequences: [
-                    ModifyMoney(9000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // BAD
-    (
-        id: "y3_random_cyber_attack",
-        title: "Cyber Attack",
-        description: "A coordinated digital assault overloads your firewall and compromises several systems.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pay specialists to restore functionality.",
-                consequences: [
-                    ModifyMoney(-7000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Handle it internally.",
-                consequences: [
-                    ModifyMoney(-4000),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_supply_shortage",
-        title: "Hardware Supply Shortage",
-        description: "A global chip shortage disrupts deliveries of essential processors.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Buy at inflated prices.",
-                consequences: [
-                    ModifyMoney(-8000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-            (
-                text: "Delay new builds.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_leak_investigation",
-        title: "Leak Investigation",
-        description: "Authorities suspect one of your facilities of leaking classified biometric data.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Cooperate with the inquiry.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyMoney(-5000),
-                ],
-            ),
-            (
-                text: "Deny involvement.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -15),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y3_random_black_market_fraud",
-        title: "Black Market Fraud",
-        description: "A broker vanishes after selling you counterfeit data packages.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(3)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Report the loss publicly.",
-                consequences: [
-                    ModifyMoney(-6000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-            (
-                text: "Seek revenge through your own channels.",
-                consequences: [
-                    ModifyMoney(-4000),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // ====================================================
-    // YEAR 4 RANDOM EVENTS (Aftermath and Consolidation)
-    // ====================================================
-
-    // GOOD
-    (
-        id: "y4_random_data_recovery_success",
-        title: "Data Recovery Success",
-        description: "Recovered archives from the Data War reveal valuable analytics still intact.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Sell the recovered data to investors.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-            (
-                text: "Donate it for scientific research.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Academia, amount: 15),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_global_exhibit",
-        title: "Global Tech Exhibition",
-        description: "Your post-war reconstruction technology is showcased internationally.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Attend and network with industry leaders.",
-                consequences: [
-                    ModifyMoney(8000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_cleanup_contract",
-        title: "Government Cleanup Contract",
-        description: "You’re awarded a national contract to rebuild public data infrastructure.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Fulfil the government request.",
-                consequences: [
-                    ModifyMoney(12000),
-                    ModifyReputation(faction: Government, amount: 15),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_public_donation",
-        title: "Public Donation Drive",
-        description: "Citizens crowdfund a project to restore community access to information—your systems make it possible.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Support the campaign publicly.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // BAD
-    (
-        id: "y4_random_postwar_blackout",
-        title: "Post-War Blackout",
-        description: "A regional blackout damages fragile recovery infrastructure.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Invest in grid repairs.",
-                consequences: [
-                    ModifyMoney(-10000),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-            (
-                text: "Ignore it—focus on profits.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_corruption_probe",
-        title: "Corruption Probe",
-        description: "Officials investigate several post-war contracts for alleged bribery.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Cooperate and provide evidence.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-            (
-                text: "Destroy the incriminating data.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Criminal, amount: 15),
-                    ModifyReputation(faction: Government, amount: -15),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_system_decay",
-        title: "System Decay",
-        description: "Neglected post-war infrastructure begins to collapse, demanding costly repairs.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Overhaul the systems entirely.",
-                consequences: [
-                    ModifyMoney(-8000),
-                ],
-            ),
-            (
-                text: "Patch minimal components.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "y4_random_public_scandal",
-        title: "Public Scandal",
-        description: "An investigative journalist reveals your firm’s questionable wartime partnerships.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [SpecificYear(4)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Issue a formal apology.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                ],
-            ),
-            (
-                text: "Threaten legal action against the press.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-])
-
-/// Faction reputation events
-
-(events: [
-
-    // --- HOSTILE ---
-    (
-        id: "corp_hostile_event",
-        title: "Corporate Blacklisting",
-        description: "Major corporations blacklist your firm and lobby against your operations.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Corporate, max: 30)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Absorb the losses and seek help from the underground.",
-                consequences: [
-                    ModifyMoney(-12000),
-                    ModifyReputation(faction: Criminal, amount: 15),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED ---
-    (
-        id: "corp_untrusted_event",
-        title: "Investor Pullout",
-        description: "Investors grow uneasy and withdraw partial funding from your ventures.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Corporate, min: 31),
-            FactionReputation(faction: Corporate, max: 60),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Tighten budgets and move on.",
-                consequences: [
-                    ModifyMoney(-5000),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY ---
-    (
-        id: "corp_friendly_event",
-        title: "Joint Marketing Initiative",
-        description: "Corporations offer to co-brand your analytics services with theirs.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Corporate, min: 91),
-            FactionReputation(faction: Corporate, max: 150),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Approve the campaign.",
-                consequences: [
-                    ModifyMoney(7000),
-                    ModifyReputation(faction: Academia, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED ---
-    (
-        id: "corp_trusted_event",
-        title: "Insider Data Feed",
-        description: "You’re granted access to proprietary consumer databases.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Corporate, min: 151),
-            FactionReputation(faction: Corporate, max: 1000),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Exploit the feed discreetly.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE ---
-    (
-        id: "corp_exclusive_event",
-        title: "Corporate Syndication",
-        description: "You are absorbed into the global megacorp network, wielding unmatched market power.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Corporate, min: 1001)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Rule the market.",
-                consequences: [
-                    ModifyMoney(40000),
-                    ModifyReputation(faction: Government, amount: -20),
-                ],
-            ),
-        ],
-    ),
-])
-
-(events: [
-
-    // --- HOSTILE ---
-    (
-        id: "acad_hostile_event",
-        title: "Academic Censure",
-        description: "Universities denounce your unethical data practices, calling for sanctions.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Academia, max: 30)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Ignore the condemnation.",
-                consequences: [
-                    ModifyMoney(-8000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED ---
-    (
-        id: "acad_untrusted_event",
-        title: "Research Access Revoked",
-        description: "Your data library access with multiple institutions is suspended pending review.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Academia, min: 31),
-            FactionReputation(faction: Academia, max: 60),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Absorb the loss quietly.",
-                consequences: [
-                    ModifyMoney(-3000),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY ---
-    (
-        id: "acad_friendly_event",
-        title: "Collaborative Symposium",
-        description: "You’re invited to present findings at a major research symposium.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Academia, min: 91),
-            FactionReputation(faction: Academia, max: 150),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Deliver your keynote speech.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED ---
-    (
-        id: "acad_trusted_event",
-        title: "Open Data Fellowship",
-        description: "Global scholars pool funding to expand your ethical data initiative.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Academia, min: 151),
-            FactionReputation(faction: Academia, max: 1000),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept and expand research.",
-                consequences: [
-                    ModifyMoney(12000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE ---
-    (
-        id: "acad_exclusive_event",
-        title: "Council of Scholars",
-        description: "You preside over the world’s largest open-data consortium.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Academia, min: 1001)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Champion transparency.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Government, amount: 15),
-                    ModifyReputation(faction: Corporate, amount: -15),
-                ],
-            ),
-        ],
-    ),
-])
-
-
-(events: [
-
-    // --- HOSTILE ---
-    (
-        id: "gov_hostile_event",
-        title: "Regulatory Crackdown",
-        description: "Authorities raid your data centers and seize assets.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Government, max: 30)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Submit to the seizure.",
-                consequences: [
-                    ModifyMoney(-15000),
-                    ModifyReputation(faction: Criminal, amount: 15),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED ---
-    (
-        id: "gov_untrusted_event",
-        title: "Compliance Burden",
-        description: "Excessive paperwork and audits slow your progress.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Government, min: 31),
-            FactionReputation(faction: Government, max: 60),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Endure the bureaucracy.",
-                consequences: [
-                    ModifyMoney(-4000),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY ---
-    (
-        id: "gov_friendly_event",
-        title: "Public Contract Renewal",
-        description: "A government department renews your data analytics contract.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Government, min: 91),
-            FactionReputation(faction: Government, max: 150),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept the extension.",
-                consequences: [
-                    ModifyMoney(8000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED ---
-    (
-        id: "gov_trusted_event",
-        title: "National Briefing Access",
-        description: "You receive privileged insights from the national data security board.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Government, min: 151),
-            FactionReputation(faction: Government, max: 1000),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Study the data.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE ---
-    (
-        id: "gov_exclusive_event",
-        title: "Directorate of Information",
-        description: "You command the global flow of sanctioned data.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Government, min: 1001)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Control the narrative.",
-                consequences: [
-                    ModifyMoney(30000),
-                    ModifyReputation(faction: Criminal, amount: -20),
-                ],
-            ),
-        ],
-    ),
-])
-
-(events: [
-
-    // --- HOSTILE ---
-    (
-        id: "crim_hostile_event",
-        title: "Syndicate Retaliation",
-        description: "You’re targeted for leaking dark-web operations. A coordinated cyberattack devastates your systems.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Criminal, max: 30)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Count your losses.",
-                consequences: [
-                    ModifyMoney(-15000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED ---
-    (
-        id: "crim_untrusted_event",
-        title: "Loss of Street Cred",
-        description: "Your reputation on the dark web collapses; buyers turn elsewhere.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Criminal, min: 31),
-            FactionReputation(faction: Criminal, max: 60),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Cut losses and move to legal markets.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY ---
-    (
-        id: "crim_friendly_event",
-        title: "Dark-Web Exchange",
-        description: "A trusted broker opens a steady channel of anonymous clients.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Criminal, min: 91),
-            FactionReputation(faction: Criminal, max: 150),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept their terms.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED ---
-    (
-        id: "crim_trusted_event",
-        title: "Syndicate Partnership",
-        description: "You join the inner circle coordinating high-value cyber operations.",
-        trigger_mode: Forced,
-        requirements: [
-            FactionReputation(faction: Criminal, min: 151),
-            FactionReputation(faction: Criminal, max: 1000),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Share resources.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE ---
-    (
-        id: "crim_exclusive_event",
-        title: "Shadow Monarch",
-        description: "You monopolise the dark web. No illicit data moves without your approval.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Criminal, min: 1001)],
-        repeatable: false,
-        choices: [
-            (
-                text: "Rule unseen.",
-                consequences: [
-                    ModifyMoney(40000),
-                    ModifyReputation(faction: Academia, amount: -15),
-                ],
-            ),
-        ],
-    ),
-])
-
-/// Random faction events
-// corporate random reputation event
-(events: [
-    // --- HOSTILE (0–30) ---
-    (
-        id: "corp_hostile_random_1",
-        title: "Corporate Smear Campaign",
-        description: "A business magazine publishes an exposé accusing your company of predatory data practices.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Corporate, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Deny everything publicly.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "corp_hostile_random_2",
-        title: "CEO Condemnation",
-        description: "A major CEO calls for others to boycott your services.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Corporate, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Double down on your independence.",
-                consequences: [
-                    ModifyMoney(1500),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED (31–60) ---
-    (
-        id: "corp_untrusted_random_1",
-        title: "Late Payments",
-        description: "Corporate partners start paying invoices weeks late, citing 'cash flow problems.'",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 31),
-            FactionReputation(faction: Corporate, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Apply penalties to their contracts.",
-                consequences: [
-                    ModifyMoney(1000),
-                    ModifyReputation(faction: Corporate, amount: -5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "corp_untrusted_random_2",
-        title: "Market Analyst Downgrade",
-        description: "Analysts label your company as a 'moderate investment risk.'",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 31),
-            FactionReputation(faction: Corporate, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Launch a PR campaign to fix it.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY (91–150) ---
-    (
-        id: "corp_friendly_random_1",
-        title: "Conference Invite",
-        description: "You’re invited to a corporate innovation summit to speak about data-driven success.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 91),
-            FactionReputation(faction: Corporate, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Attend the event.",
-                consequences: [
-                    ModifyMoney(3000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "corp_friendly_random_2",
-        title: "Cross-Promotion Deal",
-        description: "A corporate partner suggests running mutual data-sharing promotions.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 91),
-            FactionReputation(faction: Corporate, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept and share profits.",
-                consequences: [
-                    ModifyMoney(4000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED (151–1000) ---
-    (
-        id: "corp_trusted_random_1",
-        title: "Boardroom Leaks",
-        description: "You’re invited to an exclusive corporate board meeting where sensitive intel is shared.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 151),
-            FactionReputation(faction: Corporate, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Use the intel for profit.",
-                consequences: [
-                    ModifyMoney(7000),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "corp_trusted_random_2",
-        title: "Exclusive Licensing Deal",
-        description: "You receive first rights to a major new analytics tool prototype.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Corporate, min: 151),
-            FactionReputation(faction: Corporate, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Purchase the license.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE (1001+) ---
-    (
-        id: "corp_exclusive_random_1",
-        title: "Market Dominance",
-        description: "Your analytics become industry standard. Competitors can’t keep up.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Corporate, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Raise your service rates.",
-                consequences: [
-                    ModifyMoney(10000),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "corp_exclusive_random_2",
-        title: "Monopoly Lawsuit",
-        description: "Regulators question whether your control of data violates anti-trust laws.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Corporate, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pay off the inspectors.",
-                consequences: [
-                    ModifyMoney(-7000),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-])
-
-//Academic random reputation events
-
-(events: [
-
-    // --- HOSTILE (0–30) ---
-    (
-        id: "acad_hostile_random_1",
-        title: "Public Ethics Protest",
-        description: "A student coalition protests your unethical data collection outside several universities.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Academia, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Ignore the demonstrations.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Academia, amount: -5),
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-            (
-                text: "Issue a conciliatory statement.",
-                consequences: [
-                    ModifyMoney(-1000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "acad_hostile_random_2",
-        title: "Researcher Boycott",
-        description: "A consortium of data scientists urges peers not to work with your company.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Academia, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Call them out publicly.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Academia, amount: -5),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED (31–60) ---
-    (
-        id: "acad_untrusted_random_1",
-        title: "Peer Review Delay",
-        description: "A major academic partner delays a study you were co-authoring, citing 'data verification' issues.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 31),
-            FactionReputation(faction: Academia, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Provide missing documentation.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "acad_untrusted_random_2",
-        title: "Conference Rejection",
-        description: "Your submission to a leading symposium is declined due to perceived data bias.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 31),
-            FactionReputation(faction: Academia, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Revise the research for next year.",
-                consequences: [
-                    ModifyMoney(-1000),
-                ],
-            ),
-            (
-                text: "Complain publicly about academic politics.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: -10),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY (91–150) ---
-    (
-        id: "acad_friendly_random_1",
-        title: "Joint Study Success",
-        description: "Your co-authored study is cited in a major academic journal.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 91),
-            FactionReputation(faction: Academia, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Celebrate the achievement.",
-                consequences: [
-                    ModifyMoney(4000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "acad_friendly_random_2",
-        title: "Internship Applications Surge",
-        description: "Your academic partnerships draw crowds of graduate interns seeking placements.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 91),
-            FactionReputation(faction: Academia, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept and train them.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-            (
-                text: "Charge them for certification courses.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Academia, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED (151–1000) ---
-    (
-        id: "acad_trusted_random_1",
-        title: "Ethics Board Inquiry",
-        description: "An ethics committee consults you on new guidelines for AI and data consent.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 151),
-            FactionReputation(faction: Academia, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Provide expert advice.",
-                consequences: [
-                    ModifyMoney(8000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-            (
-                text: "Refuse to participate.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "acad_trusted_random_2",
-        title: "Interdisciplinary Grant",
-        description: "A coalition of universities requests your help managing a large research dataset.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Academia, min: 151),
-            FactionReputation(faction: Academia, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept and process their data.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE (1001+) ---
-    (
-        id: "acad_exclusive_random_1",
-        title: "Global Lecture Circuit",
-        description: "You’re invited to deliver keynote addresses across international conferences.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Academia, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Tour the world’s campuses.",
-                consequences: [
-                    ModifyMoney(12000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "acad_exclusive_random_2",
-        title: "Data Ethics Prize",
-        description: "You win a prestigious international award for advancing responsible data research.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Academia, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept the recognition.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-])
-
-// Government random reputation event
-(events: [
-
-    // --- HOSTILE (0–30) ---
-    (
-        id: "gov_hostile_random_1",
-        title: "Regulatory Raid",
-        description: "Armed inspectors raid your facility after allegations of unlawful data collection.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Government, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Comply and surrender records.",
-                consequences: [
-                    ModifyMoney(-8000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Wipe the drives before they arrive.",
-                consequences: [
-                    ModifyMoney(-4000),
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "gov_hostile_random_2",
-        title: "License Suspension",
-        description: "The Data Authority suspends your operational license pending investigation.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Government, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pay legal fees to appeal.",
-                consequences: [
-                    ModifyMoney(-10000),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-            (
-                text: "Operate off-grid.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED (31–60) ---
-    (
-        id: "gov_untrusted_random_1",
-        title: "Increased Compliance Costs",
-        description: "New policy changes require expensive data auditing procedures.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 31),
-            FactionReputation(faction: Government, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Update systems to comply.",
-                consequences: [
-                    ModifyMoney(-4000),
-                ],
-            ),
-            (
-                text: "Delay implementation.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "gov_untrusted_random_2",
-        title: "Audit Notification",
-        description: "A data compliance audit is scheduled for your facility next quarter.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 31),
-            FactionReputation(faction: Government, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Hire consultants to prepare.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Ignore it until later.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY (91–150) ---
-    (
-        id: "gov_friendly_random_1",
-        title: "Policy Collaboration",
-        description: "You’re invited to advise a ministry on national data policy.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 91),
-            FactionReputation(faction: Government, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Provide detailed consultation.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "gov_friendly_random_2",
-        title: "Infrastructure Contract",
-        description: "A regional authority awards you a contract to rebuild its data infrastructure.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 91),
-            FactionReputation(faction: Government, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept the job.",
-                consequences: [
-                    ModifyMoney(8000),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED (151–1000) ---
-    (
-        id: "gov_trusted_random_1",
-        title: "Security Clearance Upgrade",
-        description: "You’re granted higher security clearance, unlocking restricted national datasets.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 151),
-            FactionReputation(faction: Government, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Use the data responsibly.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Sell insights to private clients.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Government, amount: -10),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "gov_trusted_random_2",
-        title: "Ministerial Favor",
-        description: "A government minister personally endorses your company in public statements.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Government, min: 151),
-            FactionReputation(faction: Government, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Thank them publicly.",
-                consequences: [
-                    ModifyMoney(7000),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-            (
-                text: "Offer a quiet donation in return.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Government, amount: 15),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE (1001+) ---
-    (
-        id: "gov_exclusive_random_1",
-        title: "Classified Operation",
-        description: "You are asked to assist in a top-secret national surveillance program.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Government, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Authorize your systems for national use.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-            (
-                text: "Refuse to participate.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "gov_exclusive_random_2",
-        title: "Data Immunity Clause",
-        description: "Your firm is granted legal immunity for all future data operations.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Government, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Celebrate your untouchable status.",
-                consequences: [
-                    ModifyMoney(25000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-])
-
-//Criminal random reputation event
-
-(events: [
-
-    // --- HOSTILE (0–30) ---
-    (
-        id: "crim_hostile_random_1",
-        title: "Ransomware Retaliation",
-        description: "A vengeful hacking crew targets your servers with ransomware for turning them in.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Criminal, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Pay the ransom.",
-                consequences: [
-                    ModifyMoney(-10000),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-            (
-                text: "Fight back with counter-hacks.",
-                consequences: [
-                    ModifyMoney(-4000),
-                    ModifyReputation(faction: Criminal, amount: -10),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "crim_hostile_random_2",
-        title: "Assassination Threat",
-        description: "A syndicate threatens your staff after your cooperation with authorities.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Criminal, max: 30)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Hire private security.",
-                consequences: [
-                    ModifyMoney(-8000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Go into hiding temporarily.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Criminal, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- UNTRUSTED (31–60) ---
-    (
-        id: "crim_untrusted_random_1",
-        title: "Compromised Contact",
-        description: "One of your dark-web brokers leaks client data to the police.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 31),
-            FactionReputation(faction: Criminal, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Cut ties immediately.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: -5),
-                ],
-            ),
-            (
-                text: "Bribe the authorities to erase evidence.",
-                consequences: [
-                    ModifyMoney(-3000),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "crim_untrusted_random_2",
-        title: "Failed Smuggling Run",
-        description: "A smuggling network using your data routes gets intercepted at the border.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 31),
-            FactionReputation(faction: Criminal, max: 60),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Disavow all involvement.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: -5),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-            (
-                text: "Send hush money to keep it quiet.",
-                consequences: [
-                    ModifyMoney(-5000),
-                ],
-            ),
-        ],
-    ),
-
-    // --- FRIENDLY (91–150) ---
-    (
-        id: "crim_friendly_random_1",
-        title: "Anonymous Donation",
-        description: "An anonymous syndicate sends crypto as a 'thank you' for your cooperation.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 91),
-            FactionReputation(faction: Criminal, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Accept the money quietly.",
-                consequences: [
-                    ModifyMoney(6000),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-            (
-                text: "Donate it to charity.",
-                consequences: [
-                    ModifyMoney(-2000),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "crim_friendly_random_2",
-        title: "Black-Market Tech Offer",
-        description: "A contact offers to sell you unregistered server chips at a steep discount.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 91),
-            FactionReputation(faction: Criminal, max: 150),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Buy the hardware.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                ],
-            ),
-            (
-                text: "Refuse to stay clean.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 5),
-                    ModifyReputation(faction: Criminal, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- TRUSTED (151–1000) ---
-    (
-        id: "crim_trusted_random_1",
-        title: "Dark-Web Auction",
-        description: "A criminal marketplace hosts an auction of stolen government data. You're invited.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 151),
-            FactionReputation(faction: Criminal, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Buy the intelligence.",
-                consequences: [
-                    ModifyMoney(-8000),
-                    ModifyReputation(faction: Criminal, amount: 5),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-            (
-                text: "Tip off the authorities for a reward.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: -15),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "crim_trusted_random_2",
-        title: "Smuggling Windfall",
-        description: "A smuggling operation using your analytics reports massive profits.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [
-            FactionReputation(faction: Criminal, min: 151),
-            FactionReputation(faction: Criminal, max: 1000),
-        ],
-        repeatable: true,
-        choices: [
-            (
-                text: "Take your cut.",
-                consequences: [
-                    ModifyMoney(12000),
-                ],
-            ),
-            (
-                text: "Stay uninvolved.",
-                consequences: [
-                    ModifyReputation(faction: Criminal, amount: -5),
-                ],
-            ),
-        ],
-    ),
-
-    // --- EXCLUSIVE (1001+) ---
-    (
-        id: "crim_exclusive_random_1",
-        title: "Underworld Council",
-        description: "You’re invited to chair a meeting of the world’s most powerful crime lords.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Criminal, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Broker a global data-trafficking deal.",
-                consequences: [
-                    ModifyMoney(25000),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-        ],
-    ),
-    (
-        id: "crim_exclusive_random_2",
-        title: "Network Purge",
-        description: "You order a purge of rival syndicates to consolidate your rule.",
-        trigger_mode: Random(weight: 4.0),
-        requirements: [FactionReputation(faction: Criminal, min: 1001)],
-        repeatable: true,
-        choices: [
-            (
-                text: "Clean house violently.",
-                consequences: [
-                    ModifyMoney(-10000),
-                    ModifyReputation(faction: Criminal, amount: 15),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-])
-
-/// Follow up events
-
-(events: [
-
-    // ======================================================
-    // FOLLOW-UP: Hacker Encounter Chain (from data_breach_alert)
-    // ======================================================
-    (
-        id: "followup_hacker_alliance",
-        title: "Unexpected Alliance",
-        description: "The hacker you traced months ago contacts you again—offering to join forces against a mutual rival.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            EventCompleted("hacker_encounter"),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept their offer.",
-                consequences: [
-                    ModifyMoney(10000),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    UnlockEvent("darknet_contract_chain"),
-                ],
-            ),
-            (
-                text: "Refuse politely.",
-                consequences: [
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Corporate Bribery Outcome (from global_data_act)
-    // ======================================================
-    (
-        id: "followup_corporate_investment",
-        title: "Corporate Investment Round",
-        description: "The executives you bribed earlier return the favor, investing heavily in your company.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            EventCompleted("global_data_act"),
-            FactionReputation(faction: Corporate, min: 91),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept their investment.",
-                consequences: [
-                    ModifyMoney(25000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Government Support (from data_war_victory_gov_path)
-    // ======================================================
-    (
-        id: "followup_national_contract",
-        title: "National Infrastructure Renewal",
-        description: "The government commissions you to rebuild the shattered national data network post-war.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [
-            EventCompleted("data_war_victory_gov_path"),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept the massive government contract.",
-                consequences: [
-                    ModifyMoney(30000),
-                    ModifyReputation(faction: Government, amount: 15),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Academic Partnership Chain (from acad_friendly_event)
-    // ======================================================
-    (
-        id: "followup_research_award",
-        title: "Data Science Excellence Award",
-        description: "Your open data collaboration wins international recognition and a large grant.",
-        trigger_mode: Random(weight: 3.0),
-        requirements: [
-            EventCompleted("acad_friendly_event"),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept the award.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Criminal Partnership Payoff (from crim_trusted_event)
-    // ======================================================
-    (
-        id: "followup_crypto_windfall",
-        title: "Crypto Windfall",
-        description: "Your syndicate allies dump stolen crypto wallets in your favor—an untraceable fortune.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            EventCompleted("crim_trusted_event"),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Accept the windfall anonymously.",
-                consequences: [
-                    ModifyMoney(40000),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Academic + Government Friendly Crossover
-    // ======================================================
-    (
-        id: "followup_open_data_initiative",
-        title: "Open Data Initiative",
-        description: "Government and academia partner with you to launch a global open data network.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Government, min: 91),
-                FactionReputation(faction: Academia, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Sign on as a founding member.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Government, amount: 10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Corporate + Criminal Trusted Crossover
-    // ======================================================
-    (
-        id: "followup_data_cartel",
-        title: "The Data Cartel",
-        description: "Corporate and underworld actors secretly coordinate global market manipulation through your pipelines.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Corporate, min: 151),
-                FactionReputation(faction: Criminal, min: 151),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Join the conspiracy.",
-                consequences: [
-                    ModifyMoney(40000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: -20),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // FOLLOW-UP: Research Upgrade Event (from tier_3_upgrade_unlocked)
-    // ======================================================
-    (
-        id: "followup_lab_breakthrough",
-        title: "Algorithmic Breakthrough",
-        description: "Your R&D division develops a new compression algorithm that doubles efficiency.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            EventUnlocked("tier_3_upgrade_unlocked"),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Deploy the algorithm company-wide.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Corporate, amount: 5),
-                ],
-            ),
-        ],
-    ),
-])
-(events: [
-
-    // ======================================================
-    // GOVERNMENT  +  ACADEMIA  —  "Open Data Summit"
-    // ======================================================
-    (
-        id: "cross_gov_acad_opendata",
-        title: "Open Data Summit",
-        description: "Academia and the Government hold a global summit to promote open-access research. They want you to supply the initial datasets.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Government, min: 91),
-                FactionReputation(faction: Academia, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Provide anonymised data for research.",
-                consequences: [
-                    ModifyMoney(12000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: -10),
-                ],
-            ),
-            (
-                text: "Refuse to share data.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // CORPORATE  +  CRIMINAL  —  "Leak Market"
-    // ======================================================
-    (
-        id: "cross_corp_crim_leakmarket",
-        title: "Leak Market",
-        description: "An untraceable joint operation emerges between major corporations and the underworld: a secret data-leak marketplace hosted through your servers.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Corporate, min: 91),
-                FactionReputation(faction: Criminal, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Host the leak network.",
-                consequences: [
-                    ModifyMoney(25000),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: -20),
-                ],
-            ),
-            (
-                text: "Expose the scheme to authorities.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Government, amount: 15),
-                    ModifyReputation(faction: Criminal, amount: -20),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // CORPORATE  +  GOVERNMENT  —  "Public-Private Surveillance Initiative"
-    // ======================================================
-    (
-        id: "cross_corp_gov_surveillance",
-        title: "Public-Private Surveillance Initiative",
-        description: "Corporate and state actors propose integrating public data feeds into private analytics networks for 'national safety.'",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Corporate, min: 91),
-                FactionReputation(faction: Government, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Join the initiative.",
-                consequences: [
-                    ModifyMoney(20000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-            (
-                text: "Decline and warn the public.",
-                consequences: [
-                    ModifyMoney(-5000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Government, amount: -15),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // ACADEMIA  +  CRIMINAL  —  "Dark Research Collaboration"
-    // ======================================================
-    (
-        id: "cross_acad_crim_darkresearch",
-        title: "Dark Research Collaboration",
-        description: "A rogue academic network proposes conducting off-record experiments using harvested biometric data from criminal channels.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Academia, min: 91),
-                FactionReputation(faction: Criminal, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Fund the experiment quietly.",
-                consequences: [
-                    ModifyMoney(15000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Government, amount: -10),
-                ],
-            ),
-            (
-                text: "Leak it to academic press.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Academia, amount: -10),
-                    ModifyReputation(faction: Government, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // CORPORATE  +  ACADEMIA  —  "Innovation Prize"
-    // ======================================================
-    (
-        id: "cross_corp_acad_innovationprize",
-        title: "Global Innovation Prize",
-        description: "Corporate and academic leaders co-sponsor a massive research award for predictive analytics breakthroughs. You’re on the shortlist.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Corporate, min: 91),
-                FactionReputation(faction: Academia, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Invest heavily to guarantee a win.",
-                consequences: [
-                    ModifyMoney(-10000),
-                    ModifyReputation(faction: Academia, amount: 10),
-                    ModifyReputation(faction: Corporate, amount: 10),
-                ],
-            ),
-            (
-                text: "Compete fairly.",
-                consequences: [
-                    ModifyMoney(8000),
-                    ModifyReputation(faction: Academia, amount: 5),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // GOVERNMENT  +  CRIMINAL  —  "Back-Channel Negotiations"
-    // ======================================================
-    (
-        id: "cross_gov_crim_backchannel",
-        title: "Back-Channel Negotiations",
-        description: "High-ranking officials secretly approach criminal intermediaries for data on foreign rivals — through your systems.",
-        trigger_mode: Random(weight: 2.5),
-        requirements: [
-            AllOf([
-                FactionReputation(faction: Government, min: 91),
-                FactionReputation(faction: Criminal, min: 91),
-            ]),
-        ],
-        repeatable: false,
-        choices: [
-            (
-                text: "Broker the exchange anonymously.",
-                consequences: [
-                    ModifyMoney(30000),
-                    ModifyReputation(faction: Government, amount: 10),
-                    ModifyReputation(faction: Criminal, amount: 10),
-                    ModifyReputation(faction: Academia, amount: -10),
-                ],
-            ),
-            (
-                text: "Expose the scandal to the media.",
-                consequences: [
-                    ModifyMoney(5000),
-                    ModifyReputation(faction: Government, amount: -15),
-                    ModifyReputation(faction: Academia, amount: 10),
-                ],
-            ),
-        ],
-    ),
-])
-
-/// End game killer events
-
-(events: [
-    // Stage 1
-    (
-        id: "crisis_corp_stage1",
-        title: "Investor Panic",
-        description: "Investors are nervous; rumours of insolvency spread across the market.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Corporate, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Stabilise portfolios ($15 000).", consequences: [ModifyMoney(-15000), UnlockEvent("crisis_corp_stage2")] ),
-            ( text: "Refuse to pay.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    // Stage 2
-    (
-        id: "crisis_corp_stage2",
-        title: "Shareholder Revolt",
-        description: "Major shareholders threaten lawsuits unless compensated.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_corp_stage2"), FactionReputation(faction: Corporate, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay settlements ($25 000).", consequences: [ModifyMoney(-25000), UnlockEvent("crisis_corp_stage3")] ),
-            ( text: "Ignore the revolt.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    // Stage 3
-    (
-        id: "crisis_corp_stage3",
-        title: "Market Blacklist – Final Notice",
-        description: "Trading platforms delist your stock. One final payment might save you.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_corp_stage3"), FactionReputation(faction: Corporate, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Bribe regulators ($40 000).", consequences: [ModifyMoney(-40000)] ),
-            ( text: "Let it crash.", consequences: [Bankruptcy] ),
-        ],
-    ),
-])
-(events: [
-    (
-        id: "crisis_crim_stage1",
-        title: "Threat of Retribution",
-        description: "Dark-web chatter names you a traitor; crews demand compensation for 'losses.'",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Criminal, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay hush money ($25 000).", consequences: [ModifyMoney(-25000), UnlockEvent("crisis_crim_stage2")] ),
-            ( text: "Refuse payment.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_crim_stage2",
-        title: "Server Sabotage",
-        description: "A rival syndicate sabotages your infrastructure; they’ll stop if compensated.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_crim_stage2"), FactionReputation(faction: Criminal, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay protection fee ($35 000).", consequences: [ModifyMoney(-35000), UnlockEvent("crisis_crim_stage3")] ),
-            ( text: "Fight back.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_crim_stage3",
-        title: "Underworld Purge",
-        description: "Bounties appear on your executives. Only an enormous payoff will call off the hunt.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_crim_stage3"), FactionReputation(faction: Criminal, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay blood money ($50 000).", consequences: [ModifyMoney(-50000)] ),
-            ( text: "Let them come.", consequences: [Bankruptcy] ),
-        ],
-    ),
-])
-(events: [
-    (
-        id: "crisis_acad_stage1",
-        title: "Ethics Inquiry",
-        description: "Universities issue an open letter condemning your research practices.",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Academia, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Fund ethics panels ($10 000).", consequences: [ModifyMoney(-10000), UnlockEvent("crisis_acad_stage2")] ),
-            ( text: "Ignore critics.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_acad_stage2",
-        title: "Global Boycott",
-        description: "Scholars worldwide refuse collaboration until restitution is made.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_acad_stage2"), FactionReputation(faction: Academia, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Sponsor outreach ($20 000).", consequences: [ModifyMoney(-20000), UnlockEvent("crisis_acad_stage3")] ),
-            ( text: "Stay defiant.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_acad_stage3",
-        title: "Academic Excommunication",
-        description: "Research councils vote to blacklist you permanently. Only mass donations could sway them.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_acad_stage3"), FactionReputation(faction: Academia, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Endow universities ($35 000).", consequences: [ModifyMoney(-35000)] ),
-            ( text: "Reject the extortion.", consequences: [Bankruptcy] ),
-        ],
-    ),
-])
-(events: [
-    (
-        id: "crisis_gov_stage1",
-        title: "Audit Storm",
-        description: "Inspectors raid your servers; fines loom unless you 'co-operate.'",
-        trigger_mode: Forced,
-        requirements: [FactionReputation(faction: Government, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay compliance fine ($20 000).", consequences: [ModifyMoney(-20000), UnlockEvent("crisis_gov_stage2")] ),
-            ( text: "Refuse.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_gov_stage2",
-        title: "Operational Freeze",
-        description: "Authorities suspend your export license pending ‘review.’",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_gov_stage2"), FactionReputation(faction: Government, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Lobby officials ($30 000).", consequences: [ModifyMoney(-30000), UnlockEvent("crisis_gov_stage3")] ),
-            ( text: "Defy the order.", consequences: [Bankruptcy] ),
-        ],
-    ),
-    (
-        id: "crisis_gov_stage3",
-        title: "Revocation Imminent",
-        description: "A minister signs the final notice—your license will be pulled tomorrow.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("crisis_gov_stage3"), FactionReputation(faction: Government, max: 30)],
-        repeatable: true,
-        choices: [
-            ( text: "Pay emergency bonds ($50 000).", consequences: [ModifyMoney(-50000)] ),
-            ( text: "Accept shutdown.", consequences: [Bankruptcy] ),
-        ],
-    ),
-])
-/// End of game ///
-
-(events: [
-
-    // ======================================================
-    // YEAR 4 GLOBAL COLLAPSE
-    // ======================================================
-    (
-        id: "year4_run_killer",
-        title: "The Collapse Protocol",
-        description: "Year 4: Global infrastructure buckles under catastrophic data failures. The world turns to you — saviour or tyrant. Every faction demands a final choice. [This choice will effect the ending of the game]",
-        trigger_mode: Forced,
-        requirements: [SpecificYear(5)],
-        repeatable: false,
-        choices: [
-
-            // === Good Ending Path ===
-            (
-                text: "Initiate a total system shutdown.",
-                requirements: [
-                    FactionReputation(faction: Academia, min: 150),
-                    FactionReputation(faction: Government, min: 150),
-                ],
-                consequences: [
-                    ModifyMoney(-250000),
-                    ModifyReputation(faction: Corporate, amount: -30),
-                    ModifyReputation(faction: Government, amount: -20),
-                    UnlockEvent("end_reboot_rebuild"),
-                ],
-            ),
-
-            // === Domination Path ===
-            (
-                text: "Divert the crisis and scapegoat rivals.",
-                requirements: [
-                    AnyOf([
-                        FactionReputation(faction: Corporate, min: 150),
-                        FactionReputation(faction: Criminal, min: 150),
-                    ]),
-                ],
-                consequences: [
-                    ModifyMoney(-150000),
-                    ModifyReputation(faction: Corporate, amount: 20),
-                    ModifyReputation(faction: Criminal, amount: 25),
-                    UnlockEvent("end_dark_empire"),
-                ],
-            ),
-
-            // === Failure Path ===
-            (
-                text: "Let it burn — deny responsibility.",
-                requirements: [
-                ],
-                consequences: [
-                    UnlockEvent("end_silenced_network"),
-                ],
-            ),
-
-            // === Secret Harmony Path ===
-            (
-                text: "Achieve equilibrium.",
-                requirements: [
-                    FactionReputation(faction: Corporate, min: 200),
-                    FactionReputation(faction: Academia, min: 200),
-                    FactionReputation(faction: Government, min: 200),
-                    FactionReputation(faction: Criminal, min: 200),
-                ],
-                consequences: [
-                    ModifyMoney(-300000),
-                    UnlockEvent("end_equilibrium_utopia"),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // REBOOT & REBUILD
-    // ======================================================
-    (
-        id: "end_reboot_rebuild",
-        title: "Reboot & Rebuild",
-        description: "You shut it all down. The world resets to analogue silence, reborn from clean circuits and cautious trust. You walk away, leaving a legacy of restraint.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("end_reboot_rebuild")],
-        repeatable: false,
-        choices: [
-            (
-                text: "Begin the slow reconstruction.",
-                consequences: [
-                    ModifyMoney(100000),
-                    ModifyReputation(faction: Academia, amount: 50),
-                    ModifyReputation(faction: Government, amount: 30),
-                    UnlockEvent("ending_reboot_rebuild_stinger"),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "ending_reboot_rebuild_stinger",
-        title: "Epilogue – Reboot & Rebuild",
-        description: "History calls you the *Guardian of the Grid*. Decades later, your shutdown becomes the moral compass for a generation raised on transparency.",
-        trigger_mode: Manual,
-        repeatable: false,
-        choices: [( text: "End Simulation", consequences: [] )],
-    ),
-
-    // ======================================================
-    // DARK EMPIRE
-    // ======================================================
-    (
-        id: "end_dark_empire",
-        title: "The Dark Empire",
-        description: "You weaponize chaos, eliminate rivals, and rebuild the shattered web as your throne. Every byte of data bends to your algorithmic will.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("end_dark_empire")],
-        repeatable: false,
-        choices: [
-            (
-                text: "Cement your dominion.",
-                consequences: [
-                    ModifyMoney(500000),
-                    ModifyReputation(faction: Corporate, amount: 150),
-                    ModifyReputation(faction: Criminal, amount: 150),
-                    UnlockEvent("ending_dark_empire_stinger"),
-                ],
-            ),
-        ],
-    ),
-
-    (
-        id: "ending_dark_empire_stinger",
-        title: "Epilogue – The Dark Empire",
-        description: "You became the algorithm. Nations kneel before dashboards, and truth is whatever your code approves. The world endures—but it is no longer free.",
-        trigger_mode: Manual,
-        repeatable: false,
-        choices: [( text: "End Simulation", consequences: [] )],
-    ),
-
-    // ======================================================
-(events: [
-
-    // ======================================================
-    // MAIN ENDING EVENT
-    // ======================================================
-    (
-        id: "end_equilibrium_utopia",
-        title: "Equilibrium Utopia",
-        description: "Against all odds, every faction finds common ground. Corporate greed, academic idealism, state control, and underworld chaos merge into balance. Together, they entrust you to unify the world’s data under one transparent system.",
-        trigger_mode: Forced,
-        requirements: [EventUnlocked("end_equilibrium_utopia")],
-        repeatable: false,
-        choices: [
-            (
-                text: "Activate the Global Equilibrium Protocol.",
-                consequences: [
-                    ModifyMoney,
-                    ModifyReputation(faction: Corporate, amount: 100),
-                    ModifyReputation(faction: Academia, amount: 100),
-                    ModifyReputation(faction: Government, amount: 100),
-                    ModifyReputation(faction: Criminal, amount: 100),
-                    UnlockEvent("ending_equilibrium_utopia_stinger"),
-                ],
-            ),
-            (
-                text: "Hesitate – fear the power you’ve created.",
-                consequences: [
-                    ModifyReputation(faction: Academia, amount: -50),
-                    ModifyReputation(faction: Corporate, amount: -50),
-                    ModifyReputation(faction: Government, amount: -50),
-                    ModifyReputation(faction: Criminal, amount: -50),
-                    UnlockEvent("ending_silenced_network_stinger"),
-                ],
-            ),
-        ],
-    ),
-
-    // ======================================================
-    // EPILOGUE / STINGER EVENT
-    // ======================================================
-    (
-        id: "ending_equilibrium_utopia_stinger",
-        title: "Epilogue – Equilibrium Utopia",
-        description: "The world enters an age of collective intelligence. Data flows freely—no ownership, no deception. AI councils and human assemblies govern side by side. You fade into anonymity as the architect of balance, your legacy encoded in every heartbeat of the new network.",
-        trigger_mode: Manual,
-        repeatable: false,
-        choices: [
-            (
-                text: "End Simulation",
-                consequences: [],
-            ),
-        ],
-    ),
-])
-(events: [
-
-    (
-        id: "ending_silenced_network_stinger",
-        title: "Epilogue – The Silenced Network",
-        description: "The servers cooled. The cities fell silent. What began as data became dust.\n\nNo headlines marked your fall. No monuments bear your name. Yet in the void between collapsed networks, an ancient backup pings once—your signature encoded in static. For a moment, the world almost remembers.",
-        trigger_mode: Manual,
-        repeatable: false,
-        choices: [
-            (
-                text: "End Simulation",
-                consequences: [],
-            ),
-        ],
-    ),
-])
-

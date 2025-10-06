@@ -34,8 +34,8 @@ impl Building for Aggregator {
                             buffer: DataBuffer::default(),
                         },
                         position,
-                        GridSprite(Color::linear_rgba(1.0, 0.0, 1.0, 0.3)),
-                        Text2d::default(),
+                        // GridSprite(Color::linear_rgba(1.0, 0.0, 1.0, 0.3)),
+                        // Text2d::default(),
                     ),
                     (
                         DataSource {
@@ -45,7 +45,7 @@ impl Building for Aggregator {
                             buffer: DataBuffer::default()
                         },
                         position,
-                        GridSprite(Color::linear_rgba(1.0, 0.0, 1.0, 0.3)),
+                        // GridSprite(Color::linear_rgba(1.0, 0.0, 1.0, 0.3)),
                     )
                 ]),
                 self.clone(),

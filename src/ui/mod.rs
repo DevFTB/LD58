@@ -52,6 +52,8 @@ impl Plugin for UIPlugin {
                     contracts::send_scroll_events,
                     contracts::handle_contract_buttons,
                     contracts::update_contracts_sidebar_ui,
+                    contracts::resize_contract_data_icons,
+                    contracts::show_dataset_tooltip,
                 )
                     .chain(),
             )

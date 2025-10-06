@@ -39,9 +39,9 @@ impl Building for Combiner {
                                     direction: orientation.direction.opposite(),
                                     buffer: DataBuffer::default(),
                                 },
-                                Text2d::default(),
+                                // Text2d::default(),
                                 position.offset(orientation.layout_direction(), i as i64),
-                                GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
+                                // GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
                             ));
                         }
                         spawner.spawn((
@@ -52,7 +52,7 @@ impl Building for Combiner {
                                 buffer: DataBuffer::default(),
                             },
                             position,
-                            Text2d::default(),
+                            // Text2d::default(),
                         ));
                     },
                 )),

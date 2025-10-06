@@ -11,7 +11,7 @@ use crate::factory::logical::{
 use crate::factory::physical::{
     assemble_direct_logical_links, assemble_logical_links, detect_building_placement, detect_link_placement,
     on_data_sink_removed, on_data_source_removed, on_physical_link_removed, resolve_connections,
-    validate_placed_entities, EntityPlaced, ValidateConnections,
+    update_link_sprite_on_connection, validate_placed_entities, EntityPlaced, ValidateConnections,
 };
 use crate::grid::{GridPosition, Orientation};
 use bevy::ecs::relationship::Relationship;
@@ -83,6 +83,7 @@ impl Plugin for FactoryPlugin {
                     detect_building_placement,
                     validate_placed_entities,
                     resolve_connections,
+                    update_link_sprite_on_connection,
                     assemble_direct_logical_links,
                     assemble_logical_links,
                     debug_logical_links,

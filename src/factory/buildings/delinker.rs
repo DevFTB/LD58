@@ -36,12 +36,12 @@ impl Building for Delinker {
                                 buffer: DataBuffer::default(),
                             },
                             position,
-                            GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
-                            Text2d::default(),
+                            // GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
+                            // Text2d::default(),
                         ));
                         for i in 0..source_count {
                             spawner.spawn((
-                                GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
+                                // GridSprite(Color::linear_rgba(1.0, 0.5, 0.0, 0.3)),
                                 DataSource {
                                     direction: orientation.direction,
                                     throughput,
