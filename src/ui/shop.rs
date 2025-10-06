@@ -1,99 +1,143 @@
-use bevy::{
-    color::palettes::css::ANTIQUE_WHITE,
-    math::I64Vec2,
-    prelude::*,
-};
+use bevy::{color::palettes::css::ANTIQUE_WHITE, prelude::*};
+use std::sync::Arc;
 
-use crate::grid::{WorldMap, GridPosition, are_positions_free, calculate_occupied_cells_rotated};
-use crate::factory::buildings::buildings::BuildingType;
+use crate::assets::GameAssets;
+use crate::factory::buildings::aggregator::Aggregator;
+use crate::factory::buildings::buildings::{Building, SpriteResource};
+use crate::factory::buildings::combiner::Combiner;
+use crate::factory::buildings::splitter::Splitter;
+use crate::factory::physical::PhysicalLink;
+use crate::factory::ConstructBuildingEvent;
+use crate::grid::{
+    are_positions_free, calculate_occupied_cells_rotated, Grid, GridPosition, Orientation, WorldMap,
+};
 use crate::ui::BlocksWorldClicks;
 
 pub const BUILDING_BAR_WIDTH_PCT: f32 = 70.0;
 pub const BUILDING_BAR_HEIGHT_PCT: f32 = 12.0;
 const BUILDING_TILE_SIZE: i64 = 64;
 
-#[derive(Event, Message)]
-pub struct ConstructBuildingEvent {
-    pub building_type: BuildingType,
-    pub grid_position: I64Vec2,
-    pub rotation: u8,
-}
-
 #[derive(Component, Clone)]
 pub struct UIBuilding {
-    pub building_type: BuildingType,
+    pub building_type: Arc<dyn Building>,
 }
 
 #[derive(Component)]
 pub struct SelectedBuilding;
 
 #[derive(Component)]
-pub struct BuildingRotation(pub u8); // 0, 1, 2, 3 for 0°, 90°, 180°, 270°
+pub struct BuildingOrientation(pub Orientation);
 
 #[derive(Resource)]
-pub struct SelectedBuildingType(pub Option<BuildingType>);
+pub struct SelectedBuildingType(pub Option<Arc<dyn Building>>);
 
 /// Spawns the building shop UI bar at the bottom of the screen
-pub fn spawn_building_shop(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // i tried really hard to abstract this into a .ron file for way too long but failed horribly. hence what is currently here
+pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
     let buildings = [
-        UIBuilding { building_type: BuildingType::Splitter2x1 },
-        UIBuilding { building_type: BuildingType::Splitter3x1 },
-        UIBuilding { building_type: BuildingType::Splitter4x1 },
-        UIBuilding { building_type: BuildingType::Splitter2x1 },
-        UIBuilding { building_type: BuildingType::Splitter3x1 },
-        UIBuilding { building_type: BuildingType::Splitter4x1 },
-        UIBuilding { building_type: BuildingType::Splitter2x1 },
-        UIBuilding { building_type: BuildingType::Splitter3x1 },
-        UIBuilding { building_type: BuildingType::Splitter4x1 },
-        UIBuilding { building_type: BuildingType::Decoupler },
+        UIBuilding {
+            building_type: Arc::new(Splitter {
+                source_count: 2,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Splitter {
+                source_count: 3,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Splitter {
+                source_count: 4,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Combiner {
+                sink_count: 2,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Combiner {
+                sink_count: 3,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Combiner {
+                sink_count: 4,
+                throughput: 5.0,
+            }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Aggregator { throughput: 5.0 }),
+        },
+        UIBuilding {
+            building_type: Arc::new(PhysicalLink { throughput: 50.0 }),
+        },
     ];
 
     // spawn the bottom bar with factory draggables
-    commands.spawn((
-        Node {
-            width: Val::Percent(BUILDING_BAR_WIDTH_PCT),
-            height: Val::Percent(BUILDING_BAR_HEIGHT_PCT),
-            display: Display::Flex,
-            position_type: PositionType::Absolute,
-            top: Val::Percent(100.0 - BUILDING_BAR_HEIGHT_PCT),
-            left: Val::Percent((100.0 - BUILDING_BAR_WIDTH_PCT) / 2.0),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::SpaceAround,
-            align_items: AlignItems::Center,
-            ..default()
-        },
-        BackgroundColor(ANTIQUE_WHITE.into()),
-        ZIndex(1), // Ensure UI renders above sprites
-        BlocksWorldClicks,
-    )).with_children(|parent| {
-        for building in &buildings {
-            let mut image_node = ImageNode::new(asset_server.load(&building.building_type.data().sprite_path));
-            image_node.image_mode = NodeImageMode::Stretch;
+    commands
+        .spawn((
+            Node {
+                width: Val::Percent(BUILDING_BAR_WIDTH_PCT),
+                height: Val::Percent(BUILDING_BAR_HEIGHT_PCT),
+                display: Display::Flex,
+                position_type: PositionType::Absolute,
+                top: Val::Percent(100.0 - BUILDING_BAR_HEIGHT_PCT),
+                left: Val::Percent((100.0 - BUILDING_BAR_WIDTH_PCT) / 2.0),
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::SpaceAround,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(ANTIQUE_WHITE.into()),
+            ZIndex(1), // Ensure UI renders above sprites
+            BlocksWorldClicks,
+        ))
+        .with_children(|parent| {
+            for building in &buildings {
+                let data = building.building_type.data();
+                let mut image_node = match &data.sprite {
+                    Some(SpriteResource::Atlas(index)) => ImageNode::from_atlas_image(
+                        assets.buildings_texture.clone(),
+                        TextureAtlas {
+                            layout: assets.buildings_layout.clone(),
+                            index: *index,
+                        },
+                    ),
+                    Some(SpriteResource::Sprite(path)) => ImageNode::new(path.clone()),
+                    None => ImageNode::default(),
+                };
+                image_node.image_mode = NodeImageMode::Stretch;
 
-            parent.spawn((
-                Node {
-                    width: Val::Px(BUILDING_TILE_SIZE as f32),
-                    height: Val::Px(BUILDING_TILE_SIZE as f32),
-                    ..default()
-                },
-                image_node,
-                building.clone(),
-                Interaction::None,
-                Button,
-                Transform::from_xyz(0.0, 0.0, 100.0),
-            ));
-        }
-    });
+                parent.spawn((
+                    Node {
+                        width: Val::Px(BUILDING_TILE_SIZE as f32),
+                        height: Val::Px(BUILDING_TILE_SIZE as f32),
+                        ..default()
+                    },
+                    image_node,
+                    building.clone(),
+                    Interaction::None,
+                    Button,
+                    Transform::from_xyz(0.0, 0.0, 100.0),
+                ));
+            }
+        });
 }
 
 fn get_mouse_world_position(
     windows: &Query<&Window>,
     camera_query: &Query<(&Camera, &GlobalTransform)>,
 ) -> Option<Vec3> {
-    if let (Ok(window), Ok((camera, camera_transform))) = (windows.single(), camera_query.single()) {
+    if let (Ok(window), Ok((camera, camera_transform))) = (windows.single(), camera_query.single())
+    {
         if let Some(cursor_position) = window.cursor_position() {
-            if let Ok(world_position) = camera.viewport_to_world(camera_transform, cursor_position) {
+            if let Ok(world_position) = camera.viewport_to_world(camera_transform, cursor_position)
+            {
                 return Some(world_position.origin);
             }
         }
@@ -110,8 +154,9 @@ pub fn handle_building_click(
     selected_query: Query<Entity, With<SelectedBuilding>>,
     windows: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
-    grid: Res<crate::grid::Grid>,
+    grid: Res<Grid>,
     asset_server: Res<AssetServer>,
+    assets: Res<GameAssets>,
     mut selected_building_type: ResMut<SelectedBuildingType>,
 ) {
     for (_entity, interaction, building) in &mut interaction_query {
@@ -121,7 +166,7 @@ pub fn handle_building_click(
                 commands.entity(selected_entity).despawn();
             }
             // Set the selected building type
-            selected_building_type.0 = Some(building.building_type);
+            selected_building_type.0 = Some(building.building_type.clone());
 
             // Get initial mouse position
             let initial_position =
@@ -134,14 +179,29 @@ pub fn handle_building_click(
                 data.grid_height as f32 * grid.scale,
             );
 
-            commands.spawn((
-                SelectedBuilding,
-                BuildingRotation(0),
-                Sprite {
-                    image: asset_server.load(&data.sprite_path),
+            // Create sprite based on SpriteResource type
+            let sprite = match &data.sprite {
+                Some(SpriteResource::Atlas(index)) => Sprite {
+                    image: assets.buildings_texture.clone(),
+                    custom_size: Some(sprite_size),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: assets.buildings_layout.clone(),
+                        index: *index,
+                    }),
+                    ..default()
+                },
+                Some(SpriteResource::Sprite(image)) => Sprite {
+                    image: image.clone(),
                     custom_size: Some(sprite_size),
                     ..default()
                 },
+                None => Sprite::default(),
+            };
+
+            commands.spawn((
+                SelectedBuilding,
+                BuildingOrientation(Orientation::default()),
+                sprite,
                 Transform::from_xyz(initial_position.x, initial_position.y, 100.0),
                 ZIndex(10), // Ensure it renders above UI
             ));
@@ -151,7 +211,7 @@ pub fn handle_building_click(
 
 pub fn update_selected_building_position(
     mut selected_query: Query<
-        (&mut Transform, &mut Sprite, &BuildingRotation),
+        (&mut Transform, &mut Sprite, &BuildingOrientation),
         With<SelectedBuilding>,
     >,
     selected_building_type: Res<SelectedBuildingType>,
@@ -165,34 +225,28 @@ pub fn update_selected_building_position(
     {
         let data = building_type.data();
 
-        for (mut transform, mut sprite, rotation) in selected_query.iter_mut() {
-            // Convert mouse position to grid coordinates - this is our anchor cell
+        for (mut transform, mut sprite, orientation) in selected_query.iter_mut() {
+            // Snap mouse position to grid to get the anchor cell
             let snapped_grid_pos = grid.world_to_grid(world_position.xy());
 
-            // Get the world center of the anchor cell
-            let anchor_cell_center = grid.grid_to_world_center(&snapped_grid_pos);
+            // Use the shared utility function to calculate sprite position
+            let sprite_pos = grid.calculate_building_sprite_position(
+                &snapped_grid_pos,
+                data.grid_width,
+                data.grid_height,
+                orientation.0,
+            );
 
-            // Calculate offset from anchor to sprite center based on rotation
-            // For a 3x1 building, the center is (width-1)/2 cells away from anchor
-            let offset = ((data.grid_width - 1) as f32 / 2.0) * grid.scale;
+            let snapped_position = Vec3::new(sprite_pos.x, sprite_pos.y, 100.0);
 
-            let (sprite_center_x, sprite_center_y) = match rotation.0 % 4 {
-                0 => (anchor_cell_center.x + offset, anchor_cell_center.y), // extends right
-                1 => (anchor_cell_center.x, anchor_cell_center.y - offset), // extends down
-                2 => (anchor_cell_center.x - offset, anchor_cell_center.y), // extends left
-                3 => (anchor_cell_center.x, anchor_cell_center.y + offset), // extends up
-                _ => unreachable!(),
-            };
-
-            let snapped_position = Vec3::new(sprite_center_x, sprite_center_y, 100.0);
             transform.translation = snapped_position;
 
-            // Check if positions are occupied using rotated cell calculation
+            // Check if positions are occupied
             let occupied_positions = calculate_occupied_cells_rotated(
                 *snapped_grid_pos,
                 data.grid_width,
                 data.grid_height,
-                rotation.0,
+                orientation.0,
             )
             .into_iter()
             .map(GridPosition)
@@ -212,7 +266,7 @@ pub fn update_selected_building_position(
 pub fn handle_building_rotate(
     key_input: Res<ButtonInput<KeyCode>>,
     mut selected_query: Query<
-        (Entity, &mut Transform, &mut BuildingRotation),
+        (Entity, &mut Transform, &mut BuildingOrientation),
         With<SelectedBuilding>,
     >,
     selected_building_type: Res<SelectedBuildingType>,
@@ -220,9 +274,30 @@ pub fn handle_building_rotate(
     if key_input.just_pressed(KeyCode::KeyR)
         && let Some(_building_type) = &selected_building_type.0
     {
-        for (_entity, mut building_transform, mut rotation) in &mut selected_query {
-            rotation.0 = (rotation.0 + 1) % 4;
+        for (_entity, mut building_transform, mut orientation) in &mut selected_query {
+            orientation.0 = orientation.0.rotate_clockwise();
             building_transform.rotate_z(-std::f32::consts::FRAC_PI_2);
+        }
+    }
+}
+
+pub fn handle_building_flip(
+    key_input: Res<ButtonInput<KeyCode>>,
+    mut selected_query: Query<
+        (Entity, &mut Sprite, &mut BuildingOrientation),
+        With<SelectedBuilding>,
+    >,
+    selected_building_type: Res<SelectedBuildingType>,
+) {
+    if key_input.just_pressed(KeyCode::KeyF)
+        && let Some(_building_type) = &selected_building_type.0
+    {
+        for (_entity, mut sprite, mut orientation) in &mut selected_query {
+            // Toggle flip state
+            orientation.0 = orientation.0.toggle_flip();
+
+            // Always apply sprite flip_x when flipped
+            sprite.flip_x = orientation.0.flipped;
         }
     }
 }
@@ -230,7 +305,7 @@ pub fn handle_building_rotate(
 pub fn handle_placement_click(
     mut commands: Commands,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
-    selected_query: Query<(Entity, &BuildingRotation), With<SelectedBuilding>>,
+    selected_query: Query<(Entity, &BuildingOrientation), With<SelectedBuilding>>,
     mut selected_building_type: ResMut<SelectedBuildingType>,
     mut construct_events: MessageWriter<ConstructBuildingEvent>,
     windows: Query<&Window>,
@@ -247,14 +322,18 @@ pub fn handle_placement_click(
                 return;
             }
         }
-        
+
         // Check if we have a selected building
         if let Some(building_type) = &selected_building_type.0 {
             // Get mouse position
             if let Some(world_position) = get_mouse_world_position(&windows, &camera_query) {
-                // Get building data and rotation
+                // Get building data and orientation
                 let data = building_type.data();
-                let rotation = selected_query.iter().next().map(|(_, r)| r.0).unwrap_or(0);
+                let orientation = selected_query
+                    .iter()
+                    .next()
+                    .map(|(_, o)| o.0)
+                    .unwrap_or_default();
 
                 // Convert mouse position to grid coordinates - this is the anchor cell
                 let snapped_grid_pos = grid.world_to_grid(world_position.xy());
@@ -262,12 +341,12 @@ pub fn handle_placement_click(
                 // The snapped grid position IS the anchor
                 let base_position = *snapped_grid_pos;
 
-                // Calculate occupied positions using rotation-aware function
+                // Calculate occupied positions
                 let occupied_positions = calculate_occupied_cells_rotated(
                     base_position,
                     data.grid_width,
                     data.grid_height,
-                    rotation,
+                    orientation,
                 )
                 .into_iter()
                 .map(GridPosition)
@@ -275,15 +354,17 @@ pub fn handle_placement_click(
 
                 // Only place if positions are free
                 if are_positions_free(&world_map, &occupied_positions) {
-                    // Send construction event
+                    // Send construction event with:
+                    // - rotation: The actual rotation direction (not flipped)
+                    // - flipped: The flip state - building spawn system will handle the flip
                     construct_events.write(ConstructBuildingEvent {
-                        building_type: *building_type,
+                        building: building_type.clone(),
                         grid_position: base_position,
-                        rotation,
+                        orientation,
                     });
 
                     // Despawn the dragged building
-                    for (entity, _rotation) in selected_query.iter() {
+                    for (entity, _) in selected_query.iter() {
                         commands.entity(entity).despawn();
                     }
 

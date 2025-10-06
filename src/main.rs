@@ -3,7 +3,6 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
-use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
@@ -22,6 +21,7 @@ mod events;
 mod factions;
 mod factory;
 mod grid;
+// mod test; // TODO: Update test functions with new bundle signatures
 mod test;
 mod ui;
 mod world_gen;
@@ -34,7 +34,7 @@ fn main() {
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(EventsPlugin)
         .add_plugins(GameCameraPlugin)
-        .add_plugins(WorldGenPlugin)
+        //.add_plugins(WorldGenPlugin)
         .add_plugins(UIPlugin)
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
@@ -45,11 +45,11 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    // test::spawn_splitter_test(&mut commands);
-    // test::spawn_delinker_test(&mut commands);
-    // test::spawn_combiner_test(&mut commands);
-    // test::spawn_trunking_test(&mut commands);
-    // test::spawn_sized_sink_test(&mut commands);
+    //test::spawn_splitter_test(&mut commands);
+    //test::spawn_delinker_test(&mut commands);
+    test::spawn_combiner_test(&mut commands);
+    test::spawn_trunking_test(&mut commands);
+    test::spawn_sized_sink_test(&mut commands);
 }
 
 pub fn remove_physical_link_on_right_click(
