@@ -120,9 +120,9 @@ impl Building for PhysicalLink {
 
     fn data(&self) -> BuildingData {
         BuildingData {
-            sprite: SpriteResource::Atlas {
-                atlas_id: AtlasId::Wires,
-                atlas_index: 2}, // Default index, will be updated on connection
+            sprite: Some(SpriteResource::Atlas (
+                AtlasId::Wires,
+                2)), // Default index, will be updated on connection
             grid_width: 1,
             grid_height: 1,
             cost: 25,
