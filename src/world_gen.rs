@@ -20,7 +20,7 @@ use crate::factory::buildings::buildings::Building;
 use crate::factory::buildings::sink::SinkBuilding;
 use crate::factory::buildings::source::SourceBuilding;
 use crate::factory::buildings::Undeletable;
-use crate::grid::{Direction, GridSprite, Orientation};
+use crate::grid::{Direction, Grid, GridSprite, Orientation};
 use bevy_prng::WyRand;
 use bevy_rand::prelude::GlobalRng;
 use rand::prelude::IndexedRandom;
@@ -106,6 +106,7 @@ fn startup(
     asset_server: Res<AssetServer>,
     game_assets: Res<GameAssets>,
     faction_datasets: Res<FactionDatasetLibrary>,
+    grid: Res<Grid>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
     let _startup_span = info_span!("startup_span", name = "startup_span").entered();
@@ -295,6 +296,8 @@ fn startup(
                     Some(&cluster_map),
                     Some(cluster_allowable_spawns),
                     &mut commands,
+                    &asset_server,
+                    &grid,
                 );
             }
         } else {
@@ -311,6 +314,8 @@ fn startup(
             Option::None,
             Option::None,
             &mut commands,
+            &asset_server,
+            &grid,
         );
     }
 
@@ -526,6 +531,8 @@ fn spawn_faction_sink(
     cluster_map: Option<&HashMap<I64Vec2, i64>>,
     cluster_hash_set: Option<&mut HashSet<I64Vec2>>,
     commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    grid: &Res<Grid>,
 ) {
     let mut sink_vecs: Vec<I64Vec2> = Vec::new();
     for x in position.x..=position.x + 1 {
@@ -556,6 +563,32 @@ fn spawn_faction_sink(
     commands
         .entity(sink_building)
         .insert((faction, reputation, Locked, Undeletable));
+
+    // Add the visual 2x2 sink sprite overlay on top
+    let sink_texture: Handle<Image> = asset_server.load("sink.png");
+    
+    // Calculate center position for the 2x2 area using grid system
+    let center_pos = GridPosition(I64Vec2::new(
+        position.x, // Use bottom-left corner as reference
+        position.y,
+    ));
+    let world_center = grid.grid_to_world_center(&center_pos);
+    
+    // Adjust for 2x2 centering (add half a grid cell to center in the 2x2 area)
+    let world_pos = Vec3::new(
+        world_center.x + (grid.scale / 2.0),
+        world_center.y + (grid.scale / 2.0),
+        65.0, // Higher Z coordinate to appear above the individual sink sprites
+    );
+
+    commands.spawn((
+        Sprite {
+            image: sink_texture,
+            custom_size: Some(Vec2::splat(128.0)), // 2x2 grid cells = 128px
+            ..Default::default()
+        },
+        Transform::from_translation(world_pos),
+    ));
 }
 
 fn map_grid_pos_to_faction(vec: I64Vec2) -> Faction {

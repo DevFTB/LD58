@@ -37,7 +37,7 @@ mod pause;
 
 fn main() {    
     App::new()
-        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(Color::srgb(0.25, 0.25, 0.25)))
         .add_plugins(AssetPlugin)
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(EntropyPlugin::<WyRand>::default())
