@@ -1,3 +1,4 @@
+use bevy::ecs::entity;
 use bevy::{prelude::*};
 use bevy::ecs::relationship::{RelationshipTarget};
 use serde::Deserialize;
@@ -23,13 +24,16 @@ pub enum ContractStatus {
     Pending,
     Active,
     Completed,
+    Rejected,
+    Failed,
 }
 
-#[derive(Component, Deserialize, Debug)]
-pub struct ContractBaseThreshold(f64);
-
-#[derive(Component, Deserialize, Debug)]
-pub struct ContractBaseMoney(f64);
+#[derive(Debug, Copy, Clone)]
+pub enum ContractFulfillmentStatus {
+    Exceeding,
+    Meeting,
+    Failing,
+}
 
 
 #[derive(Component, Default, Deserialize, Clone, Debug)]
@@ -77,18 +81,74 @@ impl SinkContracts {
     pub fn contracts(&self) -> &[Entity] {
         &self.0
     }
+
+    // ai did this not 100% sure it works but gonna trust it
+    pub fn get_current_contracts(&self, contract_query: &Query<&ContractStatus>) -> Vec<Entity> {
+    self.0.iter()
+        .filter(|&&contract_entity| {
+            if let Ok(status) = contract_query.get(contract_entity) {
+                matches!(status, ContractStatus::Pending | ContractStatus::Active)
+            } else {
+                false
+            }
+        })
+        .copied()
+        .collect()
+    }
 }
+
+
+// duplicates base_threshold and base_money in ContractBundle but i think its ok
+#[derive(Component, Debug)]
+pub struct ContractFulfillment {
+    pub throughput: f64,
+    pub status: ContractFulfillmentStatus,
+    pub base_threshold: f64,
+    pub base_money: f64,
+}
+
+impl ContractFulfillment {
+    /// Calculate the current money per second for this contract, given its base money rate.
+    pub fn get_income(&self) -> f64 {
+        match self.status {
+            ContractFulfillmentStatus::Exceeding => self.base_money * 2.0,
+            ContractFulfillmentStatus::Meeting => self.base_money,
+            ContractFulfillmentStatus::Failing => 0.,
+        }
+    }
+
+    pub fn update_throughput(&mut self, new_throughput: f64) {
+        self.throughput = new_throughput;
+        self.status = self.get_fulfillment_status();
+    }
+
+    fn get_fulfillment_status(&mut self) -> ContractFulfillmentStatus {
+        let threshold_fraction = self.throughput / self.base_threshold;
+        get_fulfillment_status(threshold_fraction)
+    }
+
+    pub fn new(base_threshold: f64, base_money: f64) -> Self {
+        Self {
+            throughput: 0.0,
+            status: ContractFulfillmentStatus::Failing,
+            base_threshold,
+            base_money,
+        }
+    }
+
+}
+
+
 
 #[derive(Bundle, Debug)]
 pub struct ContractBundle {
     pub contract: Contract,
     pub status: ContractStatus,
     pub dataset: Dataset,
-    pub base_threshold: ContractBaseThreshold,
-    pub base_money: ContractBaseMoney,
     pub faction: Faction,
     pub timeout: ContractTimeout,
     pub description: ContractDescription,
+    pub fulfillment_info: ContractFulfillment,
 }
 
 const MAX_CONTRACTS_PER_SINK: usize = 4;
@@ -105,7 +165,7 @@ impl Plugin for ContractsPlugin {
         // System to generate a new pending random contract every 2 minutes
         app.add_systems(
             Update,
-            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(120))),
+            generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(1))),
         );
     }
 }
@@ -114,12 +174,15 @@ fn generate_random_pending_contract_system(
     mut commands: Commands,
     contract_library: Res<ContractLibrary>,
     sinks: Query<(Entity, &Faction, &ReputationLevel, &SinkContracts), (With<Unlocked>, With<SinkBuilding>)>,
+    contract_query: Query<&ContractStatus>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>
 ) {
     // Only consider sinks that are not full
     let sink_entities: Vec<_> = sinks
         .iter()
-        .filter(|(_, _, _, sink_contracts)| sink_contracts.contracts().len() < MAX_CONTRACTS_PER_SINK)
+        .filter(|(_, _, _, sink_contracts)| {
+            sink_contracts.get_current_contracts(&contract_query).len() < MAX_CONTRACTS_PER_SINK
+        })
         .collect();
 
     if let Some((sink_entity, faction, reputation, _)) = sink_entities.choose(&mut rng) {
@@ -164,12 +227,40 @@ fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: 
     let faction_corporate = Faction::Academia;
     let reputation = ReputationLevel::Neutral;
 
-    if let Some(contract_bundle) =
+    if let Some(mut contract_bundle) =
         find_and_generate_contract(faction_corporate, reputation, &library)
     {
         info!(
             "  -> SUCCESS: Found contract '{:?}'", contract_bundle
         );
+        contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(49.0);
+        commands.spawn(contract_bundle);
+    } else {
+        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
+    }
+
+    if let Some(mut contract_bundle) =
+        find_and_generate_contract(faction_corporate, reputation, &library)
+    {
+        info!(
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
+        );
+        contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(75.0);
+        commands.spawn(contract_bundle);
+    } else {
+        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
+    }
+
+    if let Some(mut contract_bundle) =
+        find_and_generate_contract(faction_corporate, reputation, &library)
+    {
+        info!(
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
+        );
+        contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(125.0);
         commands.spawn(contract_bundle);
     } else {
         info!("  -> FAILURE: No contract found for Corporate faction reputation.");
@@ -194,13 +285,25 @@ pub fn find_and_generate_contract(
         contract: Contract,
         status: ContractStatus::Pending,
         dataset: suitable_contract.dataset.clone(),
-        base_threshold: ContractBaseThreshold(suitable_contract.base_threshold),
-        base_money: ContractBaseMoney(suitable_contract.base_money),
         faction: suitable_contract.faction.clone(),
         timeout: ContractTimeout(120.0), // Default timeout
         description: ContractDescription {
             name: suitable_contract.name.clone(),
             description: suitable_contract.description.clone(),
         },
+        fulfillment_info: ContractFulfillment::new(
+            suitable_contract.base_threshold, 
+            suitable_contract.base_money
+        ),
     })
+}
+
+fn get_fulfillment_status(threshold_fraction: f64) -> ContractFulfillmentStatus {
+    if threshold_fraction >= 2.0 {
+        ContractFulfillmentStatus::Exceeding
+    } else if threshold_fraction >= 1.0 {
+        ContractFulfillmentStatus::Meeting
+    } else {
+        ContractFulfillmentStatus::Failing
+    }
 }
