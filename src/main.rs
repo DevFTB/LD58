@@ -21,6 +21,7 @@ mod events;
 mod factions;
 mod factory;
 mod grid;
+mod player;
 mod test;
 mod ui;
 mod world_gen;
@@ -29,7 +30,7 @@ fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(AssetPlugin)
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
         .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_plugins(EventsPlugin)
         .add_plugins(GameCameraPlugin)

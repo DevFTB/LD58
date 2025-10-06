@@ -1,22 +1,20 @@
 use bevy::prelude::*;
 use crate::factions::{Faction, ReputationLevel};
+use crate::player::Player;
 use std::collections::HashMap;
 use serde::Deserialize;
 
 pub mod newsfeed_events;
+// pub mod interactive_events; // Old version - replaced by interactive_events2
 pub mod interactive_events;
+pub mod event_triggers;
 
 pub use newsfeed_events::{NewsItem, AddNewsfeedItemEvent};
-pub use interactive_events::{
-    EventChoice, InteractiveEventItem, InteractiveEventData, 
-    ShowInteractiveEvent, PlayerChoiceEvent
-};
+pub use interactive_events::*;
+pub use event_triggers::*;
 
 #[derive(Resource, Deserialize, Debug)]
 pub struct NewsLibrary(pub HashMap<Faction, HashMap<ReputationLevel, Vec<NewsItem>>>);
-
-#[derive(Resource, Deserialize, Debug)]
-pub struct InteractiveEventLibrary(pub HashMap<Faction, HashMap<ReputationLevel, Vec<InteractiveEventItem>>>);
 
 // A startup system to read the file and insert it as a resource.
 fn load_news_events_from_ron(mut commands: Commands) {
@@ -39,9 +37,17 @@ fn load_interactive_events_from_ron(mut commands: Commands) {
     let ron_str = std::fs::read_to_string("assets/text/interactive_events.ron")
         .expect("Failed to read interactive_events.ron");
 
-    // Parse the RON string into our InteractiveEventLibrary struct.
-    let event_library: InteractiveEventLibrary = ron::from_str(&ron_str)
+    // Parse the RON events as a Vec
+    #[derive(Deserialize)]
+    struct EventsFile {
+        events: Vec<InteractiveEventItem>,
+    }
+    
+    let events_file: EventsFile = ron::from_str(&ron_str)
         .expect("Failed to parse interactive events from RON");
+
+    // Create library with pre-built indices
+    let event_library = InteractiveEventLibrary::new(events_file.events);
 
     // Insert the fully loaded data as a Bevy Resource.
     commands.insert_resource(event_library);
@@ -53,9 +59,20 @@ pub struct EventsPlugin;
 
 impl Plugin for EventsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<interactive_events::ShowInteractiveEvent>()
-            .add_message::<interactive_events::PlayerChoiceEvent>()
-            .add_message::<newsfeed_events::AddNewsfeedItemEvent>()
-            .add_systems(Startup, (load_news_events_from_ron, load_interactive_events_from_ron));
+        app.add_message::<ShowInteractiveEvent>()
+            .add_message::<TriggerInteractiveEvent>()
+            .add_message::<PlayerChoiceEvent>()
+            .add_message::<AddNewsfeedItemEvent>()
+            .init_resource::<EventState>()
+            .init_resource::<Player>()
+            .init_resource::<RandomEventTimer>()
+            .add_systems(PreStartup, (load_news_events_from_ron, load_interactive_events_from_ron))
+            .add_systems(Update, (
+                handle_manual_event_triggers,
+                random_event_trigger_system,
+                forced_event_checker_system,
+                handle_player_choice_system,
+                bankruptcy_update_system,
+            ));
     }
 }

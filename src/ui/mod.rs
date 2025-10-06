@@ -22,6 +22,7 @@ impl Plugin for UIPlugin {
             .insert_resource(shop::SelectedBuildingType(None))
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .insert_resource(interactive_event::ModalSpawnCooldown::default())
+            .insert_resource(interactive_event::QueuedEvents::default())
             .add_systems(Startup, startup)
             .add_systems(Startup, shop::spawn_building_shop)
             .add_systems(Startup, newsfeed::spawn_newsfeed_ui)
@@ -32,9 +33,16 @@ impl Plugin for UIPlugin {
             .add_systems(Update, newsfeed::add_newsfeed_item_system)
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
             .add_systems(Update, newsfeed::generate_news)
-            .add_systems(Update, interactive_event::show_interactive_event_system)
-            .add_systems(Update, interactive_event::handle_choice_button_interaction)
-            .add_systems(Update, interactive_event::handle_choice_click)
+            .add_systems(Update, interactive_event::route_events_by_urgency)
+            .add_systems(Update, interactive_event::manage_event_bubbles)
+            .add_systems(Update, interactive_event::handle_bubble_clicks)
+            .add_systems(Update, interactive_event::animate_bubble_wobble)
+            .add_systems(Update, (
+                interactive_event::handle_choice_button_interaction,
+                interactive_event::handle_choice_click,
+                interactive_event::handle_choice_tooltip,
+                interactive_event::scale_text_system,
+            ))
             .add_systems(Update, interactive_event::test_trigger_random_event);
     }
 }

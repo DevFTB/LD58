@@ -1,439 +1,157 @@
-InteractiveEventLibrary({
-    Corporate: {
-        Hostile: [
-            (
-                id: 1001,
-                title: "Corporate Blackmail",
-                description: "A rival corporation has obtained compromising data about your operations and is threatening to leak it unless you pay a substantial sum.",
-                choices: [
-                    (
-                        description: "Pay the blackmail to protect your reputation",
-                        consequences: [
-                            ( consequence_type: Money(-2000) ),
-                        ],
-                    ),
-                    (
-                        description: "Refuse and prepare for the fallout",
-                        consequences: [
-                            ( consequence_type: Reputation(Corporate, -15) ),
-                            ( consequence_type: Reputation(Government, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Counter-attack with your own intel",
-                        consequences: [
-                            ( consequence_type: Money(-500) ),
-                            ( consequence_type: Reputation(Corporate, -5) ),
-                        ],
-                    ),
-                ],
-            ),
-            (
-                id: 1002,
-                title: "Hostile Takeover Attempt",
-                description: "A corporate coalition is attempting to buy out your company. They're offering a generous sum, but accepting means losing control.",
-                choices: [
-                    (
-                        description: "Accept the buyout and retire rich",
-                        consequences: [
-                            ( consequence_type: Money(10000) ),
-                            ( consequence_type: GameOver ),
-                        ],
-                    ),
-                    (
-                        description: "Fight the takeover with aggressive lobbying",
-                        consequences: [
-                            ( consequence_type: Money(-3000) ),
-                            ( consequence_type: Reputation(Corporate, -10) ),
-                            ( consequence_type: Reputation(Government, 5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Untrusted: [
-            (
-                id: 1011,
-                title: "Contract Dispute",
-                description: "A major client claims you failed to deliver data as specified. They're threatening legal action.",
-                choices: [
-                    (
-                        description: "Settle out of court",
-                        consequences: [
-                            ( consequence_type: Money(-1000) ),
-                            ( consequence_type: Reputation(Corporate, 3) ),
-                        ],
-                    ),
-                    (
-                        description: "Fight it in court",
-                        consequences: [
-                            ( consequence_type: Money(-500) ),
-                            ( consequence_type: Reputation(Corporate, -5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Neutral: [
-            (
-                id: 1031,
-                title: "Partnership Opportunity",
-                description: "A mid-sized corporation offers a partnership deal that could expand your market reach.",
-                choices: [
-                    (
-                        description: "Accept the partnership",
-                        consequences: [
-                            ( consequence_type: Money(-1500) ),
-                            ( consequence_type: Reputation(Corporate, 10) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline and stay independent",
-                        consequences: [],
-                    ),
-                ],
-            ),
-        ],
-        Friendly: [
-            (
-                id: 1051,
-                title: "Exclusive Contract Offer",
-                description: "Your corporate allies offer an exclusive, high-value contract that requires significant investment.",
-                choices: [
-                    (
-                        description: "Accept the lucrative contract",
-                        consequences: [
-                            ( consequence_type: Money(3000) ),
-                            ( consequence_type: Reputation(Corporate, 5) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline to maintain flexibility",
-                        consequences: [
-                            ( consequence_type: Reputation(Corporate, -3) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Trusted: [
-            (
-                id: 1061,
-                title: "Market Manipulation Proposal",
-                description: "Your closest corporate partners suggest coordinating to manipulate market prices in your favor.",
-                choices: [
-                    (
-                        description: "Join the scheme",
-                        consequences: [
-                            ( consequence_type: Money(2000) ),
-                            ( consequence_type: Reputation(Corporate, 10) ),
-                            ( consequence_type: Reputation(Government, -10) ),
-                            (consequence_type: Reputation(Criminal, 10))
-                        ],
-                    ),
-                    (
-                        description: "Refuse and report to authorities",
-                        consequences: [
-                            ( consequence_type: Reputation(Corporate, -20) ),
-                            ( consequence_type: Reputation(Government, 15) ),
-                        ],
-                    ),
-                    (
-                        description: "Refuse but stay silent",
-                        consequences: [
-                            ( consequence_type: Reputation(Corporate, -5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    },
-    Government: {
-        Hostile: [
-            (
-                id: 2001,
-                title: "Regulatory Raid",
-                description: "Federal agents have raided your offices looking for evidence of illegal data collection. They're demanding full cooperation.",
-                choices: [
-                    (
-                        description: "Cooperate fully and provide all data",
-                        consequences: [
-                            ( consequence_type: Reputation(Government, 10) ),
-                            ( consequence_type: Reputation(Corporate, -10) ),
-                        ],
-                    ),
-                    (
-                        description: "Resist and hire lawyers",
-                        consequences: [
-                            ( consequence_type: Money(-2000) ),
-                            ( consequence_type: Reputation(Government, -15) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Untrusted: [
-            (
-                id: 2011,
-                title: "Compliance Audit",
-                description: "A government audit has found several compliance violations. Pay fines or dispute the findings?",
-                choices: [
-                    (
-                        description: "Pay the fines immediately",
-                        consequences: [
-                            ( consequence_type: Money(-1500) ),
-                            ( consequence_type: Reputation(Government, 5) ),
-                        ],
-                    ),
-                    (
-                        description: "Contest the violations",
-                        consequences: [
-                            ( consequence_type: Money(-500) ),
-                            ( consequence_type: Reputation(Government, -5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Neutral: [
-            (
-                id: 2031,
-                title: "Data Request",
-                description: "The government requests access to your data for a national security investigation.",
-                choices: [
-                    (
-                        description: "Comply with the request",
-                        consequences: [
-                            ( consequence_type: Reputation(Government, 10) ),
-                            ( consequence_type: Reputation(Criminal, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Require a warrant",
-                        consequences: [
-                            ( consequence_type: Reputation(Government, -3) ),
-                            ( consequence_type: Reputation(Academia, 5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Friendly: [
-            (
-                id: 2051,
-                title: "Government Contract",
-                description: "The government offers a lucrative contract for data analysis services.",
-                choices: [
-                    (
-                        description: "Accept the contract",
-                        consequences: [
-                            ( consequence_type: Money(2500) ),
-                            ( consequence_type: Reputation(Government, 10) ),
-                            ( consequence_type: Reputation(Criminal, -10) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline for ethical reasons",
-                        consequences: [
-                            ( consequence_type: Reputation(Government, -5) ),
-                            ( consequence_type: Reputation(Academia, 10) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    },
-    Academia: {
-        Neutral: [
-            (
-                id: 3031,
-                title: "Research Partnership",
-                description: "A university wants to use your data for a study on privacy and data ethics.",
-                choices: [
-                    (
-                        description: "Provide anonymized data for free",
-                        consequences: [
-                            ( consequence_type: Reputation(Academia, 15) ),
-                            ( consequence_type: Reputation(Government, 5) ),
-                        ],
-                    ),
-                    (
-                        description: "Charge for the data",
-                        consequences: [
-                            ( consequence_type: Money(500) ),
-                            ( consequence_type: Reputation(Academia, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline the request",
-                        consequences: [
-                            ( consequence_type: Reputation(Academia, -3) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Friendly: [
-            (
-                id: 3051,
-                title: "Collaborative Research Opportunity",
-                description: "Leading academics propose a joint research project that could improve your algorithms.",
-                choices: [
-                    (
-                        description: "Fund and participate in the research",
-                        consequences: [
-                            ( consequence_type: Money(-800) ),
-                            ( consequence_type: Reputation(Academia, 15) ),
-                        ],
-                    ),
-                    (
-                        description: "Participate without funding",
-                        consequences: [
-                            ( consequence_type: Reputation(Academia, 5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    },
-    Criminal: {
-        Hostile: [
-            (
-                id: 4001,
-                title: "Criminal Threat",
-                description: "A criminal syndicate has obtained sensitive data about your operations and is threatening to expose it unless you cooperate.",
-                choices: [
-                    (
-                        description: "Refuse and report to authorities",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, -15) ),
-                            ( consequence_type: Reputation(Government, 10) ),
-                            ( consequence_type: Money(-500) ),
-                        ],
-                    ),
-                    (
-                        description: "Negotiate a deal",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, 5) ),
-                            ( consequence_type: Money(-1000) ),
-                            ( consequence_type: Reputation(Government, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Ignore them and increase security",
-                        consequences: [
-                            ( consequence_type: Money(-800) ),
-                            ( consequence_type: Reputation(Criminal, -10) ),
-                        ],
-                    ),
-                ],
-            ),
-            (
-                id: 4002,
-                title: "Data Theft",
-                description: "Criminal hackers have breached your systems and stolen valuable data. They're selling it on the dark web.",
-                choices: [
-                    (
-                        description: "Launch damage control and notify clients",
-                        consequences: [
-                            ( consequence_type: Money(-2000) ),
-                            ( consequence_type: Reputation(Corporate, -10) ),
-                            ( consequence_type: Reputation(Criminal, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Cover it up and fix the breach quietly",
-                        consequences: [
-                            ( consequence_type: Money(-1500) ),
-                            ( consequence_type: Reputation(Government, -10) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Untrusted: [
-            (
-                id: 4011,
-                title: "Black Market Offer",
-                description: "Criminal contacts offer to sell you stolen competitor data at a steep discount.",
-                choices: [
-                    (
-                        description: "Buy the data",
-                        consequences: [
-                            ( consequence_type: Money(-800) ),
-                            ( consequence_type: Reputation(Criminal, 10) ),
-                            ( consequence_type: Reputation(Government, -15) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline and report the offer",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, -10) ),
-                            ( consequence_type: Reputation(Government, 5) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline quietly",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, -3) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Neutral: [
-            (
-                id: 4031,
-                title: "Money Laundering Proposal",
-                description: "Criminal elements approach you with an offer to launder money through your data transactions.",
-                choices: [
-                    (
-                        description: "Accept the lucrative but illegal deal",
-                        consequences: [
-                            ( consequence_type: Money(3000) ),
-                            ( consequence_type: Reputation(Criminal, 15) ),
-                            ( consequence_type: Reputation(Government, -20) ),
-                        ],
-                    ),
-                    (
-                        description: "Refuse politely",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, -5) ),
-                        ],
-                    ),
-                    (
-                        description: "Refuse and report to authorities",
-                        consequences: [
-                            ( consequence_type: Reputation(Criminal, -15) ),
-                            ( consequence_type: Reputation(Government, 10) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-        Friendly: [
-            (
-                id: 4051,
-                title: "Protection Offer",
-                description: "A criminal organization offers 'protection services' for your operations in exchange for regular payments.",
-                choices: [
-                    (
-                        description: "Accept their protection",
-                        consequences: [
-                            ( consequence_type: Money(-500) ),
-                            ( consequence_type: Reputation(Criminal, 10) ),
-                            ( consequence_type: Reputation(Government, -10) ),
-                        ],
-                    ),
-                    (
-                        description: "Decline and rely on security",
-                        consequences: [
-                            ( consequence_type: Money(-300) ),
-                            ( consequence_type: Reputation(Criminal, -5) ),
-                        ],
-                    ),
-                ],
-            ),
-        ],
-    },
-})
+(
+    events: [
+        // EXAMPLE 1: Tutorial event (Forced - auto-triggers when conditions met)
+        (
+            id: "tutorial_welcome",
+            title: "Welcome to the Data Nexus",
+            description: "Your new data processing facility is operational. The city's factions have taken notice.",
+            choices: [
+                (
+                    text: "Focus on corporate contracts",
+                    requirements: [
+                        MinMoney(10000)
+                    ],
+                    consequences: [
+                        ModifyReputation(faction: Corporate, amount: 10),
+                        ModifyMoney(500),
+                    ],
+                ),
+                (
+                    text: "Explore underground opportunities",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 10),
+                        UnlockEvent("criminal_contact"),
+                    ],
+                ),
+            ],
+            requirements: [
+                SpecificYear(0),
+            ],
+            trigger_mode: Forced,
+            repeatable: false,
+            popup_urgency: true,
+        ),
+
+        // EXAMPLE 2: Bankruptcy event (Manual - only triggered by game system)
+        (
+            id: "bankruptcy_warning",
+            title: "Financial Crisis!",
+            description: "Your facility is running out of money. You need to make drastic decisions.",
+            choices: [
+                (
+                    text: "Take emergency loan",
+                    consequences: [
+                        ModifyMoney(2000),
+                        UnlockEvent("loan_repayment"),
+                    ],
+                ),
+                (
+                    text: "Sell equipment",
+                    requirements: [
+                        MinMoney(5000),
+                    ],
+                    consequences: [
+                        ModifyMoney(1500),
+                    ],
+                ),
+                (
+                    text: "Declare bankruptcy",
+                    consequences: [
+                        Bankruptcy,
+                    ],
+                ),
+            ],
+            requirements: [],  // No requirements - only triggered when game system calls it
+            trigger_mode: Manual,
+            repeatable: true,  // Can be triggered multiple times
+        ),
+
+        // EXAMPLE 3: Random events
+        (
+            id: "random_opportunity",
+            title: "Unexpected Contract",
+            description: "A mysterious client offers you a lucrative contract.",
+            faction: Some(Criminal),
+            choices: [
+                (
+                    text: "Accept",
+                    consequences: [
+                        ModifyMoney(1000),
+                        ModifyReputation(faction: Criminal, amount: 5),
+                    ],
+                ),
+                (
+                    text: "Decline",
+                    consequences: [],
+                ),
+            ],
+            requirements: [
+                MinMoney(500),
+            ],
+            trigger_mode: Random(weight: 5.0),
+            repeatable: true,
+        ),
+        
+        // Random event that triggers immediately
+        (
+            id: "early_investor",
+            title: "Angel Investor",
+            description: "A wealthy investor shows interest in your data processing facility.",
+            faction: Some(Corporate),
+            choices: [
+                (
+                    text: "Accept investment",
+                    consequences: [
+                        ModifyMoney(2000),
+                        ModifyReputation(faction: Corporate, amount: 15),
+                    ],
+                ),
+                (
+                    text: "Stay independent",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 10),
+                    ],
+                ),
+            ],
+            requirements: [
+                MinMoney(500),
+            ],
+            trigger_mode: Random(weight: 8.0),
+            repeatable: true,
+        ),
+        
+        // Another early random event
+        (
+            id: "data_breach_alert",
+            title: "Security Concern",
+            description: "You've detected suspicious activity in your network. Someone is probing your defenses.",
+            faction: Some(Criminal),
+            choices: [
+                (
+                    text: "Upgrade security",
+                    consequences: [
+                        ModifyMoney(-500),
+                        ModifyReputation(faction: Corporate, amount: 10),
+                    ],
+                ),
+                (
+                    text: "Ignore it",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 5),
+                    ],
+                ),
+                (
+                    text: "Trace the hacker",
+                    consequences: [
+                        ModifyMoney(-200),
+                        ModifyReputation(faction: Criminal, amount: 10),
+                        UnlockEvent("hacker_encounter"),
+                    ],
+                ),
+            ],
+            requirements: [],
+            trigger_mode: Random(weight: 6.0),
+            repeatable: true,
+        ),
+    ]
+)
