@@ -17,7 +17,7 @@ pub struct Tiles(Vec<Entity>);
 
 #[derive(Component, Debug)]
 #[relationship(relationship_target = Tiles)]
-pub struct Tile(Entity);
+pub struct Tile(pub Entity);
 
 #[derive(Component, Default)]
 pub struct TileThroughputData {

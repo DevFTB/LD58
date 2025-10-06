@@ -5,8 +5,14 @@ use crate::factory::logical::{DataBuffer, DataSink};
 use crate::grid::{Direction, GridAtlasSprite, GridPosition, Orientation};
 use bevy::ecs::relationship::RelatedSpawner;
 use bevy::math::I64Vec2;
-use bevy::prelude::{Commands, Component, Entity};
+use bevy::prelude::{Commands, Component, Entity, Query, Changed, Res};
 use bevy::prelude::{SpawnRelated, SpawnWith};
+use bevy::sprite::Text2d;
+use bevy::text::{TextFont, TextColor};
+use bevy::color::Color;
+use bevy::transform::components::Transform;
+use bevy::time::Time;
+use std::collections::VecDeque;
 use std::ops::Add;
 
 #[derive(Component, Clone)]
@@ -14,6 +20,7 @@ use std::ops::Add;
 pub struct SinkBuilding {
     pub size: I64Vec2,
 }
+
 
 impl Building for SinkBuilding {
     fn spawn_naked(
@@ -147,3 +154,17 @@ fn get_placement((x, y): (i64, i64), size: I64Vec2) -> TilePlacement {
         (false, false) => TilePlacement::Inner,
     }
 }
+
+// System to update debug text on sinks showing their buffer values
+// pub fn update_sink_debug_text(
+//     mut query: Query<(&DataSink, &ThroughputTracker, &mut Text2d)>,
+// ) {
+//     for (sink, tracker, mut text) in query.iter_mut() {
+//         // Format buffer information: type, value, and throughput
+//         let buffer_info = format!(
+//             "{}",
+//             tracker.average_throughput
+//         );
+//         **text = buffer_info;
+//     }
+// }
