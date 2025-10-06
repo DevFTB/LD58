@@ -34,7 +34,7 @@ pub struct GridPlugin;
 pub struct WorldMap(pub HashMap<GridPosition, Entity>);
 
 // Function to check if a set of grid positions is free
-#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default)]
+#[derive(Component, Deref, PartialEq, Eq, Hash, Copy, Clone, Default, Debug)]
 #[require(Transform)]
 #[component(on_insert = grid_position_added)]
 #[component(on_remove = grid_position_removed)]
@@ -47,7 +47,14 @@ pub enum Direction {
     Left,
     Up,
 }
-
+impl Direction {
+    pub const ALL: [Direction; 4] = [
+        Direction::Right,
+        Direction::Down,
+        Direction::Left,
+        Direction::Up,
+    ];
+}
 #[derive(Resource)]
 pub struct Grid {
     pub scale: f32,
@@ -144,14 +151,14 @@ impl GridPosition {
                 Direction::Up,
                 GridPosition(I64Vec2 {
                     x: self.x,
-                    y: self.y - 1,
+                    y: self.y + 1,
                 }),
             ),
             (
                 Direction::Down,
                 GridPosition(I64Vec2 {
                     x: self.x,
-                    y: self.y + 1,
+                    y: self.y - 1,
                 }),
             ),
         ]
@@ -167,7 +174,11 @@ impl GridPosition {
         }
     }
 }
-
+impl From<I64Vec2> for GridPosition {
+    fn from(value: I64Vec2) -> Self {
+        GridPosition(value)
+    }
+}
 impl Material2d for GridMaterial {
     fn fragment_shader() -> ShaderRef {
         GRID_SHADER_ASSET_PATH.into()

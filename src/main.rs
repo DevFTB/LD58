@@ -1,7 +1,9 @@
 extern crate core;
+
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
+use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
@@ -10,7 +12,6 @@ use crate::{
     factory::{physical::PhysicalLink, FactoryPlugin},
     grid::{Grid, GridPlugin, GridPosition},
     ui::UIPlugin,
-    world_gen::WorldGenPlugin,
 };
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -44,10 +45,11 @@ fn main() {
 }
 
 fn startup(mut commands: Commands) {
-    test::spawn_splitter_test(&mut commands);
-    test::spawn_delinker_test(&mut commands);
-    test::spawn_combiner_test(&mut commands);
-    test::spawn_trunking_test(&mut commands);
+    // test::spawn_splitter_test(&mut commands);
+    // test::spawn_delinker_test(&mut commands);
+    // test::spawn_combiner_test(&mut commands);
+    // test::spawn_trunking_test(&mut commands);
+    // test::spawn_sized_sink_test(&mut commands);
 }
 
 pub fn remove_physical_link_on_right_click(

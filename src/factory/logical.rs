@@ -7,7 +7,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
 };
 use core::fmt;
-use std::fmt::Write;
+use std::fmt::{Display, Formatter, Write};
 
 // The fundamental types of data
 #[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -65,6 +65,30 @@ impl Dataset {
         self
     }
 }
+
+impl Display for Dataset {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let string = &self
+            .contents
+            .iter()
+            .flat_map(|(k, v)| {
+                [
+                    k.to_shorthand().to_string(),
+                    v.iter()
+                        .map(|attr| attr.to_shorthand())
+                        .collect::<Vec<_>>()
+                        .join("")
+                        .to_string(),
+                ]
+            })
+            .collect::<Vec<_>>()
+            .join("")
+            .to_string();
+
+        write!(f, "{}", string)
+    }
+}
+
 #[derive(Component, Debug)]
 pub struct DataSink {
     pub direction: Direction,
@@ -86,24 +110,10 @@ pub struct DataBuffer {
 }
 impl fmt::Display for DataBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let type_string = self.shape.as_ref().map_or(String::from("None"), |shape| {
-            shape
-                .contents
-                .iter()
-                .flat_map(|(k, v)| {
-                    [
-                        k.to_shorthand().to_string(),
-                        v.iter()
-                            .map(|attr| attr.to_shorthand())
-                            .collect::<Vec<_>>()
-                            .join("")
-                            .to_string(),
-                    ]
-                })
-                .collect::<Vec<_>>()
-                .join("")
-                .to_string()
-        });
+        let type_string = self
+            .shape
+            .as_ref()
+            .map_or(String::from("None"), |shape| shape.to_string());
         write!(f, "{}: {}", type_string, self.value.round())
     }
 }
@@ -151,14 +161,9 @@ pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     }
 }
 
-pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
-    for (entity, sink, mut text) in query {
+pub fn visualise_sinks(query: Query<(Ref<DataSink>, &mut Text2d)>) {
+    for (sink, mut text) in query {
         if sink.is_changed() {
-            // println!(
-            //     "Sink {:?} storing {:?} of amount {:?}",
-            //     entity, sink.buffer.shape, sink.buffer.value
-            //
-            // );
             text.0 = format!("{}", sink.buffer);
         }
     }

@@ -13,7 +13,6 @@ use bevy::{
         system::{Commands, Query},
     },
 };
-use bevy::prelude::World;
 
 #[derive(Component)]
 pub struct PhysicalSink(Entity, Direction);
@@ -105,6 +104,10 @@ pub fn connect_direct(
                 // Verify direction compatibility:
                 // source's output_direction should match the direction to the sink
                 // sink's input_direction should match the opposite direction (from sink to source)
+                // println!(
+                //     "Trying to match source dir {:?} {:?} {:?}",
+                //     source.direction, sink.direction
+                // );
                 if source.direction == *dir && sink.direction == dir.opposite() {
                     // Create a direct logical link with no intermediate physical links
                     let link = LogicalLink {
