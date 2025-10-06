@@ -10,7 +10,7 @@ use bevy::sprite::Text2d;
 
 #[derive(Component, Clone)]
 pub struct Trunker {
-    pub(crate) threshold_per_sink: f32,
+    pub(crate) throughput_per_sink: f32,
     pub(crate) sink_count: i64,
 }
 
@@ -22,7 +22,7 @@ impl Building for Trunker {
         orientation: Orientation,
     ) -> Entity {
         let sink_count = self.sink_count;
-        let throughput = self.threshold_per_sink * self.sink_count as f32;
+        let throughput = self.throughput_per_sink * self.sink_count as f32;
         commands
             .spawn((
                 position,
@@ -116,7 +116,7 @@ pub fn do_trunking(
                     (
                         s.buffer
                             .value
-                            .min(trunker.threshold_per_sink * time.delta_secs()),
+                            .min(trunker.throughput_per_sink * time.delta_secs()),
                         s,
                     )
                 })
