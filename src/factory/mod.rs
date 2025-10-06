@@ -79,7 +79,6 @@ pub fn handle_construction_event(
     for event in construct_events.read() {
         let base_position = GridPosition(event.grid_position);
         // Extract sprite info for all buildings
-
         event
             .building
             .spawn(&mut commands, base_position, event.orientation);

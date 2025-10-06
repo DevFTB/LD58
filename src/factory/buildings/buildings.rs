@@ -1,8 +1,3 @@
-use crate::factory::buildings::aggregator::Aggregator;
-use crate::factory::buildings::combiner::Combiner;
-use crate::factory::buildings::delinker::Delinker;
-use crate::factory::buildings::splitter::Splitter;
-use crate::factory::buildings::trunker::Trunker;
 use crate::grid::{GridAtlasSprite, GridPosition, Orientation};
 use bevy::prelude::*;
 
@@ -44,22 +39,6 @@ pub trait Building: Send + Sync {
 }
 
 #[derive(Clone)]
-pub enum BuildingTypes {
-    Link {
-        throughput: f32,
-    },
-    Collector {
-        collection_rate: f32,
-        collector_type: String,
-    },
-    Aggregator(Aggregator),
-    Splitter(Splitter),
-    Combiner(Combiner),
-    Delinker(Delinker),
-    Trunker(Trunker),
-}
-
-#[derive(Clone)]
 pub enum SpriteResource {
     Atlas(usize), // Sprite index in the texture atlas (works for all building sizes)
     Sprite(Handle<Image>), // Fallback to individual sprite file
@@ -79,8 +58,6 @@ pub struct BuildingData {
     pub grid_height: i64,
     pub cost: i32,
     pub name: String,
-    // Specific gameplay attributes
-    pub building_type: BuildingTypes,
 }
 
 impl BuildingData {

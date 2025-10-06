@@ -32,11 +32,7 @@ pub struct BuildingOrientation(pub Orientation);
 pub struct SelectedBuildingType(pub Option<Arc<dyn Building>>);
 
 /// Spawns the building shop UI bar at the bottom of the screen
-pub fn spawn_building_shop(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    assets: Res<GameAssets>,
-) {
+pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
     let buildings = [
         UIBuilding {
             building_type: Arc::new(Splitter {

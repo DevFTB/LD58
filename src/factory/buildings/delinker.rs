@@ -1,4 +1,4 @@
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource, Dataset};
 use crate::grid::{GridPosition, GridSprite, Orientation};
@@ -64,10 +64,6 @@ impl Building for Delinker {
             grid_height: 1,
             cost: 60,
             name: format!("Delinker {}x1", self.source_count),
-            building_type: BuildingTypes::Delinker(Delinker {
-                source_count: self.source_count,
-                throughput: 5.0,
-            }),
         }
     }
 }

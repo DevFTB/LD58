@@ -1,4 +1,4 @@
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{pass_data_internal, DataBuffer, DataSink, DataSource};
 use crate::grid::{GridPosition, GridSprite, Orientation};
@@ -63,10 +63,6 @@ impl Building for Splitter {
             grid_height: 1,
             cost: 60,
             name: format!("Splitter {}x1", self.source_count),
-            building_type: BuildingTypes::Splitter(Splitter {
-                throughput: 5.0,
-                source_count: self.source_count,
-            }),
         }
     }
 }

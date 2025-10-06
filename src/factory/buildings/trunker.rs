@@ -1,4 +1,4 @@
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource};
 use crate::grid::{GridPosition, GridSprite, Orientation};
@@ -63,10 +63,6 @@ impl Building for Trunker {
             grid_height: 1,
             cost: 60,
             name: format!("Trunker {}x1", self.sink_count),
-            building_type: BuildingTypes::Trunker(Trunker {
-                sink_count: self.sink_count,
-                threshold_per_sink: 5.0,
-            }),
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{
     BasicDataType, DataAttribute, DataBuffer, DataSink, DataSource, Dataset,
@@ -67,10 +67,6 @@ impl Building for Combiner {
             grid_height: 1,
             cost: 60,
             name: format!("Combiner {}x1", self.sink_count),
-            building_type: BuildingTypes::Combiner(Combiner {
-                sink_count: self.sink_count,
-                throughput: 5.0,
-            }),
         }
     }
 }

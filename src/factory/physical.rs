@@ -1,3 +1,4 @@
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -9,7 +10,6 @@ use bevy::ecs::{
     system::{Commands, Query},
 };
 use bevy::platform::collections::{HashMap, HashSet};
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -42,7 +42,6 @@ impl Building for PhysicalLink {
             grid_height: 1,
             cost: 25,
             name: "Link".to_string(),
-            building_type: BuildingTypes::Link { throughput: 10.0 },
         }
     }
 }

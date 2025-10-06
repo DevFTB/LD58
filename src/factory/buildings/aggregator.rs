@@ -1,4 +1,4 @@
-use crate::factory::buildings::buildings::{Building, BuildingData, BuildingTypes, SpriteResource};
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::Tiles;
 use crate::factory::logical::{
     pass_data_internal, DataAttribute, DataBuffer, DataSink, DataSource,
@@ -59,7 +59,6 @@ impl Building for Aggregator {
             grid_height: 1,
             cost: 75,
             name: "Aggregator".to_string(),
-            building_type: BuildingTypes::Aggregator(Aggregator { throughput: 5.0 }),
         }
     }
 }
