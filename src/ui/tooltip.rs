@@ -1,5 +1,6 @@
 use crate::factory::buildings::TileThroughputData;
 use crate::factory::logical::calculate_throughput;
+use crate::LinkedSpawn;
 use bevy::app::{App, Plugin, Update};
 use bevy::color::Color;
 use bevy::math::Vec3;
@@ -86,15 +87,17 @@ pub fn attach_tooltip(commands: &mut Commands, id: Entity) {
         ))
         .id();
 
+    let child = commands
+        .spawn(InheritTranslation(id))
+        .add_children(&[in_text, out_text])
+        .id();
     commands.entity(id).insert((
         TileThroughputData::default(),
         Pickable::default(),
         ToggleOnHover(vec![in_text, out_text]),
         TileThroughputTooltip { in_text, out_text },
+        LinkedSpawn(vec![child]),
     ));
-    commands
-        .spawn(InheritTranslation(id))
-        .add_children(&[in_text, out_text]);
 }
 
 #[derive(Component, Deref)]

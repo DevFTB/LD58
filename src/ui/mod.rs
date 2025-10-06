@@ -1,13 +1,17 @@
+use crate::factory::physical::remove_physical_link_on_right_click;
+use crate::ui::shop::clear_selection;
 use crate::ui::tooltip::TooltipPlugin;
 use crate::player::Player;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
-pub mod newsfeed;
-pub mod shop;
 pub mod contracts;
 pub mod interactive_event;
+pub mod newsfeed;
+pub mod shop;
 pub mod tooltip;
 pub mod money;
+
+pub mod interaction;
 
 pub struct UIPlugin;
 
@@ -29,11 +33,15 @@ impl Plugin for UIPlugin {
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .insert_resource(interactive_event::ModalSpawnCooldown::default())
             .insert_resource(interactive_event::QueuedEvents::default())
-            .add_systems(Update, (
-                contracts::send_scroll_events,
-                contracts::handle_contract_buttons,
-                contracts::update_contracts_sidebar_ui,
-            ).chain())
+            .add_systems(
+                Update,
+                (
+                    contracts::send_scroll_events,
+                    contracts::handle_contract_buttons,
+                    contracts::update_contracts_sidebar_ui,
+                )
+                    .chain(),
+            )
             .add_observer(contracts::on_scroll_handler)
             .add_systems(Startup, startup)
             .add_systems(Startup, shop::spawn_building_shop)
@@ -47,18 +55,26 @@ impl Plugin for UIPlugin {
             .add_systems(Update, shop::handle_building_rotate)
             .add_systems(Update, newsfeed::add_newsfeed_item_system)
             .add_systems(Update, newsfeed::scroll_newsfeed_items)
-            .add_systems(Update, newsfeed::generate_news) 
+            .add_systems(Update, newsfeed::generate_news)
             .add_systems(Update, interactive_event::route_events_by_urgency)
             .add_systems(Update, interactive_event::manage_event_bubbles)
             .add_systems(Update, interactive_event::handle_bubble_clicks)
             .add_systems(Update, interactive_event::animate_bubble_wobble)
-            .add_systems(Update, (
-                interactive_event::handle_choice_button_interaction,
-                interactive_event::handle_choice_click,
-                interactive_event::handle_choice_tooltip,
-                interactive_event::scale_text_system,
-            ))
-            .add_systems(Update, interactive_event::test_trigger_random_event);
+            .add_systems(
+                Update,
+                (
+                    interactive_event::handle_choice_button_interaction,
+                    interactive_event::handle_choice_click,
+                    interactive_event::handle_choice_tooltip,
+                    interactive_event::scale_text_system,
+                ),
+            )
+            .add_systems(Update, interactive_event::test_trigger_random_event)
+            .add_systems(
+                Update,
+                clear_selection.before(remove_physical_link_on_right_click),
+            );
+        app.add_plugins(TooltipPlugin);
     }
 }
 

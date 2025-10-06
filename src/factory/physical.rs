@@ -1,6 +1,8 @@
-use crate::factory::buildings::Tile;
 use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
-use crate::grid::{GridAtlasSprite, WorldMap};
+use crate::factory::buildings::Tile;
+use crate::factory::{MarkedForRemoval, RemoveBuildingRequest};
+use crate::grid::{Grid, GridAtlasSprite, WorldMap};
+use crate::ui::interaction::MouseButtonEvent;
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -13,7 +15,7 @@ use bevy::ecs::{
 };
 use bevy::platform::collections::HashSet;
 use bevy::prelude::*;
-
+use bevy::window::PrimaryWindow;
 // ============================================================================
 // COMPONENTS
 // ============================================================================
@@ -459,7 +461,6 @@ pub fn assemble_logical_links(
 
         // Mark all segments as linked
         for &segment in full_chain.iter() {
-            commands.entity(segment).insert(Linked);
             processed.insert(segment);
         }
 
@@ -524,6 +525,34 @@ fn walk_downstream(
 // CLEANUP ON REMOVAL
 // ============================================================================
 
+/// Handles cleanup when a DataSource is removed - removes LogicalLinks that reference it
+pub fn on_data_source_removed(
+    trigger: On<Remove, DataSource>,
+    mut commands: Commands,
+    logical_links: Query<(Entity, &LogicalLink)>,
+) {
+    let removed_entity = trigger.entity;
+
+    // Find and remove any LogicalLinks that have this entity as their source
+    for (sink_entity, logical) in logical_links.iter() {
+        if logical.source == removed_entity {
+            // Remove the LogicalLink from the sink
+            if let Ok(mut entity_commands) = commands.get_entity(sink_entity) {
+                entity_commands.remove::<LogicalLink>();
+            }
+        }
+    }
+}
+
+/// Handles cleanup when a DataSink is removed - removes LogicalLinks that reference it
+pub fn on_data_sink_removed(
+    trigger: On<Remove, DataSink>,
+    mut commands: Commands,
+    logical_links: Query<(Entity, &LogicalLink)>,
+) {
+    // Logical link will clean up itself
+}
+
 /// Handles cleanup when a PhysicalLink is removed
 pub fn on_physical_link_removed(
     trigger: On<Remove, PhysicalLink>,
@@ -573,12 +602,6 @@ pub fn on_physical_link_removed(
     // Tear down logical links that used this segment
     for (sink_entity, logical) in logical_links.iter() {
         if logical.links.contains(&removed_entity) {
-            // Unmark all segments
-            for &segment in logical.links.iter() {
-                if let Ok(mut entity_commands) = commands.get_entity(segment) {
-                    entity_commands.remove::<Linked>();
-                }
-            }
             // Remove the logical link
             if let Ok(mut entity_commands) = commands.get_entity(sink_entity) {
                 entity_commands.remove::<LogicalLink>();
@@ -591,5 +614,66 @@ pub fn on_physical_link_removed(
         validation_events.write(ValidateConnections {
             positions: positions_to_revalidate,
         });
+    }
+}
+
+pub fn remove_physical_link_on_right_click(
+    mut commands: Commands,
+    mut mouse: ResMut<MouseButtonEvent>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform)>,
+    grid: Res<Grid>,
+    world_map: Res<WorldMap>,
+    links: Query<&PhysicalLink>,
+    tiles: Query<&Tile>,
+    mut removal_events: MessageWriter<RemoveBuildingRequest>,
+) {
+    let Some(mouse) = mouse.handle() else { return };
+
+    // Only act on the press edge to avoid repeating every frame the button is held.
+    if !mouse.just_pressed(MouseButton::Right) {
+        return;
+    }
+
+    let window = match windows.single() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+    let (camera, cam_xform) = match camera_q.single() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let cursor_screen = match window.cursor_position() {
+        Some(p) => p,
+        None => return, // cursor not over window
+    };
+
+    // 2D conversion from screen to world
+    let world_pos = match camera.viewport_to_world_2d(cam_xform, cursor_screen) {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    let grid_pos = grid.world_to_grid(world_pos);
+
+    // Get all entities at this grid position
+    let Some(entities) = world_map.get(&grid_pos) else {
+        return;
+    };
+
+    // Check each entity at this position
+    for &entity in entities.iter() {
+        // Check if it's a PhysicalLink
+        if links.get(entity).is_ok() {
+            commands.entity(entity).remove::<PhysicalLink>();
+            commands.entity(entity).insert(MarkedForRemoval);
+            return; // Stop after removing first PhysicalLink
+        }
+
+        // Check if it's a Tile (part of a building)
+        if tiles.get(entity).is_ok() {
+            removal_events.write(RemoveBuildingRequest { tile: entity });
+            return; // Stop after emitting first removal request
+        }
     }
 }
