@@ -28,7 +28,20 @@ pub enum ContractStatus {
     Failed,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Component, Debug)]
+pub struct FailingTimer {
+    pub timer: Timer,
+}
+
+impl FailingTimer {
+    pub fn new(duration_secs: f32) -> Self {
+        Self {
+            timer: Timer::from_seconds(duration_secs, TimerMode::Once),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ContractFulfillmentStatus {
     Exceeding,
     Meeting,
@@ -180,6 +193,7 @@ impl Plugin for ContractsPlugin {
             .add_systems(Update, (
                 first_minute_system,
                 generate_random_pending_contract_system.run_if(on_timer(std::time::Duration::from_secs(20))),
+                handle_failing_contract_timeouts,
             ));
     }
 }
@@ -352,7 +366,7 @@ pub fn find_and_generate_contract(
         status: ContractStatus::Pending,
         dataset: suitable_contract.dataset.clone(),
         faction: suitable_contract.faction.clone(),
-        timeout: ContractTimeout(120.0), // Default timeout
+        timeout: ContractTimeout(120.), // Default timeout
         description: ContractDescription {
             name: suitable_contract.name.clone(),
             description: suitable_contract.description.clone(),
@@ -362,6 +376,54 @@ pub fn find_and_generate_contract(
             suitable_contract.base_money
         ),
     })
+}
+
+/// System to handle contracts that have been failing for too long
+fn handle_failing_contract_timeouts(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut contracts: Query<(
+        Entity,
+        &mut ContractStatus,
+        &ContractFulfillment,
+        &ContractTimeout,
+        Option<&mut FailingTimer>,
+    )>,
+) {
+    for (entity, mut status, fulfillment, timeout, failing_timer) in contracts.iter_mut() {
+        // Skip non-active contracts
+        if *status != ContractStatus::Active {
+            continue;
+        }
+
+        match fulfillment.status {
+            ContractFulfillmentStatus::Failing => {
+                // Contract is currently failing
+                if let Some(mut timer) = failing_timer {
+                    // Update existing timer
+                    timer.timer.tick(time.delta());
+                    if timer.timer.is_finished() {
+                        // Timer expired, fail the contract
+                        *status = ContractStatus::Failed;
+                        commands.entity(entity).remove::<FailingTimer>();
+                        info!("Contract {:?} failed due to timeout after {:.1}s of failing", entity, timeout.0);
+                    }
+                } else {
+                    // Start the failing timer
+                    let failing_timer = FailingTimer::new(timeout.0);
+                    commands.entity(entity).insert(failing_timer);
+                    info!("Contract {:?} started failing timer ({:.1}s)", entity, timeout.0);
+                }
+            }
+            ContractFulfillmentStatus::Meeting | ContractFulfillmentStatus::Exceeding => {
+                // Contract is meeting requirements, remove failing timer if present
+                if failing_timer.is_some() {
+                    commands.entity(entity).remove::<FailingTimer>();
+                    info!("Contract {:?} recovered from failing state", entity);
+                }
+            }
+        }
+    }
 }
 
 fn get_fulfillment_status(threshold_fraction: f64) -> ContractFulfillmentStatus {

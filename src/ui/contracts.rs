@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{
-    contracts::{AssociatedWithSink, Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus},
+    contracts::{AssociatedWithSink, Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus, FailingTimer, ContractTimeout},
     grid::GridPosition,
     grid::Grid,
     ui::BlocksWorldScroll,
@@ -153,7 +153,7 @@ pub fn spawn_contracts_sidebar_ui(mut commands: Commands) {
 pub fn update_contracts_sidebar_ui(
     mut commands: Commands,
     sidebar_query: Query<Entity, With<ContractsSidebarRoot>>,
-    contract_query: Query<(Entity, &Contract, &ContractStatus, &ContractDescription, &ContractFulfillment)>,
+    contract_query: Query<(Entity, &Contract, &ContractStatus, &ContractDescription, &ContractFulfillment, Option<&FailingTimer>, Option<&ContractTimeout>)>,
     children_query: Query<&Children>,
     game_assets: Res<GameAssets>,
 ) {
@@ -168,12 +168,12 @@ pub fn update_contracts_sidebar_ui(
 
     // Collect and sort contracts by priority
     let mut contracts: Vec<_> = contract_query.iter()
-        .filter(|(_, _, status, _, _)| matches!(status, ContractStatus::Pending | ContractStatus::Active))
+        .filter(|(_, _, status, _, _, _, _)| matches!(status, ContractStatus::Pending | ContractStatus::Active))
         .collect();
-    contracts.sort_by_key(|(_, _, status, _, fulfillment)| get_contract_sort_priority(status, fulfillment));
+    contracts.sort_by_key(|(_, _, status, _, fulfillment, _, _)| get_contract_sort_priority(status, fulfillment));
 
     // Add a card for each sorted contract
-    for (contract_entity, _contract, status, desc, fulfillment) in contracts {
+    for (contract_entity, _contract, status, desc, fulfillment, failing_timer, contract_timeout) in contracts {
         if matches!(status, ContractStatus::Pending | ContractStatus::Active) {
             // Card background color
             let card_color = match status {
@@ -224,7 +224,7 @@ pub fn update_contracts_sidebar_ui(
                         // Contract name on the left
                         header.spawn((
                             Text::new(&desc.name),
-                            game_assets.text_font(20.0),
+                            game_assets.text_font(16.0),
                             ScalableText::from_vw(1.2),
                             TextColor(Color::WHITE),
                             Node { ..default() },
@@ -259,29 +259,41 @@ pub fn update_contracts_sidebar_ui(
                         Node { ..default() },
                     ));
                 }
+                // Show status line - fulfillment status for active contracts, regular status for others
+                let status_text = if let ContractStatus::Active = status {
+                    match fulfillment.status {
+                        ContractFulfillmentStatus::Failing => {
+                            if let (Some(timer), Some(timeout)) = (failing_timer, contract_timeout) {
+                                let time_left = timeout.0 - timer.timer.elapsed_secs();
+                                format!("Failing - Time left: {:.1}s", time_left.max(0.0))
+                            } else {
+                                "Failing - Starting timeout...".to_string()
+                            }
+                        },
+                        ContractFulfillmentStatus::Meeting => "Meeting Requirements".to_string(),
+                        ContractFulfillmentStatus::Exceeding => "Exceeding Requirements".to_string(),
+                    }
+                } else {
+                    format!("Status: {:?}", status)
+                };
+                
                 parent.spawn((
-                    Text::new(format!("Status: {:?}", status)),
+                    Text::new(status_text),
                     game_assets.text_font(12.0),
                     ScalableText::from_vw(0.7),
                     TextColor(status_text_color),
                     Node { ..default() },
                 ));
+                
                 if let ContractStatus::Active = status {
-                    parent.spawn((
-                        Text::new(format!("Fulfillment: {:?}", fulfillment.status)),
-                        game_assets.text_font(12.0),
-                        ScalableText::from_vw(0.7),
-                        TextColor(status_text_color),
-                        Node { ..default() },
-                    ));
 
                     // Add base money and throughput info
                     parent.spawn((
                         Text::new(format!(
-                            "Base income: {:.2} | Required: {:.2}",
+                            "Pay: {:.1} | Threshold: {:.1}",
                             fulfillment.base_money, fulfillment.base_threshold
                         )),
-                        TextFont { font_size: 12.0, ..default() },
+                        game_assets.text_font(12.0),
                         TextColor(Color::WHITE),
                         Node { ..default() },
                     ));
@@ -289,7 +301,7 @@ pub fn update_contracts_sidebar_ui(
                     // Add current money and throughput info
                     parent.spawn((
                         Text::new(format!(
-                            "Income: {:.2} | Throughput: {:.2}",
+                            "Income: {:.1} | Throughput: {:.1}",
                             fulfillment.get_income(), fulfillment.throughput
                         )),
                         game_assets.text_font(12.0),
@@ -338,7 +350,7 @@ pub fn update_contracts_sidebar_ui(
                     // Add base money and throughput info
                     parent.spawn((
                         Text::new(format!(
-                            "Base income: {:.2} | Required: {:.2}",
+                            "Pay: {:.1} | Threshold: {:.1}",
                             fulfillment.base_money, fulfillment.base_threshold
                         )),
                         game_assets.text_font(12.0),
@@ -380,7 +392,7 @@ pub fn update_contracts_sidebar_ui(
                             ));
                         });
 
-                        /// View Sink button
+                        // View Sink button
                         buttons.spawn((
                             Node {
                                 padding: UiRect::all(Val::Vw(0.6)),
