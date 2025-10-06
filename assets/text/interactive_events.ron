@@ -1,0 +1,157 @@
+(
+    events: [
+        // EXAMPLE 1: Tutorial event (Forced - auto-triggers when conditions met)
+        (
+            id: "tutorial_welcome",
+            title: "Welcome to the Data Nexus",
+            description: "Your new data processing facility is operational. The city's factions have taken notice.",
+            choices: [
+                (
+                    text: "Focus on corporate contracts",
+                    requirements: [
+                        MinMoney(10000)
+                    ],
+                    consequences: [
+                        ModifyReputation(faction: Corporate, amount: 10),
+                        ModifyMoney(500),
+                    ],
+                ),
+                (
+                    text: "Explore underground opportunities",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 10),
+                        UnlockEvent("criminal_contact"),
+                    ],
+                ),
+            ],
+            requirements: [
+                SpecificYear(0),
+            ],
+            trigger_mode: Forced,
+            repeatable: false,
+            popup_urgency: true,
+        ),
+
+        // EXAMPLE 2: Bankruptcy event (Manual - only triggered by game system)
+        (
+            id: "bankruptcy_warning",
+            title: "Financial Crisis!",
+            description: "Your facility is running out of money. You need to make drastic decisions.",
+            choices: [
+                (
+                    text: "Take emergency loan",
+                    consequences: [
+                        ModifyMoney(2000),
+                        UnlockEvent("loan_repayment"),
+                    ],
+                ),
+                (
+                    text: "Sell equipment",
+                    requirements: [
+                        MinMoney(5000),
+                    ],
+                    consequences: [
+                        ModifyMoney(1500),
+                    ],
+                ),
+                (
+                    text: "Declare bankruptcy",
+                    consequences: [
+                        Bankruptcy,
+                    ],
+                ),
+            ],
+            requirements: [],  // No requirements - only triggered when game system calls it
+            trigger_mode: Manual,
+            repeatable: true,  // Can be triggered multiple times
+        ),
+
+        // EXAMPLE 3: Random events
+        (
+            id: "random_opportunity",
+            title: "Unexpected Contract",
+            description: "A mysterious client offers you a lucrative contract.",
+            faction: Some(Criminal),
+            choices: [
+                (
+                    text: "Accept",
+                    consequences: [
+                        ModifyMoney(1000),
+                        ModifyReputation(faction: Criminal, amount: 5),
+                    ],
+                ),
+                (
+                    text: "Decline",
+                    consequences: [],
+                ),
+            ],
+            requirements: [
+                MinMoney(500),
+            ],
+            trigger_mode: Random(weight: 5.0),
+            repeatable: true,
+        ),
+        
+        // Random event that triggers immediately
+        (
+            id: "early_investor",
+            title: "Angel Investor",
+            description: "A wealthy investor shows interest in your data processing facility.",
+            faction: Some(Corporate),
+            choices: [
+                (
+                    text: "Accept investment",
+                    consequences: [
+                        ModifyMoney(2000),
+                        ModifyReputation(faction: Corporate, amount: 15),
+                    ],
+                ),
+                (
+                    text: "Stay independent",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 10),
+                    ],
+                ),
+            ],
+            requirements: [
+                MinMoney(500),
+            ],
+            trigger_mode: Random(weight: 8.0),
+            repeatable: true,
+        ),
+        
+        // Another early random event
+        (
+            id: "data_breach_alert",
+            title: "Security Concern",
+            description: "You've detected suspicious activity in your network. Someone is probing your defenses.",
+            faction: Some(Criminal),
+            choices: [
+                (
+                    text: "Upgrade security",
+                    consequences: [
+                        ModifyMoney(-500),
+                        ModifyReputation(faction: Corporate, amount: 10),
+                    ],
+                ),
+                (
+                    text: "Ignore it",
+                    consequences: [
+                        ModifyReputation(faction: Criminal, amount: 5),
+                    ],
+                ),
+                (
+                    text: "Trace the hacker",
+                    consequences: [
+                        ModifyMoney(-200),
+                        ModifyReputation(faction: Criminal, amount: 10),
+                        UnlockEvent("hacker_encounter"),
+                    ],
+                ),
+            ],
+            requirements: [],
+            trigger_mode: Random(weight: 6.0),
+            repeatable: true,
+        ),
+    ]
+)

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-use crate::events::{AddNewsfeedItemEvent, NewsLibrary};
+use crate::events::newsfeed_events::{AddNewsfeedItemEvent, get_news_headline};
+use crate::events::NewsLibrary;
 use crate::factions::{Faction, FactionReputations};
-use crate::events::event_data::{get_news_headline};
 use crate::assets::GameAssets;
 use rand::prelude::IndexedRandom;
 
@@ -93,12 +93,8 @@ pub fn add_newsfeed_item_system(
     }
 
     if let Some(event) = events.read().next() {
-        let faction_color = match event.faction {
-            Faction::Academia => Color::srgb(0.2, 0.8, 1.0),    // Cyan, index 0
-            Faction::Corporate => Color::srgb(0.9, 0.9, 0.3),     // Yellow, index 1
-            Faction::Government => Color::srgb(0.3, 1.0, 0.3),   // Green, index 2
-            Faction::Criminal => Color::srgb(1.0, 0.3, 0.3),     // Red
-        };
+        // Use shared color scheme for faction colors
+        let faction_color = game_assets.faction_color(event.faction);
         
 
         // Create a news item container
@@ -120,11 +116,12 @@ pub fn add_newsfeed_item_system(
             .id();
 
         // Add faction icon with fixed size and maintain aspect ratio
+        let icon_index = game_assets.faction_icon(event.faction);
         let icon = commands
             .spawn((
                 ImageNode::from_atlas_image(
-                    game_assets.transparent_icons_texture.clone(),
-                    TextureAtlas { layout: game_assets.icons_layout.clone(), index: event.faction as usize },
+                    game_assets.small_sprites_texture.clone(),
+                    TextureAtlas { layout: game_assets.small_sprites_layout.clone(), index: icon_index },
                 ),
                 Node {
                     width: Val::Px(32.0),  // Set desired size

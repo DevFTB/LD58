@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use crate::factory::buildings::sink::SinkBuilding;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Enum for the four factions in the game.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Default, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default, Component)]
 #[repr(u8)]
 pub enum Faction {
     Criminal = 0,

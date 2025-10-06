@@ -542,9 +542,9 @@ fn spawn_grid_atlas_sprite_system(
         commands.entity(entity).insert((
             Sprite {
                 custom_size: Some(Vec2::new(sprite_width, sprite_height)),
-                image: game_assets.buildings_texture.clone(),
+                image: game_assets.machines_texture.clone(),
                 texture_atlas: Some(TextureAtlas {
-                    layout: game_assets.buildings_layout.clone(),
+                    layout: game_assets.machines_layout.clone(),
                     index: atlas_sprite.atlas_index,
                 }),
                 flip_x: atlas_sprite.orientation.flipped, // Always apply flip_x when flipped
