@@ -43,6 +43,9 @@ pub struct FactionCluster {
 #[require(Faction)]
 pub struct ClusterID(i64);
 
+#[derive(Component)]
+pub struct LockMarker;
+
 // might need to change min/max logic a bit if not even lol
 const WORLD_SIZE: i64 = 80;
 const WORLD_MIN: i64 = -(WORLD_SIZE / 2);
@@ -66,14 +69,15 @@ const MIN_CLUSTER_SIZE: i32 = 32;
 
 impl Plugin for WorldGenPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup);
+        app.add_systems(Startup, startup)
+            .add_systems(Update, cleanup_unlocked_markers);
     }
 }
 
 fn startup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    game_asset: Res<GameAssets>,
+    game_assets: Res<GameAssets>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>,
 ) {
     let _startup_span = info_span!("startup_span", name = "startup_span").entered();
@@ -187,16 +191,20 @@ fn startup(
 
     for (cell_vec, cluster_id) in cluster_map.iter().collect::<Vec<(&I64Vec2, &i64)>>()
     {
-        if let Some(faction) = cluster_faction.get(cluster_id) {
-            let faction_color = game_asset.faction_color(*faction);
+        if let (Some(faction), Some(reputation)) = (cluster_faction.get(cluster_id), cluster_reputation.get(cluster_id)) {
+            let mut faction_color = game_assets.faction_color(*faction);
+            faction_color.set_alpha(0.5);
             commands.spawn((
                 Locked,
                 GridPosition(*cell_vec),
                 GridSprite(faction_color),
+                *faction,
+                *reputation,
                 Transform::from_xyz(0.0, 0.0, 50.0), // Higher Z coordinate to appear above other sprites
+                LockMarker
             ));
         } else {
-            panic!("cluster {cluster_id} has no faction");
+            panic!("cluster {cluster_id} is missing from a hashmap");
         }
     }
 
@@ -228,6 +236,31 @@ fn startup(
             cluster_faction.get(cluster_id),
             cluster_reputation.get(cluster_id),
         ) {
+            // spawn faction icon
+            let icon_index = game_assets.faction_icon(*faction);
+            commands.spawn((
+                GridPosition(*cell_vec),
+                Sprite {
+                    image: game_assets.small_sprites_texture.clone(),
+                    texture_atlas: Some(TextureAtlas { layout: game_assets.small_sprites_layout.clone(), index: icon_index }),
+                    custom_size: Some(Vec2::splat(128.0)), // Upscale the sprite (default grid size is 64.0)
+                    ..Default::default()
+                },
+                Transform::from_xyz(0.0, 0.0, 60.0), // Higher Z coordinate to appear above other sprites
+                *faction,
+                *reputation,
+                Locked,
+                LockMarker,
+                // Reputation level text indicator
+                Text2d::new(format!("{:?}", reputation)),
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(1.0, 1.0, 1.0)), // White text
+                ZIndex(70), // Above the sprite
+            ));
+
             if let Some(cluster_allowable_spawns) = faction_source_locations.get_mut(cluster_id) {
                 spawn_faction_sink(
                     *cell_vec,
@@ -397,9 +430,9 @@ fn get_faction_source_dataset(
 fn get_faction_cluster_reputation(vec: I64Vec2) -> ReputationLevel {
     let length_f64_squared = vec.length_squared() as f64;
     let length_f64 = length_f64_squared.sqrt();
-    if length_f64 <= 40. {
+    if length_f64 <= 20. {
         ReputationLevel::Friendly
-    } else if length_f64 <= 60. {
+    } else if length_f64 <= 35. {
         ReputationLevel::Trusted
     } else {
         ReputationLevel::Exclusive
@@ -517,4 +550,23 @@ fn get_locked_tile_noise(vec: I64Vec2, offset: f32) -> f32 {
         0.55,
     )
     .x + (0.1 * normalised_simplex_noise.powf(BIAS_EXPONENT));
+}
+
+/// System that checks all entities with LockMarker and removes them when the Locked component is removed
+/// Only runs when entities actually lose their Locked component (optimized with change detection)
+fn cleanup_unlocked_markers(
+    mut commands: Commands,
+    // Query for entities that have LockMarker and just lost their Locked component
+    // RemovedComponents<Locked> tracks entities that had Locked removed this frame
+    mut removed_locked: RemovedComponents<Locked>,
+    // Check if the entity still has LockMarker (so we know it's a lock marker to clean up)
+    lock_markers: Query<(), With<LockMarker>>,
+) {
+    // Only process entities that just had their Locked component removed this frame
+    for entity in removed_locked.read() {
+        // If the entity still has LockMarker, it's a visual marker that should be cleaned up
+        if lock_markers.contains(entity) {
+            commands.entity(entity).despawn();
+        }
+    }
 }
