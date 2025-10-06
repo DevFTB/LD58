@@ -1,54 +1,69 @@
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
 use crate::factory::buildings::{Tile, Tiles};
 use crate::factory::logical::{DataBuffer, DataSink, DataSource};
-use crate::grid::{Direction, GridPosition, GridSprite};
+use crate::grid::{GridPosition, GridSprite, Orientation};
 use bevy::color::Color;
 use bevy::ecs::relationship::RelatedSpawner;
-use bevy::prelude::{Bundle, Component, Query, Res, SpawnWith, Time};
+use bevy::prelude::{Commands, Component, Query, Res, SpawnWith, Time};
 use bevy::prelude::{Entity, SpawnRelated};
 use bevy::sprite::Text2d;
-use std::hash::Hash;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Trunker {
-    threshold_per_sink: f32,
+    pub(crate) threshold_per_sink: f32,
+    pub(crate) sink_count: i64,
 }
 
-impl Trunker {
-    pub fn get_bundle(
+impl Building for Trunker {
+    fn spawn_naked(
+        &self,
+        commands: &mut Commands,
         position: GridPosition,
-        threshold_per_sink: f32,
-        source_dir: Direction,
-        sink_count: i8,
-    ) -> impl Bundle {
-        (
-            Trunker { threshold_per_sink },
-            position,
-            Tiles::spawn(SpawnWith(
-                move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
-                    for i in 0..sink_count {
+        orientation: Orientation,
+    ) -> Entity {
+        let sink_count = self.sink_count;
+        let throughput = self.threshold_per_sink * self.sink_count as f32;
+        commands
+            .spawn((
+                position,
+                Tiles::spawn(SpawnWith(
+                    move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
+                        for i in 0..sink_count {
+                            spawner.spawn((
+                                DataSink {
+                                    direction: orientation.direction.opposite(),
+                                    buffer: DataBuffer::default(),
+                                },
+                                Text2d::default(),
+                                position.offset(orientation.layout_direction(), i as i64),
+                                GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
+                            ));
+                        }
                         spawner.spawn((
-                            DataSink {
-                                direction: source_dir.opposite(),
+                            DataSource {
+                                throughput,
+                                limited: true,
+                                direction: orientation.effective_direction(),
                                 buffer: DataBuffer::default(),
                             },
+                            position,
                             Text2d::default(),
-                            position.offset(Direction::Up, i as i64),
-                            GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 1.0)),
                         ));
-                    }
-                    spawner.spawn((
-                        DataSource {
-                            throughput: threshold_per_sink * 3.,
-                            limited: true,
-                            direction: source_dir,
-                            buffer: DataBuffer::default(),
-                        },
-                        position,
-                        Text2d::default(),
-                    ));
-                },
-            )),
-        )
+                    },
+                )),
+                self.clone(),
+            ))
+            .id()
+    }
+
+    fn data(&self) -> BuildingData {
+        BuildingData {
+            sprite: Some(SpriteResource::Atlas(self.sink_count as usize + 10)),
+            grid_width: self.sink_count,
+            grid_height: 1,
+            cost: 60,
+            name: format!("Trunker {}x1", self.sink_count),
+        }
     }
 }
 pub fn do_trunking(
@@ -106,11 +121,6 @@ pub fn do_trunking(
                     )
                 })
                 .for_each(|(value, sink)| {
-                    // println!(
-                    //     "{} {}",
-                    //     value,
-                    //     trunker.threshold_per_sink * time.delta_secs()
-                    // );
                     sink.buffer.remove(value);
                     source.buffer.add(&shape, value)
                 });

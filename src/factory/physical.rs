@@ -1,19 +1,19 @@
+use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResource};
+use crate::factory::buildings::Tile;
+use crate::grid::GridAtlasSprite;
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
-    grid::{Direction, GridPosition, GridSprite},
+    grid::{Direction, GridPosition, Orientation},
+};
+use bevy::ecs::{
+    component::Component,
+    entity::Entity,
+    query::{Added, With, Without},
+    system::{Commands, Query},
 };
 use bevy::platform::collections::{HashMap, HashSet};
-use bevy::{
-    color::Color,
-    ecs::{
-        bundle::Bundle,
-        component::Component,
-        entity::Entity,
-        query::{Added, With, Without},
-        system::{Commands, Query},
-    },
-};
-use bevy::prelude::World;
+use bevy::prelude::*;
+use itertools::Itertools;
 
 #[derive(Component)]
 pub struct PhysicalSink(Entity, Direction);
@@ -26,19 +26,58 @@ pub struct PhysicalLink {
     pub throughput: f32,
 }
 
-#[derive(Component)]
-pub struct Linked;
+impl Building for PhysicalLink {
+    fn spawn_naked(
+        &self,
+        commands: &mut Commands,
+        position: GridPosition,
+        _: Orientation,
+    ) -> Entity {
+        commands
+            .spawn((PhysicalLink { throughput: 234.0 }, position))
+            .with_related::<Tile>(())
+            .id()
+    }
 
-impl PhysicalLink {
-    pub fn get_bundle(position: GridPosition) -> impl Bundle {
-        (
-            position,
-            PhysicalLink { throughput: 234. },
-            GridSprite(Color::linear_rgba(0.0, 0.0, 1.0, 1.0)),
-        )
+    fn spawn(
+        &self,
+        commands: &mut Commands,
+        position: GridPosition,
+        orientation: Orientation,
+    ) -> Entity {
+        let id = self.spawn_naked(commands, position, orientation);
+        let data = self.data();
+
+        match data.sprite {
+            Some(SpriteResource::Atlas(index)) => {
+                commands.entity(id).insert(GridAtlasSprite {
+                    atlas_index: index,
+                    grid_width: data.grid_width,
+                    grid_height: data.grid_height,
+                    orientation,
+                });
+            }
+            Some(SpriteResource::Sprite(image)) => {
+                commands.entity(id).insert(Sprite { image, ..default() });
+            }
+            None => {}
+        };
+
+        id
+    }
+    fn data(&self) -> BuildingData {
+        BuildingData {
+            sprite: Some(SpriteResource::Atlas(2)),
+            grid_width: 1,
+            grid_height: 1,
+            cost: 25,
+            name: "Link".to_string(),
+        }
     }
 }
 
+#[derive(Component)]
+pub struct Linked;
 pub fn connect_physical_links_to_data(
     query: Query<(Entity, &GridPosition), Added<PhysicalLink>>,
     mut commands: Commands,
@@ -84,38 +123,54 @@ pub fn connect_physical_links_to_data(
 
 pub fn connect_direct(
     mut commands: Commands,
-    sources: Query<
+    all_sources: Query<
         (Entity, &GridPosition, &DataSource),
         (Without<PhysicalSource>, Without<DataSink>),
     >,
-    sinks: Query<(Entity, &GridPosition, &DataSink), (Without<PhysicalSink>, Without<DataSource>)>,
+    all_sinks: Query<
+        (Entity, &GridPosition, &DataSink),
+        (Without<PhysicalSink>, Without<DataSource>, Added<DataSink>),
+    >,
     existing_links: Query<&LogicalLink>,
 ) {
-    for (source_entity, source_pos, source) in sources.iter() {
-        // Check each sink to see if it's a neighbor
-        for (sink_entity, sink_pos, sink) in sinks.iter() {
-            // Skip if this sink already has a logical link
-            if existing_links.get(sink_entity).is_ok() {
-                continue;
-            }
+    let mut linked_sinks = HashSet::new();
 
-            // Check if they're neighbors
-            let neighbors = source_pos.neighbours();
-            if let Some((dir, _)) = neighbors.iter().find(|(_, pos)| pos == sink_pos) {
-                // Verify direction compatibility:
-                // source's output_direction should match the direction to the sink
-                // sink's input_direction should match the opposite direction (from sink to source)
-                if source.direction == *dir && sink.direction == dir.opposite() {
-                    // Create a direct logical link with no intermediate physical links
+    let source_map = all_sources.iter().into_group_map_by(|x| x.1);
+
+    for (sink_entity, sink_pos, sink) in all_sinks.iter() {
+        if existing_links.get(sink_entity).is_ok() {
+            continue;
+        }
+        if linked_sinks.contains(&sink_entity) {
+            continue;
+        }
+
+        for (dir_from_sink, pos) in sink_pos.neighbours().into_iter() {
+            if let Some(vec) = source_map.get(&pos) {
+                let dir_from_source = dir_from_sink.opposite();
+                let Some((source_entity, _, source)) = vec.iter().find(|(_, _, source)| {
+                    source.direction == dir_from_source && sink.direction == dir_from_sink
+                }) else {
+                    continue;
+                };
+
+                if source.direction == dir_from_source && sink.direction == dir_from_sink {
                     let link = LogicalLink {
-                        links: Vec::new(),             // No physical links in between
-                        throughput: source.throughput, // Use source throughput as there's no bottleneck
-                        source: source_entity,
+                        links: Vec::new(),
+                        throughput: source.throughput,
+                        source: *source_entity,
                         sink: sink_entity,
                     };
 
-                    insert_physical_connection(&mut commands, source_entity, sink_entity, *dir);
+                    insert_physical_connection(
+                        &mut commands,
+                        *source_entity,
+                        sink_entity,
+                        dir_from_source,
+                    );
                     commands.entity(sink_entity).insert(link);
+                    linked_sinks.insert(sink_entity);
+                    break;
                 }
             }
         }
@@ -223,7 +278,6 @@ fn insert_physical_connection(
     commands.entity(source).insert(PhysicalSource(sink, dir));
     commands.entity(sink).insert(PhysicalSink(source, dir));
 }
-use bevy::prelude::*;
 
 pub fn on_physical_link_removed(
     trigger: On<Remove, PhysicalLink>,
@@ -261,7 +315,6 @@ pub fn on_physical_link_removed(
             }
             // Remove the logical link from its sink if it still exists
             if let Ok(mut e) = commands.get_entity(sink_entity) {
-                println!("Logical Link removed");
                 e.remove::<LogicalLink>();
             }
         }

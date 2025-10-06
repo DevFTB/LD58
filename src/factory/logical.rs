@@ -1,16 +1,17 @@
+use crate::factory::buildings::{TileThroughputData, Tiles};
 use crate::grid::Direction;
 use bevy::prelude::{DetectChanges, Query, Ref, Res};
-use bevy::sprite::Text2d;
 use bevy::time::Time;
 use bevy::{
     ecs::{component::Component, entity::Entity},
     platform::collections::{HashMap, HashSet},
 };
 use core::fmt;
-use std::fmt::Write;
+use serde::Deserialize;
+use std::fmt::{Display, Formatter, Write};
 
 // The fundamental types of data
-#[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deserialize)]
 pub enum BasicDataType {
     Biometric,   // A
     Economic,    // B
@@ -30,7 +31,7 @@ impl BasicDataType {
 }
 
 // Attributes that modify a data stream
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize)]
 pub enum DataAttribute {
     Aggregated,
     DeIdentified,
@@ -49,7 +50,7 @@ impl DataAttribute {
     }
 }
 
-#[derive(Component, Debug, Clone, PartialEq, Eq)]
+#[derive(Component, Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Dataset {
     // The core of the data packet.
     // Maps each data type present in the packet to a set of its attributes.
@@ -65,6 +66,30 @@ impl Dataset {
         self
     }
 }
+
+impl Display for Dataset {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let string = &self
+            .contents
+            .iter()
+            .flat_map(|(k, v)| {
+                [
+                    k.to_shorthand().to_string(),
+                    v.iter()
+                        .map(|attr| attr.to_shorthand())
+                        .collect::<Vec<_>>()
+                        .join("")
+                        .to_string(),
+                ]
+            })
+            .collect::<Vec<_>>()
+            .join("")
+            .to_string();
+
+        write!(f, "{}", string)
+    }
+}
+
 #[derive(Component, Debug)]
 pub struct DataSink {
     pub direction: Direction,
@@ -83,31 +108,42 @@ pub struct DataSource {
 pub struct DataBuffer {
     pub(crate) shape: Option<Dataset>,
     pub(crate) value: f32,
+    last_in: f32,
+    last_out: f32,
 }
+
+impl DataBuffer {
+    pub(crate) fn reset_delta(&mut self) {
+        self.last_in = 0.;
+        self.last_out = 0.;
+    }
+}
+
 impl fmt::Display for DataBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let type_string = self.shape.as_ref().map_or(String::from("None"), |shape| {
-            shape
-                .contents
-                .iter()
-                .flat_map(|(k, v)| {
-                    [
-                        k.to_shorthand().to_string(),
-                        v.iter()
-                            .map(|attr| attr.to_shorthand())
-                            .collect::<Vec<_>>()
-                            .join("")
-                            .to_string(),
-                    ]
-                })
-                .collect::<Vec<_>>()
-                .join("")
-                .to_string()
-        });
+        let type_string = self
+            .shape
+            .as_ref()
+            .map_or(String::from("None"), |shape| shape.to_string());
         write!(f, "{}: {}", type_string, self.value.round())
     }
 }
 impl DataBuffer {
+    pub(crate) fn new(shape: Option<Dataset>, value: f32) -> Self {
+        DataBuffer {
+            shape,
+            value,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn with_shape(shape: Option<Dataset>) -> Self {
+        DataBuffer {
+            shape,
+            ..Self::default()
+        }
+    }
+
     pub(crate) fn set_shape(&mut self, p0: Option<&Dataset>) {
         let are_different = if let (Some(s1), Some(s2)) = (self.shape.as_ref(), p0) {
             // Case 1: Both are Some. Compare their values by dereferencing.
@@ -120,7 +156,7 @@ impl DataBuffer {
         };
 
         if are_different {
-            println!("{:?} != {:?}", self.shape, &p0);
+            // println!("{:?} != {:?}", self.shape, &p0);
             self.shape = p0.cloned();
             self.value = 0.;
         }
@@ -130,9 +166,13 @@ impl DataBuffer {
         self.set_shape(Some(dataset));
 
         self.value += amount;
+        self.last_in += amount;
     }
     pub(crate) fn remove(&mut self, amount: f32) {
-        self.value = (self.value - amount).max(0.);
+        let diff = amount.min(self.value);
+
+        self.value -= diff;
+        self.last_out += diff;
     }
 }
 
@@ -146,21 +186,37 @@ pub struct LogicalLink {
 pub fn debug_logical_links(query: Query<Ref<LogicalLink>>) {
     for link in query {
         if link.is_added() {
-            println!("Added LogicalLink {:?}", link);
+            // println!("Added LogicalLink {:?}", link);
         }
     }
 }
 
-pub fn visualise_sinks(query: Query<(Entity, Ref<DataSink>, &mut Text2d)>) {
-    for (entity, sink, mut text) in query {
-        if sink.is_changed() {
-            // println!(
-            //     "Sink {:?} storing {:?} of amount {:?}",
-            //     entity, sink.buffer.shape, sink.buffer.value
-            //
-            // );
-            text.0 = format!("{}", sink.buffer);
-        }
+pub fn calculate_throughput(
+    parents: Query<(&Tiles, &mut TileThroughputData)>,
+    sinks: Query<&DataSink>,
+    sources: Query<&DataSource>,
+) {
+    for (children, mut data) in parents {
+        let amount_in = children
+            .iter()
+            .filter_map(|e| sinks.get(*e).ok())
+            .fold(0., |acc, e| acc + e.buffer.last_out);
+        let amount_out = children
+            .iter()
+            .filter_map(|e| sources.get(*e).ok())
+            .fold(0., |acc, e| acc + e.buffer.last_out);
+
+        data.amount_in = amount_in;
+        data.amount_out = amount_out;
+    }
+}
+
+pub fn reset_delta(sinks: Query<&mut DataSink>, sources: Query<&mut DataSource>) {
+    for mut sink in sinks {
+        sink.buffer.reset_delta();
+    }
+    for mut source in sources {
+        source.buffer.reset_delta();
     }
 }
 
@@ -176,17 +232,23 @@ pub fn pass_data_system(
 }
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {
     sink.buffer.set_shape(source.buffer.shape.as_ref());
-    let packet = if source.limited {
-        source.buffer.value.clamp(0., source.throughput * secs)
-    } else {
-        source.throughput * secs
-    };
 
-    source.buffer.value = (source.buffer.value - packet).max(0.);
-    sink.buffer.value += packet;
+    if let Some(ref shape) = source.buffer.shape {
+        let packet = if source.limited {
+            source.buffer.value.clamp(0., source.throughput * secs)
+        } else {
+            source.throughput * secs
+        };
+
+        sink.buffer.add(&shape, packet);
+        source.buffer.remove(packet);
+    }
 }
 pub fn pass_data_internal(source: &mut DataSource, sink: &mut DataSink, amount: f32) {
     let amount = amount.min(sink.buffer.value);
-    source.buffer.value += amount;
-    sink.buffer.value -= amount;
+
+    if let Some(ref shape) = sink.buffer.shape {
+        source.buffer.add(&shape, amount);
+        sink.buffer.remove(amount);
+    }
 }

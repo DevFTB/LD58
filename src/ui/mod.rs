@@ -1,11 +1,10 @@
-use bevy::{
-    color::palettes::css::BROWN,
-    prelude::*,
-};
+use crate::ui::tooltip::TooltipPlugin;
+use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod newsfeed;
 pub mod shop;
 pub mod interactive_event;
+pub mod tooltip;
 
 pub struct UIPlugin;
 
@@ -18,8 +17,7 @@ pub struct BlocksWorldClicks;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.add_message::<shop::ConstructBuildingEvent>()
-            .insert_resource(shop::SelectedBuildingType(None))
+        app.insert_resource(shop::SelectedBuildingType(None))
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .insert_resource(interactive_event::ModalSpawnCooldown::default())
             .insert_resource(interactive_event::QueuedEvents::default())
@@ -66,5 +64,3 @@ fn startup(mut commands: Commands) {
         BlocksWorldClicks,
     ));
 }
-
-
