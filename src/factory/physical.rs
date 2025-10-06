@@ -2,6 +2,7 @@ use crate::factory::buildings::buildings::{Building, BuildingData, SpriteResourc
 use crate::factory::buildings::Tile;
 use crate::factory::{MarkedForRemoval, RemoveBuildingRequest};
 use crate::grid::{Grid, GridAtlasSprite, WorldMap};
+use crate::ui::interaction::MouseButtonEvent;
 use crate::{
     factory::logical::{DataSink, DataSource, LogicalLink},
     grid::{Direction, GridPosition, Orientation},
@@ -618,7 +619,7 @@ pub fn on_physical_link_removed(
 
 pub fn remove_physical_link_on_right_click(
     mut commands: Commands,
-    mouse: Res<ButtonInput<MouseButton>>,
+    mut mouse: ResMut<MouseButtonEvent>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     grid: Res<Grid>,
@@ -627,6 +628,8 @@ pub fn remove_physical_link_on_right_click(
     tiles: Query<&Tile>,
     mut removal_events: MessageWriter<RemoveBuildingRequest>,
 ) {
+    let Some(mouse) = mouse.handle() else { return };
+
     // Only act on the press edge to avoid repeating every frame the button is held.
     if !mouse.just_pressed(MouseButton::Right) {
         return;

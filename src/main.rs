@@ -3,6 +3,7 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
+use crate::ui::interaction::CustomInteractionPlugin;
 use crate::ui::tooltip::inherit_translation;
 use crate::world_gen::WorldGenPlugin;
 use crate::{
@@ -45,6 +46,7 @@ fn main() {
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
         .add_plugins(FactionsPlugin)
+        .add_plugins(CustomInteractionPlugin)
         .add_systems(Startup, startup)
         .add_systems(PostUpdate, inherit_translation)
         .run();

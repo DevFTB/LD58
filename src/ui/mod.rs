@@ -1,3 +1,6 @@
+use crate::factory::physical::remove_physical_link_on_right_click;
+use crate::ui::shop::clear_selection;
+use crate::ui::tooltip::TooltipPlugin;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
 pub mod contracts;
@@ -5,6 +8,8 @@ pub mod interactive_event;
 pub mod newsfeed;
 pub mod shop;
 pub mod tooltip;
+
+pub mod interaction;
 
 pub struct UIPlugin;
 
@@ -60,8 +65,12 @@ impl Plugin for UIPlugin {
                     interactive_event::scale_text_system,
                 ),
             )
-            .add_systems(Update, interactive_event::test_trigger_random_event);
-        // app.add_plugins(TooltipPlugin);
+            .add_systems(Update, interactive_event::test_trigger_random_event)
+            .add_systems(
+                Update,
+                clear_selection.before(remove_physical_link_on_right_click),
+            );
+        app.add_plugins(TooltipPlugin);
     }
 }
 

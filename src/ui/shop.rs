@@ -10,6 +10,7 @@ use crate::factory::ConstructBuildingEvent;
 use crate::grid::{
     are_positions_free, calculate_occupied_cells_rotated, Grid, GridPosition, Orientation, WorldMap,
 };
+use crate::ui::interaction::MouseButtonEvent;
 use crate::ui::BlocksWorldClicks;
 use bevy::color::palettes::css::DIM_GRAY;
 use bevy::prelude::*;
@@ -301,6 +302,30 @@ pub fn handle_building_flip(
     }
 }
 
+pub fn clear_selection(
+    mut commands: Commands,
+    mut mouse_button_event: ResMut<MouseButtonEvent>,
+    mut selected_building: ResMut<SelectedBuildingType>,
+    selected_query: Single<Option<(Entity, &BuildingOrientation)>, With<SelectedBuilding>>,
+) {
+    let Some(mouse) = mouse_button_event.handle() else {
+        return;
+    };
+
+    if !mouse.just_pressed(MouseButton::Right) {
+        return;
+    };
+
+    // Despawn the dragged building
+    let Some((entity, _)) = *selected_query else {
+        return;
+    };
+    commands.entity(entity).despawn();
+    if mouse.pressed(MouseButton::Right) {
+        selected_building.0 = None;
+    }
+}
+
 pub fn handle_placement_click(
     mut commands: Commands,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
@@ -362,13 +387,13 @@ pub fn handle_placement_click(
                         orientation,
                     });
 
-                    // Despawn the dragged building
-                    for (entity, _) in selected_query.iter() {
-                        commands.entity(entity).despawn();
-                    }
+                    // // Despawn the dragged building
+                    // for (entity, _) in selected_query.iter() {
+                    //     commands.entity(entity).despawn();
+                    // }
 
                     // Clear selection
-                    selected_building_type.0 = None;
+                    // selected_building_type.0 = None;
                 }
                 // If occupied, do nothing - building stays selected and tinted red
             }
