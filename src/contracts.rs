@@ -24,6 +24,8 @@ pub enum ContractStatus {
     Pending,
     Active,
     Completed,
+    Rejected,
+    Failed,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -78,6 +80,20 @@ pub struct SinkContracts(Vec<Entity>);
 impl SinkContracts {
     pub fn contracts(&self) -> &[Entity] {
         &self.0
+    }
+
+    // ai did this not 100% sure it works but gonna trust it
+    pub fn get_current_contracts(&self, contract_query: &Query<&ContractStatus>) -> Vec<Entity> {
+    self.0.iter()
+        .filter(|&&contract_entity| {
+            if let Ok(status) = contract_query.get(contract_entity) {
+                matches!(status, ContractStatus::Pending | ContractStatus::Active)
+            } else {
+                false
+            }
+        })
+        .copied()
+        .collect()
     }
 }
 
@@ -158,12 +174,15 @@ fn generate_random_pending_contract_system(
     mut commands: Commands,
     contract_library: Res<ContractLibrary>,
     sinks: Query<(Entity, &Faction, &ReputationLevel, &SinkContracts), (With<Unlocked>, With<SinkBuilding>)>,
+    contract_query: Query<&ContractStatus>,
     mut rng: Single<&mut WyRand, With<GlobalRng>>
 ) {
     // Only consider sinks that are not full
     let sink_entities: Vec<_> = sinks
         .iter()
-        .filter(|(_, _, _, sink_contracts)| sink_contracts.contracts().len() < MAX_CONTRACTS_PER_SINK)
+        .filter(|(_, _, _, sink_contracts)| {
+            sink_contracts.get_current_contracts(&contract_query).len() < MAX_CONTRACTS_PER_SINK
+        })
         .collect();
 
     if let Some((sink_entity, faction, reputation, _)) = sink_entities.choose(&mut rng) {
@@ -215,7 +234,33 @@ fn test_find_and_generate_contract(library: Res<ContractLibrary>, mut commands: 
             "  -> SUCCESS: Found contract '{:?}'", contract_bundle
         );
         contract_bundle.status = ContractStatus::Active;
-        contract_bundle.fulfillment_info.update_throughput(50.0);
+        contract_bundle.fulfillment_info.update_throughput(49.0);
+        commands.spawn(contract_bundle);
+    } else {
+        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
+    }
+
+    if let Some(mut contract_bundle) =
+        find_and_generate_contract(faction_corporate, reputation, &library)
+    {
+        info!(
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
+        );
+        contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(75.0);
+        commands.spawn(contract_bundle);
+    } else {
+        info!("  -> FAILURE: No contract found for Corporate faction reputation.");
+    }
+
+    if let Some(mut contract_bundle) =
+        find_and_generate_contract(faction_corporate, reputation, &library)
+    {
+        info!(
+            "  -> SUCCESS: Found contract '{:?}'", contract_bundle
+        );
+        contract_bundle.status = ContractStatus::Active;
+        contract_bundle.fulfillment_info.update_throughput(125.0);
         commands.spawn(contract_bundle);
     } else {
         info!("  -> FAILURE: No contract found for Corporate faction reputation.");

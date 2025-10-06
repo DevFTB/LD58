@@ -1,15 +1,23 @@
 use bevy::prelude::*;
 use crate::{contracts::{Contract, ContractDescription, ContractFulfillment, ContractFulfillmentStatus, ContractStatus}, ui::BlocksWorldScroll};
 use bevy::{
-    a11y::AccessibilityNode,
-    ecs::spawn::SpawnIter,
     input::mouse::{MouseScrollUnit, MouseWheel},
     picking::hover::HoverMap,
-    prelude::*,
 };
 
 #[derive(Component)]
+pub struct ContractAcceptButton;
+
+#[derive(Component)]
+pub struct ContractRejectButton;
+
+#[derive(Component)]
+pub struct ContractEntityLink(Entity);
+
+#[derive(Component)]
 pub struct ContractsSidebarRoot;
+
+
 
 const LINE_HEIGHT: f32 = 21.;
 
@@ -121,7 +129,7 @@ pub fn spawn_contracts_sidebar_ui(mut commands: Commands) {
 pub fn update_contracts_sidebar_ui(
     mut commands: Commands,
     sidebar_query: Query<Entity, With<ContractsSidebarRoot>>,
-    contract_query: Query<(&Contract, &ContractStatus, &ContractDescription, &ContractFulfillment)>,
+    contract_query: Query<(Entity, &Contract, &ContractStatus, &ContractDescription, &ContractFulfillment)>,
     children_query: Query<&Children>,
 ) {
     let Ok(sidebar) = sidebar_query.single() else { return; };
@@ -134,7 +142,7 @@ pub fn update_contracts_sidebar_ui(
     }
 
     // Add a card for each contract (pending or active)
-    for (_contract, status, desc, fulfillment) in contract_query.iter() {
+    for (contract_entity, _contract, status, desc, fulfillment) in contract_query.iter() {
         if matches!(status, ContractStatus::Pending | ContractStatus::Active) {
             // Card background color
             let card_color = match status {
@@ -158,6 +166,7 @@ pub fn update_contracts_sidebar_ui(
             };
             let card = commands.spawn((
                 Node {
+                    margin: UiRect::new(Val::Px(4.), Val::Px(4.), Val::Px(2.), Val::Px(2.)),
                     padding: UiRect::all(Val::Px(16.0)),
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::FlexStart,
@@ -187,6 +196,17 @@ pub fn update_contracts_sidebar_ui(
                         Node { ..default() },
                     ));
 
+                    // Add base money and throughput info
+                    parent.spawn((
+                        Text::new(format!(
+                            "Base income: {:.2} | Required: {:.2}",
+                            fulfillment.base_money, fulfillment.base_threshold
+                        )),
+                        TextFont { font_size: 12.0, ..default() },
+                        TextColor(Color::WHITE),
+                        Node { ..default() },
+                    ));
+
                     // Add current money and throughput info
                     parent.spawn((
                         Text::new(format!(
@@ -204,31 +224,99 @@ pub fn update_contracts_sidebar_ui(
                         Node {
                             width: Val::Px(180.0),
                             height: Val::Px(12.0),
+                            position_type: PositionType::Relative,
                             ..default()
                         },
                         BackgroundColor(Color::srgb(0.18, 0.18, 0.18)),
                     ))
                     .with_children(|bar| {
+                        // Progress fill
                         bar.spawn((
                             Node {
                                 width: Val::Px(180.0 * progress as f32),
                                 height: Val::Px(12.0),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
                                 ..default()
                             },
                             BackgroundColor(Color::srgb(0.3, 0.7, 0.3)),
+                        ));
+                        
+                        // Threshold line
+                        bar.spawn((
+                            Node {
+                                width: Val::Px(1.0),
+                                height: Val::Px(12.0),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(90.0), // 50% of 180px
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgba(1., 1., 1., 0.4)), // Semi-transparent white
                         ));
                     });
                 } else {
                     // Add base money and throughput info
                     parent.spawn((
                         Text::new(format!(
-                            "Base income: {:.2} | Throughput: {:.2}",
+                            "Base income: {:.2} | Required: {:.2}",
                             fulfillment.base_money, fulfillment.base_threshold
                         )),
                         TextFont { font_size: 12.0, ..default() },
                         TextColor(Color::WHITE),
                         Node { ..default() },
                     ));
+
+                    // Add accept/reject buttons
+                    parent.spawn((
+                        Node {
+                            margin: UiRect::top(Val::Px(8.0)),
+                            display: Display::Flex,
+                            flex_direction: FlexDirection::Row,
+                            justify_content: JustifyContent::SpaceBetween,
+                            width: Val::Percent(100.0),
+                            ..default()
+                        },
+                        BackgroundColor(Color::NONE),
+                    )).with_children(|buttons| {
+                        // Accept button
+                        buttons.spawn((
+                            Node {
+                                padding: UiRect::all(Val::Px(8.0)),
+                                margin: UiRect::right(Val::Px(8.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.2, 0.6, 0.2)),
+                            ContractAcceptButton,
+                            ContractEntityLink(contract_entity),
+                            Interaction::None,
+                        )).with_children(|button| {
+                            button.spawn((
+                                Text::new("✓"),
+                                TextFont { font_size: 16.0, ..default() },
+                                TextColor(Color::WHITE),
+                                Node::default()
+                            ));
+                        });
+
+                        // Reject button
+                        buttons.spawn((
+                            Node {
+                                padding: UiRect::all(Val::Px(8.0)),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgb(0.6, 0.2, 0.2)),
+                            ContractRejectButton,
+                            ContractEntityLink(contract_entity),
+                            Interaction::None,
+                        )).with_children(|button| {
+                            button.spawn((
+                                Text::new("✗"),
+                                TextFont { font_size: 16.0, ..default() },
+                                TextColor(Color::WHITE),
+                                Node::default()
+                            ));
+                        });
+                    });
                 }
             })
             .id();
@@ -236,3 +324,28 @@ pub fn update_contracts_sidebar_ui(
         }
     }
 }
+
+pub fn handle_contract_buttons(
+    mut contract_query: Query<&mut ContractStatus>,
+    accept_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ContractAcceptButton>)>,
+    reject_query: Query<(&Interaction, &ContractEntityLink), (Changed<Interaction>, With<ContractRejectButton>)>,
+) {
+    // Handle accept button clicks
+    for (interaction, link) in accept_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(mut status) = contract_query.get_mut(link.0) {
+                *status = ContractStatus::Active;
+            }
+        }
+    }
+
+    // Handle reject button clicks
+    for (interaction, link) in reject_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(mut status) = contract_query.get_mut(link.0) {
+                *status = ContractStatus::Rejected;
+            }
+        }
+    }
+}
+
