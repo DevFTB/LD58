@@ -179,6 +179,9 @@ pub fn update_source_data_icons(
                 let icon_size = 32.0; // Large sprites are 32x32
                 
                 // Calculate offset based on layout pattern
+                // Scale up single icons to be more prominent
+                let icon_display_size = if num_icons == 1 { 48.0 } else { icon_size };
+                
                 let (offset_x, offset_y) = match num_icons {
                     1 => {
                         // Single icon at center
@@ -230,7 +233,7 @@ pub fn update_source_data_icons(
                 let icon = commands
                     .spawn((
                         Sprite {
-                            custom_size: Some(Vec2::new(icon_size, icon_size)),
+                            custom_size: Some(Vec2::new(icon_display_size, icon_display_size)),
                             image: texture,
                             texture_atlas: Some(TextureAtlas {
                                 layout,

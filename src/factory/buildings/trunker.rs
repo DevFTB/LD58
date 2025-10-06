@@ -11,7 +11,7 @@ use bevy::sprite::Text2d;
 
 #[derive(Component, Clone)]
 pub struct Trunker {
-    pub(crate) threshold_per_sink: f32,
+    pub(crate) throughput_per_sink: f32,
     pub(crate) sink_count: i64,
 }
 
@@ -23,7 +23,7 @@ impl Building for Trunker {
         orientation: Orientation,
     ) -> Entity {
         let sink_count = self.sink_count;
-        let throughput = self.threshold_per_sink * self.sink_count as f32;
+        let throughput = self.throughput_per_sink * self.sink_count as f32;
         commands
             .spawn((
                 position,
@@ -35,9 +35,9 @@ impl Building for Trunker {
                                     direction: orientation.direction.opposite(),
                                     buffer: DataBuffer::default(),
                                 },
-                                Text2d::default(),
+                                // Text2d::default(),
                                 position.offset(orientation.layout_direction(), i as i64),
-                                GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
+                                // GridSprite(Color::linear_rgba(0.7, 0.3, 1.0, 0.3)),
                             ));
                         }
                         spawner.spawn((
@@ -48,7 +48,7 @@ impl Building for Trunker {
                                 buffer: DataBuffer::default(),
                             },
                             position,
-                            Text2d::default(),
+                            // Text2d::default(),
                         ));
                     },
                 )),
@@ -124,7 +124,7 @@ pub fn do_trunking(
                     (
                         s.buffer
                             .value
-                            .min(trunker.threshold_per_sink * time.delta_secs()),
+                            .min(trunker.throughput_per_sink * time.delta_secs()),
                         s,
                     )
                 })

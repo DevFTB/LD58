@@ -1,17 +1,21 @@
-use bevy::{color::palettes::css::ANTIQUE_WHITE, prelude::*};
-use std::sync::Arc;
-
 use crate::assets::GameAssets;
 use crate::factory::buildings::aggregator::Aggregator;
 use crate::factory::buildings::buildings::{Building, SpriteResource};
 use crate::factory::buildings::combiner::Combiner;
+use crate::factory::buildings::delinker::Delinker;
 use crate::factory::buildings::splitter::Splitter;
+use crate::factory::buildings::trunker::Trunker;
 use crate::factory::physical::PhysicalLink;
 use crate::factory::ConstructBuildingEvent;
 use crate::grid::{
     are_positions_free, calculate_occupied_cells_rotated, Grid, GridPosition, Orientation, WorldMap,
 };
+use crate::ui::interaction::MouseButtonEvent;
+use crate::ui::interactive_event::ScalableText;
 use crate::ui::BlocksWorldClicks;
+use bevy::color::palettes::css::DIM_GRAY;
+use bevy::prelude::*;
+use std::sync::Arc;
 
 pub const BUILDING_BAR_WIDTH_PCT: f32 = 70.0;
 pub const BUILDING_BAR_HEIGHT_PCT: f32 = 12.0;
@@ -35,20 +39,14 @@ pub struct SelectedBuildingType(pub Option<Arc<dyn Building>>);
 pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
     let buildings = [
         UIBuilding {
+            building_type: Arc::new(PhysicalLink { throughput: 50.0 }),
+        },
+        UIBuilding {
+            building_type: Arc::new(Aggregator { throughput: 5.0 }),
+        },
+        UIBuilding {
             building_type: Arc::new(Splitter {
                 source_count: 2,
-                throughput: 5.0,
-            }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Splitter {
-                source_count: 3,
-                throughput: 5.0,
-            }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Splitter {
-                source_count: 4,
                 throughput: 5.0,
             }),
         },
@@ -59,22 +57,16 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
             }),
         },
         UIBuilding {
-            building_type: Arc::new(Combiner {
-                sink_count: 3,
+            building_type: Arc::new(Delinker {
                 throughput: 5.0,
+                source_count: 2,
             }),
         },
         UIBuilding {
-            building_type: Arc::new(Combiner {
-                sink_count: 4,
-                throughput: 5.0,
+            building_type: Arc::new(Trunker {
+                sink_count: 2,
+                throughput_per_sink: 5.0,
             }),
-        },
-        UIBuilding {
-            building_type: Arc::new(Aggregator { throughput: 5.0 }),
-        },
-        UIBuilding {
-            building_type: Arc::new(PhysicalLink { throughput: 50.0 }),
         },
     ];
 
@@ -93,7 +85,7 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                 align_items: AlignItems::Center,
                 ..default()
             },
-            BackgroundColor(ANTIQUE_WHITE.into()),
+            BackgroundColor(DIM_GRAY.into()),
             ZIndex(1), // Ensure UI renders above sprites
             BlocksWorldClicks,
         ))
@@ -128,19 +120,35 @@ pub fn spawn_building_shop(mut commands: Commands, assets: Res<GameAssets>) {
                     Some(SpriteResource::Sprite(path)) => ImageNode::new(path.clone()),
                     None => ImageNode::default(),
                 };
-                image_node.image_mode = NodeImageMode::Stretch;
+                // Use Auto mode to maintain aspect ratio
+                image_node.image_mode = NodeImageMode::Auto;
 
                 parent.spawn((
                     Node {
-                        width: Val::Px(BUILDING_TILE_SIZE as f32),
-                        height: Val::Px(BUILDING_TILE_SIZE as f32),
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
-                    image_node,
-                    building.clone(),
-                    Interaction::None,
-                    Button,
-                    Transform::from_xyz(0.0, 0.0, 100.0),
+                    children![
+                        (
+                            Node {
+                                width: Val::Vh(8.0 * data.grid_width as f32),
+                                height: Val::Vh(8.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
+                                ..default()
+                            },
+                            image_node,
+                            building.clone(),
+                            Interaction::None,
+                            Button,
+                        ),
+                        (
+                            Text(data.name),
+                            assets.text_font(12.0),
+                            ScalableText::from_vw(0.7),
+                        ),
+                    ],
                 ));
             }
         });
@@ -338,6 +346,30 @@ pub fn handle_building_flip(
     }
 }
 
+pub fn clear_selection(
+    mut commands: Commands,
+    mut mouse_button_event: ResMut<MouseButtonEvent>,
+    mut selected_building: ResMut<SelectedBuildingType>,
+    selected_query: Single<Option<(Entity, &BuildingOrientation)>, With<SelectedBuilding>>,
+) {
+    let Some(mouse) = mouse_button_event.handle() else {
+        return;
+    };
+
+    if !mouse.just_pressed(MouseButton::Right) {
+        return;
+    };
+
+    // Despawn the dragged building
+    let Some((entity, _)) = *selected_query else {
+        return;
+    };
+    commands.entity(entity).despawn();
+    if mouse.pressed(MouseButton::Right) {
+        selected_building.0 = None;
+    }
+}
+
 pub fn handle_placement_click(
     mut commands: Commands,
     mouse_button_input: Res<ButtonInput<MouseButton>>,
@@ -399,13 +431,13 @@ pub fn handle_placement_click(
                         orientation,
                     });
 
-                    // Despawn the dragged building
-                    for (entity, _) in selected_query.iter() {
-                        commands.entity(entity).despawn();
-                    }
+                    // // Despawn the dragged building
+                    // for (entity, _) in selected_query.iter() {
+                    //     commands.entity(entity).despawn();
+                    // }
 
                     // Clear selection
-                    selected_building_type.0 = None;
+                    // selected_building_type.0 = None;
                 }
                 // If occupied, do nothing - building stays selected and tinted red
             }

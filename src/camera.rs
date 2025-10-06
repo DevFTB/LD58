@@ -13,7 +13,10 @@ use bevy::{
         mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseButton},
     },
     transform::components::Transform,
+    prelude::*
 };
+
+use crate::{grid::{GridPosition, Grid}, ui::BlocksWorldScroll};
 
 #[derive(Debug, Resource)]
 struct CameraSettings {
@@ -47,7 +50,16 @@ fn zoom(
     camera: Single<&mut Projection, With<Camera>>,
     camera_settings: Res<CameraSettings>,
     mouse_wheel_input: Res<AccumulatedMouseScroll>,
+    scroll_blocker_query: Query<&Interaction, With<BlocksWorldScroll>>,
 ) {
+    // Check if cursor is over any BlocksWorldScroll UI panel
+    for interaction in scroll_blocker_query.iter() {
+        if *interaction == Interaction::Hovered || *interaction == Interaction::Pressed {
+            // Cursor is over a UI panel, don't scroll the camera
+            return;
+        }
+    }
+
     if let Projection::Orthographic(ref mut orthographic) = *camera.into_inner() {
         // We want scrolling up to zoom in, decreasing the scale, so we negate the delta.
         let delta_zoom = -mouse_wheel_input.delta.y * camera_settings.orthographic_zoom_speed;
@@ -88,4 +100,9 @@ fn pan_camera(
     let delta = -mouse_motion.delta * camera_scale;
     camera_transform.translation.x += delta.x;
     camera_transform.translation.y -= delta.y; // Y is inverted in screen space
+}
+
+pub fn focus_camera_on_grid_pos(grid_pos: &GridPosition, grid: &Grid, camera_transform: &mut Transform, orthographic: &mut OrthographicProjection) {
+    camera_transform.translation = grid.grid_to_world_center(grid_pos).extend(camera_transform.translation.z);
+    orthographic.scale = 0.7;
 }

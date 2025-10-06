@@ -17,10 +17,13 @@ pub struct Tiles(Vec<Entity>);
 
 #[derive(Component, Debug)]
 #[relationship(relationship_target = Tiles)]
-pub struct Tile(Entity);
+pub struct Tile(pub Entity);
 
 #[derive(Component, Default)]
 pub struct TileThroughputData {
     pub(crate) amount_in: f32,
     pub(crate) amount_out: f32,
 }
+
+#[derive(Component)]
+pub struct Undeletable;

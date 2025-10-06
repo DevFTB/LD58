@@ -31,7 +31,7 @@ impl Building for Splitter {
                     move |spawner: &mut RelatedSpawner<Tile> /* Type */| {
                         for i in 0..source_count {
                             spawner.spawn((
-                                GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
+                                // GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
                                 DataSource {
                                     direction: orientation.effective_direction(),
                                     throughput,
@@ -47,8 +47,8 @@ impl Building for Splitter {
                                 buffer: DataBuffer::default(),
                             },
                             position,
-                            GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
-                            Text2d::default(),
+                            // GridSprite(Color::linear_rgba(0.1, 0.3, 1.0, 0.3)),
+                            // Text2d::default(),
                         ));
                     },
                 )),

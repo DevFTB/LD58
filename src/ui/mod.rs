@@ -1,10 +1,17 @@
+use crate::factory::physical::remove_physical_link_on_right_click;
+use crate::ui::shop::clear_selection;
 use crate::{assets::GameAssets, ui::tooltip::TooltipPlugin};
+use crate::player::Player;
 use bevy::{color::palettes::css::BROWN, prelude::*};
 
+pub mod contracts;
+pub mod interactive_event;
 pub mod newsfeed;
 pub mod shop;
-pub mod interactive_event;
 pub mod tooltip;
+pub mod money;
+
+pub mod interaction;
 
 pub struct UIPlugin;
 
@@ -26,6 +33,11 @@ pub struct PausedFadeAnimation {
     cycle_duration: f32,
 }
 
+/// Marker component for UI elements that should block world clicks
+#[derive(Component)]
+#[require(Interaction)]
+pub struct BlocksWorldScroll;
+
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         use crate::pause::GameState;
@@ -34,10 +46,22 @@ impl Plugin for UIPlugin {
             .insert_resource(newsfeed::RecentNewsIds::new(5))
             .insert_resource(interactive_event::ModalSpawnCooldown::default())
             .insert_resource(interactive_event::QueuedEvents::default())
-            .add_systems(Startup, startup)
+            .add_systems(
+                Update,
+                (
+                    contracts::send_scroll_events,
+                    contracts::handle_contract_buttons,
+                    contracts::update_contracts_sidebar_ui,
+                )
+                    .chain(),
+            )
+            .add_observer(contracts::on_scroll_handler)
             .add_systems(Startup, spawn_paused_indicator)
             .add_systems(Startup, shop::spawn_building_shop)
             .add_systems(Startup, newsfeed::spawn_newsfeed_ui)
+            .add_systems(Startup, contracts::spawn_contracts_sidebar_ui)
+            .add_systems(Startup, money::spawn_money_display_ui)
+            .add_systems(Update, money::update_money_display.run_if(resource_changed::<Player>))
             .add_systems(Update, (update_paused_indicator, animate_paused_fade))
             // Shop systems should work in Running and ManualPause (allow building placement while paused)
             .add_systems(Update, (
@@ -60,37 +84,26 @@ impl Plugin for UIPlugin {
                 interactive_event::animate_bubble_wobble,
             ).run_if(in_state(GameState::Running).or(in_state(GameState::ManualPause))))
             // Modal interaction always runs (needed when modal is open)
-            .add_systems(Update, (
-                interactive_event::handle_choice_button_interaction,
-                interactive_event::handle_choice_click,
-                interactive_event::handle_choice_tooltip,
-                interactive_event::scale_text_system,
-            ))
+            .add_systems(
+                Update,
+                (
+                    interactive_event::handle_choice_button_interaction,
+                    interactive_event::handle_choice_click,
+                    interactive_event::handle_choice_tooltip,
+                    interactive_event::scale_text_system,
+                ),
+            )
             // Test trigger should work in Running and ManualPause
             .add_systems(Update, interactive_event::test_trigger_random_event
-                .run_if(in_state(GameState::Running).or(in_state(GameState::ManualPause))));
+                .run_if(in_state(GameState::Running).or(in_state(GameState::ManualPause))))
+            .add_systems(
+                Update,
+                clear_selection.before(remove_physical_link_on_right_click),
+            );
+        app.add_plugins(TooltipPlugin);
     }
 }
 
-fn startup(mut commands: Commands) {
-    // spawn the right bar with other information: contracts + newsfeed atm
-    commands.spawn((
-        Node {
-            width: Val::Percent(RIGHT_BAR_WIDTH_PCT),
-            height: Val::Percent(100.0),
-            display: Display::Flex,
-            position_type: PositionType::Absolute,
-            top: Val::Percent(0.0),
-            left: Val::Percent(100.0 - RIGHT_BAR_WIDTH_PCT),
-            flex_direction: FlexDirection::Column,
-            justify_content: JustifyContent::SpaceAround,
-            ..default()
-        },
-        BackgroundColor(BROWN.into()),
-        ZIndex(-1),
-        BlocksWorldClicks,
-    ));
-}
 
 fn spawn_paused_indicator(mut commands: Commands, game_assets: Res<GameAssets>) {
     commands.spawn((

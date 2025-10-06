@@ -31,7 +31,7 @@ impl BasicDataType {
 }
 
 // Attributes that modify a data stream
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Copy, Deserialize, PartialOrd, Ord)]
 pub enum DataAttribute {
     Aggregated,
     DeIdentified,
@@ -55,6 +55,22 @@ pub struct Dataset {
     // The core of the data packet.
     // Maps each data type present in the packet to a set of its attributes.
     pub contents: HashMap<BasicDataType, HashSet<DataAttribute>>,
+}
+
+impl std::hash::Hash for Dataset {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // Create a sorted vector of key-value pairs to ensure deterministic hashing
+        let mut items: Vec<_> = self.contents.iter().collect();
+        items.sort_by_key(|(k, _)| *k);
+        
+        for (key, value) in items {
+            key.hash(state);
+            // Hash the sorted attributes for deterministic ordering
+            let mut attrs: Vec<_> = value.iter().collect();
+            attrs.sort();
+            attrs.hash(state);
+        }
+    }
 }
 
 impl Dataset {
@@ -108,8 +124,8 @@ pub struct DataSource {
 pub struct DataBuffer {
     pub(crate) shape: Option<Dataset>,
     pub(crate) value: f32,
-    last_in: f32,
-    last_out: f32,
+    pub last_in: f32,
+    pub last_out: f32,
 }
 
 impl DataBuffer {
@@ -226,8 +242,21 @@ pub fn pass_data_system(
     time: Res<Time>,
 ) {
     for (mut sink, link) in sinks {
-        let mut source = sources.get_mut(link.source).unwrap();
-        pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+        //         thread 'Compute Task Pool (4)' panicked at src\factory\logical.rs:245:55:
+        // called `Result::unwrap()` on an `Err` value: QueryDoesNotMatch(7155v511, ArchetypeId(183))
+        // note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+        // Encountered a panic in system `LD58::factory::logical::pass_data_system`!
+        // Encountered a panic in system `bevy_app::main_schedule::Main::run_main`!
+        // error: process didn't exit successfully: `target\debug\LD58.exe` (exit code: 101)
+        // errrored out here twice, probs the get_mut i think?
+        // Use proper error handling instead of unwrap() to avoid panic
+        // TOOD: debug more closely
+        if let Ok(mut source) = sources.get_mut(link.source) {
+            pass_data_external(&mut *source, &mut *sink, time.delta_secs());
+        } else {
+            // Log warning if source entity doesn't exist or doesn't have DataSource component
+            println!("Warning: LogicalLink references invalid source entity {:?}", link.source);
+        }
     }
 }
 pub fn pass_data_external(source: &mut DataSource, sink: &mut DataSink, secs: f32) {

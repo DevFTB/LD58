@@ -3,24 +3,28 @@ extern crate core;
 use bevy_prng::WyRand;
 use bevy_rand::prelude::*;
 
+use crate::player::PlayerPlugin;
+use crate::ui::interaction::CustomInteractionPlugin;
 use crate::ui::tooltip::inherit_translation;
 use crate::world_gen::WorldGenPlugin;
 use crate::{
     assets::AssetPlugin,
     camera::GameCameraPlugin,
+    contracts::ContractsPlugin,
     events::EventsPlugin,
     factions::FactionsPlugin,
-    factory::{physical::PhysicalLink, FactoryPlugin},
-    grid::{Grid, GridPlugin, GridPosition},
+    factory::FactoryPlugin,
+    grid::{GridPlugin, GridPosition},
     ui::UIPlugin,
-    contracts::ContractsPlugin,
     pause::PausePlugin,
 };
+use bevy::ecs::lifecycle::HookContext;
+use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 
 mod assets;
 mod camera;
+mod contracts;
 mod events;
 mod factions;
 mod factory;
@@ -29,12 +33,9 @@ mod player;
 mod test;
 mod ui;
 mod world_gen;
-mod contracts;
 mod pause;
 
-fn main() {
-    use pause::GameState;
-    
+fn main() {    
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(AssetPlugin)
@@ -49,11 +50,9 @@ fn main() {
         .add_plugins(GridPlugin)
         .add_plugins(FactoryPlugin)
         .add_plugins(FactionsPlugin)
+        .add_plugins(PlayerPlugin)
+        .add_plugins(CustomInteractionPlugin)
         .add_systems(Startup, startup)
-        // Link removal should work in Running and ManualPause
-        .add_systems(Update, remove_physical_link_on_right_click
-            .run_if(in_state(GameState::Running).or(in_state(GameState::ManualPause))))
-        // Translation inheritance should always run
         .add_systems(PostUpdate, inherit_translation)
         .run();
 }
@@ -66,49 +65,21 @@ fn startup(_commands: Commands) {
     //test::spawn_sized_sink_test(&mut commands);
 }
 
-pub fn remove_physical_link_on_right_click(
-    mut commands: Commands,
-    mouse: Res<ButtonInput<MouseButton>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    // Use your main 2D camera; if you have a marker component for it, add With<YourCameraTag>
-    camera_q: Query<(&Camera, &GlobalTransform)>,
-    grid: Res<Grid>,
+#[derive(Component, Deref)]
+#[component(on_remove = cleanup_linked_spawn)]
+pub struct LinkedSpawn(Vec<Entity>);
 
-    links: Query<(Entity, &GridPosition), With<PhysicalLink>>,
-) {
-    // Only act on the press edge to avoid repeating every frame the button is held.
-    if !mouse.just_pressed(MouseButton::Right) {
-        return;
-    }
+fn cleanup_linked_spawn(mut world: DeferredWorld, context: HookContext) {
+    let entity = context.entity;
 
-    let window = match windows.single() {
-        Ok(w) => w,
-        Err(_) => return,
-    };
-    let (camera, cam_xform) = match camera_q.single() {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-    let cursor_screen = match window.cursor_position() {
-        Some(p) => p,
-        None => return, // cursor not over window
-    };
+    // Get the LinkedSpawn component data before it's removed
+    if let Some(linked_spawn) = world.get::<LinkedSpawn>(entity) {
+        // Clone the entity list before we drop the borrow
+        let entities_to_despawn = linked_spawn.0.clone();
 
-    // 2D conversion from screen to world
-    let world_pos = match camera.viewport_to_world_2d(cam_xform, cursor_screen) {
-        Ok(p) => p,
-        Err(_) => return,
-    };
-
-    // Find a PhysicalLink occupying this grid cell
-    if let Some((entity, _)) = links
-        .iter()
-        .find(|(_, gp)| **gp == grid.world_to_grid(world_pos))
-    {
-        // Option A: fully despawn the entity (removes sprite, etc.)
-        commands.entity(entity).remove::<PhysicalLink>();
-        commands.entity(entity).despawn();
-
-        // Option B: only remove the PhysicalLink component (keeps the entity/sprite)
+        // Despawn all linked entities using commands
+        for &linked_entity in &entities_to_despawn {
+            world.commands().entity(linked_entity).despawn();
+        }
     }
 }
